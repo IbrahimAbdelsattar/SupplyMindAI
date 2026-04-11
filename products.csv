@@ -1,0 +1,14 @@
+product_id,product_name,category,type,size,min_price,max_price
+FAN_STD,Fan,Cooling,Standard,Multiple,1800,3000
+EX_FLAT,Exhaust Flat,Cooling,Exhaust,Multiple,1600,2200
+EX_POLY,Exhaust Polygon,Cooling,Exhaust,Multiple,1800,2500
+EX_CIRC,Exhaust Circular,Cooling,Exhaust,Multiple,2000,2800
+AF_5,Air Fryer 5L,Kitchen,AirFryer,5L,4500,6500
+AF_75,Air Fryer 7.5L,Kitchen,AirFryer,7.5L,6500,9500
+BL_CHOP,Chopper Blender,Kitchen,Blender,Small,1800,2600
+BL_KIT,Kitchen Blender,Kitchen,Blender,Medium,2500,3500
+BL_IND,Industrial Blender,Industrial,Blender,Large,4000,7000
+ESP,Espresso Machine,Kitchen,Coffee,Standard,6000,10000
+SW,Sandwich Maker,Kitchen,Heating,Standard,1200,2500
+MX_KIT,Kitchen Mixer,Kitchen,Mixer,Medium,2500,4000
+MX_IND,Industrial Mixer,Industrial,Mixer,Large,6000,12000

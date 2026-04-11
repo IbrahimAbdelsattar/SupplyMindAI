@@ -1,0 +1,7 @@
+material_id,material_name,unit_cost,supplier_id
+RM_PLASTIC,Plastic Housing,5,SUP_4
+RM_COPPER,Copper Motor,8,SUP_8
+RM_STEEL,Steel Body,12,SUP_8
+RM_BOARD,Electronics Board,15,SUP_3
+RM_HEATER,Heating Element,20,SUP_6
+RM_PACK,Packaging,3,SUP_5

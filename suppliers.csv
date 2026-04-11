@@ -1,0 +1,9 @@
+supplier_id,supplier_name,region,reliability,lead_time_days
+SUP_1,Supplier_1,Upper,0.8,8
+SUP_2,Supplier_2,Upper,0.97,7
+SUP_3,Supplier_3,Delta,0.9,5
+SUP_4,Supplier_4,Giza,0.87,7
+SUP_5,Supplier_5,Giza,0.74,9
+SUP_6,Supplier_6,Delta,0.74,10
+SUP_7,Supplier_7,Upper,0.72,12
+SUP_8,Supplier_8,Delta,0.94,9
