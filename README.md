@@ -276,3 +276,4 @@ To become the intelligence layer behind modern supply chain operations by combin
 ## 📄 License
 
 This project is developed for academic and research purposes.
+# Demand-Forecasting-Inventory-Optimization-Engine
