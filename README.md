@@ -113,51 +113,89 @@ SupplyMind AI addresses these challenges using data-driven predictive intelligen
 ---
 
 ## 🏗️ System Architecture
+```mermaid
+flowchart LR
+    user[Manager / Analyst User]
 
-                    ┌──────────────────────┐
-                    │      Data Sources     │
-                    │  (Sales, Products,    │
-                    │   Promotions, etc.)   │
-                    └────────────┬─────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────┐
-                    │   Data Processing    │
-                    │   & Feature Engine   │
-                    └────────────┬─────────┘
-                                 │
-                                 ▼
-    ┌─────────────────────────────────────────────────┐
-    │               Machine Learning Layer            │
-    │ ┌────────────────┐  ┌────────────────────────┐ │
-    │ │ Forecast Model │  │  Inventory Optimizer   │ │
-    │ │ (Time Series)  │  │ (EOQ, Safety Stock)    │ │
-    │ └────────────────┘  └────────────────────────┘ │
-    └─────────────────────────────────────────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────┐
-                    │   AI Insights Layer  │
-                    │  (Explainability)    │
-                    └────────────┬─────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────┐
-                    │ Alert & Risk Engine  │
-                    └────────────┬─────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────┐
-                    │   API / Backend      │
-                    └────────────┬─────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────┐
-                    │  Web Dashboard UI    │
-                    └──────────────────────┘
+    subgraph FE["Frontend SPA (Current)"]
+        app[React + Vite + React Router]
+        providers[Providers\nQueryClientProvider\nAuthProvider\nThemeProvider]
+        pages[Pages\nLanding, Login, Dashboard,\nForecasting, Inventory,\nAI Insights, Reports,\nMLOps, Settings]
+        shared[Shared UI\nDashboardSidebar\nDashboardHeader\nCharts\nAIChatbot]
+        mock[mockData.ts + local component state]
 
+        app --> providers --> pages --> shared
+        pages -. current data source .-> mock
+    end
 
----
+    subgraph API["Application Backend (Planned)"]
+        gateway[FastAPI App /api/v1]
+        auth[Auth Router + JWT]
+        dataSvc[Data Router]
+        forecastSvc[Forecast Service]
+        inventorySvc[Inventory + Alert Services]
+        insightSvc[Insights + Chat Services]
+        mlopsSvc[MLOps + Reports Services]
+        cache[(Redis)]
+
+        gateway --> auth
+        gateway --> dataSvc
+        gateway --> forecastSvc
+        gateway --> inventorySvc
+        gateway --> insightSvc
+        gateway --> mlopsSvc
+        gateway <--> cache
+    end
+
+    subgraph DATA["Data and ML Platform (Planned)"]
+        raw[Local CSVs / Azure Blob Storage\nproducts, sales, inventory,\nproduction, suppliers,\ncontracts, raw_materials, bom]
+        ingest[Ingestion + Validation\npandas + Great Expectations]
+        features[Feature Engineering\nfeatures_daily.parquet]
+        postgres[(PostgreSQL)]
+        training[Training Pipeline\nXGBoost / LSTM / TFT]
+        registry[MLflow Tracking + Model Registry]
+        drift[Drift Detection + Retraining]
+        optimizer[Inventory Optimizer\nEOQ / ROP / Safety Stock]
+        vector[(ChromaDB / Azure AI Search)]
+
+        raw --> ingest --> features
+        ingest --> postgres
+        features --> postgres
+        features --> training --> registry
+        features --> drift
+        raw --> vector
+        optimizer --> postgres
+    end
+
+    subgraph EXT["External / Infrastructure (Planned)"]
+        llm[OpenAI / Azure OpenAI]
+        monitor[Azure Monitor / App Insights]
+        deploy[Docker + GitHub Actions + AKS]
+    end
+
+    user --> app
+    pages -. planned API integration .-> gateway
+
+    dataSvc <--> postgres
+    auth <--> postgres
+    forecastSvc --> postgres
+    forecastSvc --> registry
+    inventorySvc --> postgres
+    inventorySvc --> optimizer
+    inventorySvc --> vector
+    inventorySvc --> forecastSvc
+    insightSvc --> postgres
+    insightSvc --> forecastSvc
+    insightSvc --> llm
+    mlopsSvc --> registry
+    mlopsSvc --> drift
+    mlopsSvc --> postgres
+
+    deploy --> app
+    deploy --> gateway
+    monitor --> gateway
+    monitor --> registry
+```
 
 # ☁️ Azure Cloud Infrastructure
 
