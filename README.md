@@ -29,6 +29,43 @@
 - **Ali Ehab Massad Abdelghany**  
   *RAG*
 
+TEAM STRUCTURE & OWNERSHIP MAP
+
+## Visual Ownership Matrix
+
+```mermaid
+graph TD
+    M1["Member 1<br/>Data Engineer"] --> Data["Data Pipeline<br/>Feature Store<br/>Dashboard Pages"]
+    M2["Member 2<br/>ML Engineer"] --> Models["XGBoost/LSTM/GRU/TFT<br/>Training & Evaluation<br/>Model Artifacts"]
+    M3["Member 3<br/>LLM Engineer"] --> LLM["AI Insights Page<br/>LLM Reasoning<br/>Report Generation"]
+    M4["Member 4<br/>RAG Engineer"] --> RAG["Inventory Page<br/>RAG System<br/>Alert Engine"]
+    M5["Member 5<br/>MLOps Engineer"] --> MLOps["MLOps Page<br/>Drift Detection<br/>Retraining Pipeline"]
+    M6["Member 6<br/>Backend Lead"] --> Infra["FastAPI Backend<br/>PostgreSQL DB<br/>Azure + Docker + CI/CD"]
+
+    M1 -->|clean data| M2
+    M2 -->|model outputs + SHAP| M3
+    M2 -->|forecasts| M4
+    M2 -->|model artifacts| M5
+    M3 -->|endpoint integration| M6
+    M4 -->|endpoint integration| M6
+    M5 -->|endpoint integration| M6
+```
+
+## File Ownership Map
+
+| File/Directory | Owner |
+|---|---|
+| `data/`, `ml_pipeline/feature_engineering/` | Member 1 |
+| `src/pages/Dashboard.tsx`, `src/components/dashboard/` | Member 1 |
+| `ml_pipeline/training/`, `ml_pipeline/evaluation/`, `ml_pipeline/models/` | Member 2 |
+| `src/pages/AIInsights.tsx`, `rag/insights/`, `backend/routers/insights.py` | Member 3 |
+| `src/pages/Inventory.tsx`, `rag/inventory/`, `backend/routers/inventory.py`, `backend/routers/alerts.py` | Member 4 |
+| `src/pages/MLOps.tsx`, `mlops/`, `backend/routers/mlops.py` | Member 5 |
+| `backend/` (core), `deployment/`, `.github/`, `backend/routers/auth.py`, `backend/routers/data.py` | Member 6 |
+| `src/pages/Login.tsx`, `src/pages/Settings.tsx`, `src/pages/Reports.tsx` | Member 6 (shared) |
+| `src/pages/Forecasting.tsx` | Member 2 (data binding), Member 6 (API integration) |
+
+---
 ---
 
 
