@@ -95,7 +95,7 @@ flowchart LR
 ```
 
 ## 2. ER Diagram
-![alt text](<ChatGPT Image 11 أبريل 2026، 04_48_30 م.png>)
+
 Notes:
 
 - `PRODUCTS`, `SALES_DAILY`, `INVENTORY`, `PRODUCTION_SCHEDULE`, `SUPPLIERS`, `CONTRACTS`, `RAW_MATERIALS`, and `BOM` come from the current CSV data.
@@ -267,7 +267,7 @@ erDiagram
 ```
 
 ## 3. Sequence Diagram
-![alt text](<ChatGPT Image 11 أبريل 2026، 04_48_29 م.png>)
+
 This sequence models the target end-to-end user flow for the core product experience: forecast generation, inventory optimization, and AI insight retrieval from the frontend.
 
 ```mermaid
