@@ -57,10 +57,6 @@
 <br/>
 
 <div align="center">
-
-<!-- Animated Banner -->
-<img src="docs/images/dashboard_preview.png" alt="SupplyMind AI Dashboard" width="100%" style="border-radius:12px;"/>
-
 <br/><br/>
 
 <!-- Animated Title -->
@@ -69,6 +65,11 @@
 </a>
 
 <br/>
+<!-- Animated Banner -->
+<img src="docs/images/dashboard_preview.png" alt="SupplyMind AI Dashboard" width="100%" style="border-radius:12px;"/>
+
+
+---
 
 ## 📌 Overview
 
