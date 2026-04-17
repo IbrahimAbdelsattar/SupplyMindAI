@@ -58,7 +58,7 @@
 <div align="center">
 
 <!-- Animated Banner -->
-<img src="docs/images/dashboard_preview.png" alt="SupplyMind AI Dashboard" width="100%" style="border-radius:12px;"/>
+<img src="Screenshot 2026-04-17 201341.png"/>
 
 <br/><br/>
 
