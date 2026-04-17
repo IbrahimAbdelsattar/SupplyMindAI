@@ -269,8 +269,7 @@ flowchart LR
 ## 🤖 AI & ML Pipeline
 
 <div align="center">
-  <img src="d<img width="855" height="405" alt="image" src="https://github.com/user-attachments/assets/5f966943-c2c5-4856-b267-71612ac06d76" />
-" alt="ML Pipeline" width="90%"/>
+  <img src="Screenshot 2026-04-17 201531.png" alt="ML Pipeline" width="90%"/>
 </div>
 
 <br/>
