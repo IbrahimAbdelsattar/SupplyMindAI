@@ -1,3 +1,7 @@
+<!-- Animated Title -->
+<a href="#">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=36&pause=1000&color=7C3AED&center=true&vCenter=true&width=800&lines=SupplyMind+AI+%F0%9F%9A%80;AI-Powered+Demand+Forecasting;Inventory+Optimization+Engine;Enterprise+MLOps+%26+Insights" alt="Typing SVG"/>
+</a>
 
 <p align="center">
   <b>Enterprise-Grade AI Platform for Intelligent Supply Chain Operations</b><br/>
@@ -59,10 +63,7 @@
 <div align="center">
 <br/><br/>
 
-<!-- Animated Title -->
-<a href="#">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=36&pause=1000&color=7C3AED&center=true&vCenter=true&width=800&lines=SupplyMind+AI+%F0%9F%9A%80;AI-Powered+Demand+Forecasting;Inventory+Optimization+Engine;Enterprise+MLOps+%26+Insights" alt="Typing SVG"/>
-</a>
+
 
 <br/>
 <!-- Animated Banner -->
