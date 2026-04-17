@@ -48,6 +48,12 @@
   <a href="#-team"><img src="https://img.shields.io/badge/👥-Team-F59E0B?style=flat-square"/></a>
 </p>
 
+
+
+---
+
+</div>
+
 <br/>
 
 <div align="center">
@@ -63,10 +69,6 @@
 </a>
 
 <br/>
-
----
-
-</div>
 
 ## 📌 Overview
 
