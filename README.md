@@ -362,7 +362,7 @@ graph TD
 | # | Name | Role | Responsibilities |
 |---|------|------|-----------------|
 | 👑 | **Ibrahim Abdelsttar Abdelgawad** | Team Leader · Deployment | FastAPI Backend, PostgreSQL, Azure, Docker, CI/CD, Auth |
-| 🤖 | **Kenzi Walid Sorour Hosny** | LLM Engineer | AI Insights, LLM Reasoning, Report Generation |
+| 🤖 | **Kenzy Walid Srour hassanien** | LLM Engineer | AI Insights, LLM Reasoning, Report Generation |
 | 📊 | **Rahma Shaaban Elhusseiny Shaaban** | Data Analyst | Data Pipeline, Feature Store, Dashboard Pages |
 | 🧮 | **Karim Ayman Abdelgaber Deif** | ML Engineer | XGBoost/LSTM/GRU/TFT, Training & Evaluation |
 | ⚙️ | **Ali El Shaarawy** | MLOps Engineer | Drift Detection, Retraining Pipeline, Model Monitoring |
@@ -376,7 +376,7 @@ graph TD
 graph TD
     M1["👤 Rahma\nData Analyst"] --> Data["📊 Data Pipeline\nFeature Store\nDashboard Pages"]
     M2["👤 Karim\nML Engineer"] --> Models["🤖 XGBoost/LSTM/GRU/TFT\nTraining & Evaluation\nModel Artifacts"]
-    M3["👤 Kenzi\nLLM Engineer"] --> LLM["💡 AI Insights Page\nLLM Reasoning\nReport Generation"]
+    M3["👤 Kenzy\nLLM Engineer"] --> LLM["💡 AI Insights Page\nLLM Reasoning\nReport Generation"]
     M4["👤 Ali E.\nRAG Engineer"] --> RAG["📦 Inventory Page\nRAG System\nAlert Engine"]
     M5["👤 Ali S.\nMLOps Engineer"] --> MLOps["⚙️ MLOps Page\nDrift Detection\nRetraining Pipeline"]
     M6["👤 Ibrahim\nBackend Lead"] --> Infra["🔧 FastAPI Backend\nPostgreSQL DB\nAzure + Docker + CI/CD"]
