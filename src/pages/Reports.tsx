@@ -8,49 +8,17 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, Download, Calendar, TrendingUp, Package, Eye } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch, getApiBaseUrl, getToken } from '@/lib/api';
 
-const reports = [
-  {
-    id: 1,
-    title: 'Weekly Demand Forecast Summary',
-    description: 'Comprehensive forecast for all products with accuracy metrics',
-    type: 'Forecast',
-    date: '2025-01-24',
-    status: 'ready',
-  },
-  {
-    id: 2,
-    title: 'Monthly Inventory Optimization Report',
-    description: 'Inventory recommendations and potential cost savings analysis',
-    type: 'Inventory',
-    date: '2025-01-20',
-    status: 'ready',
-  },
-  {
-    id: 3,
-    title: 'Q4 2024 Executive Summary',
-    description: 'High-level overview of AI performance and business impact',
-    type: 'Executive',
-    date: '2025-01-15',
-    status: 'ready',
-  },
-  {
-    id: 4,
-    title: 'Model Performance Analysis',
-    description: 'Detailed breakdown of forecast accuracy by product category',
-    type: 'Technical',
-    date: '2025-01-10',
-    status: 'ready',
-  },
-  {
-    id: 5,
-    title: 'Stock-out Risk Assessment',
-    description: 'Products at risk of stock-out in the next 30 days',
-    type: 'Risk',
-    date: '2025-01-08',
-    status: 'generating',
-  },
-];
+type ReportItem = {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  date: string;
+  status: string;
+};
 
 const typeColors: Record<string, string> = {
   Forecast: 'bg-primary/10 text-primary',
@@ -63,12 +31,32 @@ const typeColors: Record<string, string> = {
 const Reports = () => {
   const { isAuthenticated } = useAuth();
 
+  const { data: reports = [] } = useQuery({
+    queryKey: ['reports'],
+    queryFn: () => apiFetch<ReportItem[]>('/reports/list'),
+    enabled: isAuthenticated,
+  });
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  const handleDownload = (format: 'pdf' | 'csv') => {
-    console.log(`Downloading as ${format}`);
+  const handleDownload = async (reportId: string) => {
+    const baseUrl = getApiBaseUrl();
+    const token = getToken();
+    const url = new URL(`${baseUrl}/reports/download`);
+    url.searchParams.set('report_id', reportId);
+    // forecast report needs product_id; keep it simple and omit unless user wants
+    if (reportId === 'r_forecast') return;
+
+    const res = await fetch(url.toString(), {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = reportId === 'r_inventory' ? 'inventory_recommendations.csv' : 'report.csv';
+    a.click();
   };
 
   return (
@@ -164,11 +152,8 @@ const Reports = () => {
                             <Eye className="w-3.5 h-3.5" />
                             Preview
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDownload('pdf')} className="text-xs">
-                            PDF
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDownload('csv')} className="text-xs">
-                            CSV
+                          <Button variant="outline" size="sm" onClick={() => handleDownload(report.id)} className="text-xs">
+                            Download
                           </Button>
                         </>
                       )}

@@ -5,13 +5,29 @@ import { DemandChart } from '@/components/dashboard/DemandChart';
 import { HeatmapChart } from '@/components/dashboard/HeatmapChart';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
-import { kpiData } from '@/lib/mockData';
 import { TrendingUp, DollarSign, AlertTriangle, Package } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
+
+type KPIResponse = {
+  totalDemand: number;
+  inventoryCost: number;
+  stockoutRisk: number;
+  overstockRisk: number;
+  revenue: number;
+  accuracy: number;
+};
 
 const Dashboard = () => {
   const { isAuthenticated } = useAuth();
+
+  const { data: kpiData } = useQuery({
+    queryKey: ['kpis', 30],
+    queryFn: () => apiFetch<KPIResponse>('/data/kpis?period_days=30'),
+    enabled: isAuthenticated,
+  });
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -32,7 +48,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <KPICard
               title="Total Forecasted Demand"
-              value={kpiData.totalDemand}
+              value={kpiData?.totalDemand ?? 0}
               suffix=" units"
               change={12}
               changeLabel="vs last period"
@@ -42,7 +58,7 @@ const Dashboard = () => {
             />
             <KPICard
               title="Inventory Cost"
-              value={kpiData.inventoryCost}
+              value={kpiData?.inventoryCost ?? 0}
               prefix="$"
               change={-8}
               changeLabel="vs last period"
@@ -52,7 +68,7 @@ const Dashboard = () => {
             />
             <KPICard
               title="Stock-out Risk"
-              value={kpiData.stockoutRisk}
+              value={kpiData?.stockoutRisk ?? 0}
               suffix="%"
               change={-15}
               changeLabel="lower than last month"
@@ -62,7 +78,7 @@ const Dashboard = () => {
             />
             <KPICard
               title="Overstock Risk"
-              value={kpiData.overstockRisk}
+              value={kpiData?.overstockRisk ?? 0}
               suffix="%"
               change={-5}
               changeLabel="improvement"

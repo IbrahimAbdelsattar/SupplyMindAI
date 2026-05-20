@@ -15,14 +15,33 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { inventoryRecommendations } from '@/lib/mockData';
 import { Package, AlertTriangle, DollarSign, ArrowRight } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
+
+type InventoryRecommendation = {
+  product_id: string;
+  product_name: string;
+  currentStock: number;
+  reorderPoint: number;
+  reorderQty: number;
+  safetyStock: number;
+  leadTime: number;
+  costSavings: number;
+  riskLevel: 'low' | 'medium' | 'high';
+};
 
 const Inventory = () => {
   const { isAuthenticated } = useAuth();
+
+  const { data: inventoryRecommendations = [] } = useQuery({
+    queryKey: ['inventory-optimize', 13],
+    queryFn: () => apiFetch<InventoryRecommendation[]>('/inventory/optimize?limit=13'),
+    enabled: isAuthenticated,
+  });
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -31,7 +50,7 @@ const Inventory = () => {
   const totalSavings = inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0);
 
   const comparisonData = inventoryRecommendations.map((item) => ({
-    name: item.product.split(' ').slice(0, 2).join(' '),
+    name: item.product_name.split(' ').slice(0, 2).join(' '),
     current: item.currentStock,
     optimal: item.reorderPoint + item.safetyStock,
   }));
@@ -128,7 +147,7 @@ const Inventory = () => {
               <CardContent className="space-y-3 sm:space-y-4">
                 {inventoryRecommendations.map((item, index) => (
                   <motion.div
-                    key={item.product}
+                    key={item.product_id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
@@ -138,7 +157,7 @@ const Inventory = () => {
                       {/* Product header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                          <h4 className="text-sm sm:text-lg font-semibold">{item.product}</h4>
+                          <h4 className="text-sm sm:text-lg font-semibold">{item.product_name}</h4>
                           <Badge
                             variant={
                               item.riskLevel === 'high'

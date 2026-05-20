@@ -33,20 +33,53 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { generateDemandData, products, stores } from '@/lib/mockData';
 import { Download, TrendingUp, Calendar, Sun, Tag } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
+
+type Product = { product_id: string; product_name: string; category?: string };
+type Store = { id: string; name: string; region?: string };
+type ForecastPoint = { date: string; actual?: number | null; forecast: number; lower: number; upper: number };
+type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[] };
 
 const Forecasting = () => {
   const { isAuthenticated } = useAuth();
-  const [selectedProduct, setSelectedProduct] = useState(products[0].id.toString());
-  const [selectedStore, setSelectedStore] = useState(stores[0].id.toString());
+  const { data: products } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => apiFetch<Product[]>('/data/products'),
+  });
+
+  // Stores aren't in your datasets yet; keep UI but provide a single default option.
+  const stores: Store[] = [{ id: 'default', name: 'All Regions' }];
+
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [selectedStore, setSelectedStore] = useState(stores[0].id);
   const [horizon, setHorizon] = useState('14');
   const [includeSeasonality, setIncludeSeasonality] = useState(true);
   const [includePromotions, setIncludePromotions] = useState(false);
 
-  const chartData = useMemo(() => generateDemandData(parseInt(horizon)), [horizon]);
+  useMemo(() => {
+    if (!selectedProduct && products?.[0]?.product_id) setSelectedProduct(products[0].product_id);
+  }, [products, selectedProduct]);
+
+  const forecastMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedProduct) return null;
+      return apiFetch<ForecastResponse>('/forecast/predict', {
+        method: 'POST',
+        body: JSON.stringify({ product_id: selectedProduct, horizon_days: parseInt(horizon) }),
+      });
+    },
+  });
+
+  const chartData = useMemo(() => forecastMutation.data?.series ?? [], [forecastMutation.data]);
+
+  useMemo(() => {
+    void forecastMutation.mutateAsync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProduct, horizon, includeSeasonality, includePromotions, selectedStore]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -99,9 +132,9 @@ const Forecasting = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover">
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name}
+                        {(products ?? []).map((product) => (
+                          <SelectItem key={product.product_id} value={product.product_id}>
+                            {product.product_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -119,7 +152,7 @@ const Forecasting = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-popover">
                         {stores.map((store) => (
-                          <SelectItem key={store.id} value={store.id.toString()}>
+                          <SelectItem key={store.id} value={store.id}>
                             {store.name}
                           </SelectItem>
                         ))}

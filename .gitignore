@@ -107,3 +107,4 @@ dmypy.json
 Thumbs.db
 Modeling/
 data/
+node_modules

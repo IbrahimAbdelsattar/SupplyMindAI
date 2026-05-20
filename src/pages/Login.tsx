@@ -7,15 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { BarChart3, User, Briefcase, ArrowLeft, Loader2 } from 'lucide-react';
+import { BarChart3, ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'manager' | 'analyst'>('manager');
+  const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -24,16 +24,16 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      await login(email, password, selectedRole);
+      await login(email, password);
       toast({
         title: 'Welcome back!',
-        description: `Logged in as ${selectedRole === 'manager' ? 'Manager' : 'Analyst'}`,
+        description: `Logged in as ${email}`,
       });
       navigate('/dashboard');
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to login',
+        description: error instanceof Error ? error.message : 'Failed to login',
         variant: 'destructive',
       });
     } finally {
@@ -41,19 +41,40 @@ const Login = () => {
     }
   };
 
-  const handleDemoLogin = async (role: 'manager' | 'analyst') => {
+  const handleDemoLogin = async () => {
     setIsLoading(true);
     try {
-      await login('demo@company.com', 'demo', role);
+      await login('demo@supplymind.ai', 'demo');
       toast({
         title: 'Demo Mode Activated',
-        description: `Exploring as ${role === 'manager' ? 'Business Manager' : 'Data Analyst'}`,
+        description: 'Exploring as Demo User',
       });
       navigate('/dashboard');
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to start demo',
+        description: error instanceof Error ? error.message : 'Failed to start demo',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await register(name, email, password);
+      toast({
+        title: 'Account created',
+        description: 'You are now signed in.',
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to register',
         variant: 'destructive',
       });
     } finally {
@@ -94,48 +115,30 @@ const Login = () => {
         <Card className="border-border/50 bg-card/80 backdrop-blur-xl">
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
-            <CardDescription>Choose a demo account or enter your credentials</CardDescription>
+            <CardDescription>Use demo or your email/password</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="demo" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="demo">Demo Access</TabsTrigger>
-                <TabsTrigger value="credentials">Credentials</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="demo">Demo</TabsTrigger>
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
 
               <TabsContent value="demo" className="space-y-4">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Select a role to explore the platform with demo data
+                  Use the pre-created demo user in the database
                 </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleDemoLogin('manager')}
-                    disabled={isLoading}
-                    className="p-6 rounded-xl border-2 border-border hover:border-primary/50 bg-card transition-all duration-200 text-center group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
-                      <Briefcase className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="font-semibold mb-1">Manager</h3>
-                    <p className="text-xs text-muted-foreground">Business overview</p>
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleDemoLogin('analyst')}
-                    disabled={isLoading}
-                    className="p-6 rounded-xl border-2 border-border hover:border-accent/50 bg-card transition-all duration-200 text-center group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-accent/20 transition-colors">
-                      <User className="w-6 h-6 text-accent" />
-                    </div>
-                    <h3 className="font-semibold mb-1">Analyst</h3>
-                    <p className="text-xs text-muted-foreground">Technical details</p>
-                  </motion.button>
-                </div>
+                <Button onClick={handleDemoLogin} disabled={isLoading} className="w-full h-11">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Continue as Demo User'
+                  )}
+                </Button>
                 {isLoading && (
                   <div className="flex items-center justify-center gap-2 text-muted-foreground mt-4">
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -144,7 +147,7 @@ const Login = () => {
                 )}
               </TabsContent>
 
-              <TabsContent value="credentials">
+              <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -168,29 +171,6 @@ const Login = () => {
                       className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant={selectedRole === 'manager' ? 'default' : 'outline'}
-                        onClick={() => setSelectedRole('manager')}
-                        className="h-11"
-                      >
-                        <Briefcase className="w-4 h-4 mr-2" />
-                        Manager
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={selectedRole === 'analyst' ? 'default' : 'outline'}
-                        onClick={() => setSelectedRole('analyst')}
-                        className="h-11"
-                      >
-                        <User className="w-4 h-4 mr-2" />
-                        Analyst
-                      </Button>
-                    </div>
-                  </div>
                   <Button type="submit" className="w-full h-11" disabled={isLoading}>
                     {isLoading ? (
                       <>
@@ -199,6 +179,54 @@ const Login = () => {
                       </>
                     ) : (
                       'Sign In'
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="register">
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Your name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg_email">Email</Label>
+                    <Input
+                      id="reg_email"
+                      type="email"
+                      placeholder="you@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg_password">Password</Label>
+                    <Input
+                      id="reg_password"
+                      type="password"
+                      placeholder="At least 6 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      'Create Account'
                     )}
                   </Button>
                 </form>

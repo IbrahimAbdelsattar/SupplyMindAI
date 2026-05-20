@@ -1,17 +1,18 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { apiFetch, setToken, getToken } from '@/lib/api';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: 'manager' | 'analyst';
   avatar?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, role: 'manager' | 'analyst') => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -25,36 +26,61 @@ export const useAuth = () => {
   return context;
 };
 
-const mockUsers: Record<string, User> = {
-  manager: {
-    id: '1',
-    name: 'Sarah Johnson',
-    email: 'sarah@company.com',
-    role: 'manager',
-  },
-  analyst: {
-    id: '2',
-    name: 'Alex Chen',
-    email: 'alex@company.com',
-    role: 'analyst',
-  },
+type LoginResponse = {
+  access_token: string;
+  token_type: 'bearer';
+  user: User;
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (email: string, password: string, role: 'manager' | 'analyst') => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setUser(mockUsers[role]);
+  const login = async (email: string, password: string) => {
+    const res = await apiFetch<LoginResponse>('/auth/login', {
+      method: 'POST',
+      auth: false,
+      body: JSON.stringify({ email: email?.trim(), password: password?.trim() }),
+    });
+
+    setToken(res.access_token);
+    localStorage.setItem('supplymind_user', JSON.stringify(res.user));
+    setUser(res.user);
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    await apiFetch<User>('/auth/register', {
+      method: 'POST',
+      auth: false,
+      body: JSON.stringify({ name: name?.trim(), email: email?.trim(), password }),
+    });
+    await login(email, password);
   };
 
   const logout = () => {
+    setToken(null);
+    localStorage.removeItem('supplymind_user');
     setUser(null);
   };
 
+  useEffect(() => {
+    const token = getToken();
+    const rawUser = localStorage.getItem('supplymind_user');
+    if (token && rawUser) {
+      try {
+        setUser(JSON.parse(rawUser) as User);
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, isAuthenticated: !!user, login, register, logout }),
+    [user]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

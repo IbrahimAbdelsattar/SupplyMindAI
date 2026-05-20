@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   LineChart,
@@ -20,7 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { generateDemandData, products } from '@/lib/mockData';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
+
+type Product = { product_id: string; product_name: string; category?: string };
+type ForecastPoint = { date: string; actual?: number | null; forecast: number; lower: number; upper: number };
+type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[] };
 
 const timeRanges = [
   { label: '7 Days', value: 7 },
@@ -30,9 +35,36 @@ const timeRanges = [
 
 export const DemandChart = () => {
   const [selectedRange, setSelectedRange] = useState(14);
-  const [selectedProduct, setSelectedProduct] = useState('all');
+  const [selectedProduct, setSelectedProduct] = useState<string>('all');
 
-  const chartData = useMemo(() => generateDemandData(selectedRange), [selectedRange]);
+  const { data: products } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => apiFetch<Product[]>('/data/products'),
+  });
+
+  const forecastMutation = useMutation({
+    mutationFn: async () => {
+      const firstProductId = products?.[0]?.product_id;
+      const productId = selectedProduct === 'all' ? firstProductId : selectedProduct;
+      if (!productId) return null;
+      return apiFetch<ForecastResponse>('/forecast/predict', {
+        method: 'POST',
+        body: JSON.stringify({ product_id: productId, horizon_days: selectedRange }),
+      });
+    },
+  });
+
+  const chartData = useMemo(() => {
+    const data = forecastMutation.data?.series;
+    if (data?.length) return data;
+    return [];
+  }, [forecastMutation.data]);
+
+  // Auto-run when filters change
+  useMemo(() => {
+    void forecastMutation.mutateAsync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRange, selectedProduct, products?.length]);
 
   return (
     <motion.div
@@ -54,9 +86,9 @@ export const DemandChart = () => {
             </SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="all">All Products</SelectItem>
-              {products.map((product) => (
-                <SelectItem key={product.id} value={product.id.toString()}>
-                  {product.name}
+              {(products ?? []).map((product) => (
+                <SelectItem key={product.product_id} value={product.product_id}>
+                  {product.product_name}
                 </SelectItem>
               ))}
             </SelectContent>
