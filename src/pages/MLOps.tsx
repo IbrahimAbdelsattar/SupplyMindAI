@@ -14,8 +14,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+
 import { fetchApi } from '@/lib/api';
 import { useState, useEffect } from 'react';
+
 import { Activity, CheckCircle2, AlertTriangle, RefreshCw, Database, Cpu, Zap } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,6 +45,7 @@ const MLOps = () => {
   if (!metricsData) {
     return <div className="p-8">Loading MLOps metrics...</div>;
   }
+
 
 
   if (!isAuthenticated) {
@@ -109,6 +112,7 @@ const MLOps = () => {
                 <div className="h-52 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={metricsData.modelAccuracy}>
+
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
@@ -157,6 +161,7 @@ const MLOps = () => {
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
                   {metricsData.dataDrift.map((item, index) => (
+
                     <motion.div
                       key={item.feature}
                       initial={{ opacity: 0, x: -20 }}
@@ -208,6 +213,7 @@ const MLOps = () => {
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
                   {metricsData.retrainingHistory.map((item, index) => (
+
                     <motion.div
                       key={item.date}
                       initial={{ opacity: 0, x: -20 }}
@@ -254,6 +260,7 @@ const MLOps = () => {
                     { label: 'CPU Usage', value: metricsData.system.cpu },
                     { label: 'Memory Usage', value: metricsData.system.memory },
                     { label: 'GPU Utilization', value: metricsData.system.gpu },
+
                   ].map((resource) => (
                     <div key={resource.label} className="space-y-2">
                       <div className="flex items-center justify-between">

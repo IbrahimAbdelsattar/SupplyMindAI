@@ -247,6 +247,7 @@ const AIInsights = () => {
             </Card>
           </motion.div>
 
+
         </main>
       </div>
 
