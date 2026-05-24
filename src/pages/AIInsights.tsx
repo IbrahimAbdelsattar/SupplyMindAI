@@ -197,6 +197,56 @@ const AIInsights = () => {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Strategic Insights Assistant */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <Card>
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Strategic Insights Assistant</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Discuss reasoning behind insights and deeper strategic shifts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col h-80 space-y-4">
+                  <div className="flex-1 overflow-y-auto space-y-4 border rounded-md p-4 bg-muted/20">
+                    {chatMessages.length === 0 && (
+                      <div className="text-sm text-muted-foreground text-center mt-10">
+                        Ask a question like "Why did the seasonal demand pattern shift?" or "Explain the promotion effect further."
+                      </div>
+                    )}
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] rounded-lg p-3 text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))}
+                    {isChatLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-muted rounded-lg p-3 text-sm animate-pulse">Analyzing...</div>
+                      </div>
+                    )}
+                  </div>
+                  <form onSubmit={handleChatSubmit} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Ask about AI reasoning..."
+                      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    <button type="submit" disabled={isChatLoading || !chatInput.trim()} className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                      Send
+                    </button>
+                  </form>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
         </main>
       </div>
 
