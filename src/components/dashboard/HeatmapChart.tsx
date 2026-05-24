@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { heatmapData, products, stores } from '@/lib/mockData';
+import { fetchApi } from '@/lib/api';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 const getHeatmapColor = (value: number) => {
@@ -10,6 +11,28 @@ const getHeatmapColor = (value: number) => {
 };
 
 export const HeatmapChart = () => {
+const [apiProducts, setApiProducts] = useState<any[]>([]);
+  const [apiStores, setApiStores] = useState<any[]>([{id: 'all', name: 'All Stores'}]);
+  const [apiData, setApiData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const prods = await fetchApi('/data/products');
+        if (prods) setApiProducts(prods);
+
+        // Fetch actual heatmap layout from sales data
+        const heat = await fetchApi('/data/heatmap');
+        if (heat) {
+            setApiData(heat.data);
+            if (heat.stores) setApiStores(heat.stores);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadData();
+  }, []);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -27,7 +50,7 @@ export const HeatmapChart = () => {
           {/* Header */}
           <div className="grid grid-cols-6 gap-2 mb-2">
             <div className="text-xs text-muted-foreground font-medium"></div>
-            {stores.map((store) => (
+            {apiStores.map((store) => (
               <div key={store.id} className="text-xs text-muted-foreground font-medium text-center truncate">
                 {store.name.replace(' Store', '')}
               </div>
@@ -35,20 +58,20 @@ export const HeatmapChart = () => {
           </div>
 
           {/* Rows */}
-          {products.map((product, productIndex) => (
+          {apiProducts.map((product, productIndex) => (
             <motion.div
-              key={product.id}
+              key={product.product_id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: productIndex * 0.05 }}
               className="grid grid-cols-6 gap-2 mb-2"
             >
               <div className="text-xs text-muted-foreground font-medium flex items-center truncate pr-2">
-                {product.name}
+                {product.product_name}
               </div>
-              {stores.map((store) => {
+              {apiStores.map((store) => {
                 const data = heatmapData.find(
-                  (d) => d.product === product.name && d.store === store.name
+                  (d) => d.product === product.product_name && d.store === store.name
                 );
                 const value = data?.demand || 0;
                 return (
@@ -60,7 +83,7 @@ export const HeatmapChart = () => {
                       getHeatmapColor(value),
                       'text-primary-foreground'
                     )}
-                    title={`${product.name} at ${store.name}: ${value} units`}
+                    title={`${product.product_name} at ${store.name}: ${value} units`}
                   >
                     {value}
                   </motion.div>

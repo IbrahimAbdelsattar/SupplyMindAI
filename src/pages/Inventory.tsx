@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { AIChatbot } from '@/components/chatbot/AIChatbot';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -330,7 +330,7 @@ const Inventory = () => {
         </main>
       </div>
 
-      <AIChatbot />
+
     </div>
   );
 };
