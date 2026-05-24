@@ -16,7 +16,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .db import User, create_tables, get_db
+import sys
+import os
+# Add the project root to the python path to allow imports to resolve
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from backend.db import User, create_tables, get_db, SessionLocal
 
 
 # -----------------------------------------------------------------------------
@@ -343,10 +348,16 @@ def health() -> dict[str, Any]:
 
 @app.on_event("startup")
 def _startup() -> None:
+    import sys
+    import os
+    # Add the project root to the python path to allow imports to resolve
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+    from backend.db import User, create_tables, get_db, SessionLocal
+
     create_tables()
 
     # ensure a single demo user exists for quick start
-    from .db import SessionLocal
 
     db = SessionLocal()
     try:
