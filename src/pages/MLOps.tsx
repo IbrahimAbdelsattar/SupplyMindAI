@@ -14,7 +14,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { mlopsMetrics } from '@/lib/mockData';
+import { fetchApi } from '@/lib/api';
+import { useState, useEffect } from 'react';
 import { Activity, CheckCircle2, AlertTriangle, RefreshCw, Database, Cpu, Zap } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +23,27 @@ import { cn } from '@/lib/utils';
 
 const MLOps = () => {
   const { isAuthenticated } = useAuth();
+
+  const [metricsData, setMetricsData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetchApi('/mlops/metrics');
+        if (res) {
+          setMetricsData(res);
+        }
+      } catch (e) {
+        console.error("Failed to fetch MLOps metrics", e);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  if (!metricsData) {
+    return <div className="p-8">Loading MLOps metrics...</div>;
+  }
+
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -86,7 +108,7 @@ const MLOps = () => {
               <CardContent>
                 <div className="h-52 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={mlopsMetrics.modelAccuracy}>
+                    <LineChart data={metricsData.modelAccuracy}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
@@ -134,7 +156,7 @@ const MLOps = () => {
                   <CardDescription className="text-xs sm:text-sm">Feature distribution stability</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
-                  {mlopsMetrics.dataDrift.map((item, index) => (
+                  {metricsData.dataDrift.map((item, index) => (
                     <motion.div
                       key={item.feature}
                       initial={{ opacity: 0, x: -20 }}
@@ -185,7 +207,7 @@ const MLOps = () => {
                   <CardDescription className="text-xs sm:text-sm">Recent model updates and triggers</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
-                  {mlopsMetrics.retrainingHistory.map((item, index) => (
+                  {metricsData.retrainingHistory.map((item, index) => (
                     <motion.div
                       key={item.date}
                       initial={{ opacity: 0, x: -20 }}
@@ -229,9 +251,9 @@ const MLOps = () => {
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                   {[
-                    { label: 'CPU Usage', value: 42 },
-                    { label: 'Memory Usage', value: 68 },
-                    { label: 'GPU Utilization', value: 35 },
+                    { label: 'CPU Usage', value: metricsData.system.cpu },
+                    { label: 'Memory Usage', value: metricsData.system.memory },
+                    { label: 'GPU Utilization', value: metricsData.system.gpu },
                   ].map((resource) => (
                     <div key={resource.label} className="space-y-2">
                       <div className="flex items-center justify-between">

@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { alerts } from '@/lib/mockData';
+import { fetchApi } from '@/lib/api';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
@@ -28,8 +29,21 @@ const iconStyles = {
 
 export const AlertsPanel = () => {
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
+  const [apiAlerts, setApiAlerts] = useState<any[]>([]);
 
-  const visibleAlerts = alerts.filter((alert) => !dismissedAlerts.includes(alert.id));
+  useEffect(() => {
+    const loadAlerts = async () => {
+      try {
+        const data = await fetchApi('/alerts/active');
+        if (data) setApiAlerts(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadAlerts();
+  }, []);
+
+  const visibleAlerts = apiAlerts.filter((alert) => !dismissedAlerts.includes(alert.id));
 
   const dismissAlert = (id: number) => {
     setDismissedAlerts((prev) => [...prev, id]);
