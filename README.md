@@ -41,7 +41,10 @@
 <p align="center">
   <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
   <img src="https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis&logoColor=white"/>
-  <img src="https://img.shields.io/badge/OpenAI-LLM%20Powered-412991?style=for-the-badge&logo=openai&logoColor=white"/>
+<img src="https://img.shields.io/badge/OpenAI-LLM%20Powered-412991?style=for-the-badge&logo=openai&logoColor=white"/>
+  <img src="https://img.shields.io/badge/LangChain-Orchestration-1c3c3c?style=for-the-badge&logo=langchain&logoColor=white"/>
+  <img src="https://img.shields.io/badge/LangGraph-Agentic%20AI-5682A3?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/LangSmith-Observability-FFB347?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/License-Academic-lightgrey?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Status-Active%20Development-brightgreen?style=for-the-badge"/>
 </p>
@@ -143,12 +146,12 @@ Cost savings estimation<br/><br/>
 </td>
 <td align="center" width="33%">
 <br/>
-<b>🧠 AI Insights & XAI</b><br/><br/>
+<b>🧠 Agentic AI Insights</b><br/><br/>
+LangGraph Multi-Agent Workflows<br/>
 SHAP feature importance<br/>
-Demand factor breakdown<br/>
-Seasonal pattern detection<br/>
-Promotion impact analysis<br/>
-Actionable recommendations<br/><br/>
+Semantic Document RAG<br/>
+Structured Executive Narratives<br/>
+Agent Tool Calling<br/><br/>
 </td>
 </tr>
 <tr>
@@ -167,17 +170,17 @@ Configurable thresholds<br/><br/>
 Model performance tracking<br/>
 Automated retraining triggers<br/>
 Data drift monitoring<br/>
-Inference latency tracking<br/>
+LangSmith Workflow Tracing<br/>
 Model version control<br/><br/>
 </td>
 <td align="center" width="33%">
 <br/>
-<b>📊 Reporting & Exports</b><br/><br/>
-Weekly & monthly AI reports<br/>
-Executive summaries<br/>
-CSV / PDF exports<br/>
-Scheduled report delivery<br/>
-LLM-generated narratives<br/><br/>
+<b>📊 Enterprise CI/CD</b><br/><br/>
+Full Docker Compose Architecture<br/>
+GitHub Actions Workflows<br/>
+Nginx Reverse Proxy<br/>
+Seamless Local Deployment<br/>
+Scalable Design<br/><br/>
 </td>
 </tr>
 </table>
@@ -302,18 +305,16 @@ graph LR
 |-------|-----------|---------|
 | **Frontend** | React 18 + TypeScript + Vite | SPA Dashboard & UI |
 | **Styling** | Tailwind CSS + Shadcn/UI + Framer Motion | Design system & animations |
-| **Backend** | FastAPI + Python 3.10+ | REST API & business logic |
-| **Database** | PostgreSQL (Azure) | Persistent data store |
-| **Cache** | Redis | API response caching |
-| **ML Models** | XGBoost, PyTorch (LSTM/GRU/TFT) | Demand forecasting |
-| **AutoML** | Scikit-learn + SHAP | Feature selection & explainability |
-| **MLOps** | MLflow + Azure ML | Model registry & tracking |
-| **Vector DB** | ChromaDB / Azure AI Search | RAG knowledge base |
-| **LLM** | OpenAI / Azure OpenAI | Natural language insights |
-| **Cloud** | Microsoft Azure (AKS, Data Factory, Blob) | Infrastructure |
-| **CI/CD** | GitHub Actions + Azure DevOps | Automated deployment |
-| **Containers** | Docker + Kubernetes | Scalable deployment |
-| **Monitoring** | Azure Monitor + App Insights | Production observability |
+| **Backend** | FastAPI + Python 3.12 | REST API & business logic |
+| **Database** | PostgreSQL (Dockerized) | Persistent data store |
+| **Cache / Queue** | Redis | API response caching & sessions |
+| **ML Models** | XGBoost | Demand forecasting |
+| **AI Agents** | LangGraph + LangChain | Multi-agent orchestration |
+| **Observability** | LangSmith | AI prompt tracing & debugging |
+| **Vector DB** | ChromaDB | RAG knowledge base |
+| **LLM** | OpenAI / OpenRouter | Natural language reasoning |
+| **Containers** | Docker + Docker Compose | Scalable deployment |
+| **CI/CD** | GitHub Actions | Automated build & test pipeline |
 
 </div>
 
@@ -473,66 +474,36 @@ supplymind-ai/
 
 ## 🚀 Getting Started
 
-### Prerequisites
+We provide multiple ways to run SupplyMind AI: natively or via Docker.
 
-```bash
-node >= 18.0.0
-npm >= 9.0.0
-python >= 3.10
+### Option 1: Native Startup Script (Windows/Linux)
+Make sure you have Node (>=20) and Python (>=3.12) installed.
+
+1. Clone the repository
+2. Duplicate `.env.example` to `.env` and fill in your keys (especially `OPENROUTER_API_KEY`).
+3. Run the automated startup script:
+
+**Windows:**
+```bat
+start.bat
 ```
 
-### Frontend Setup
-
+**Linux/Mac:**
 ```bash
-# Clone the repository
-git clone https://github.com/IbrahimAbdelsattar/Demand-Forecasting-Inventory-Optimization-Engine.git
-cd Demand-Forecasting-Inventory-Optimization-Engine
-
-# Install dependencies
-npm install
-
-# Start development server (runs on :8080)
-npm run dev
+./start.sh
 ```
 
-### Backend Setup *(Planned)*
+### Option 2: Full Docker Architecture (Production-Ready)
+To spin up the entire isolated enterprise architecture (Postgres, Redis, FastAPI, React/Nginx):
 
 ```bash
-# Create Python virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install backend dependencies
-pip install -r backend/requirements.txt
-
-# Set up environment variables
+# Set up your .env file
 cp .env.example .env
-# Edit .env with your Azure & OpenAI credentials
 
-# Start FastAPI server
-uvicorn backend.main:app --reload --port 8000
+# Build and start all services in detached mode
+docker compose up -d --build
 ```
-
-### Environment Variables *(Planned)*
-
-```env
-# Azure
-AZURE_STORAGE_CONNECTION_STRING=...
-AZURE_ML_WORKSPACE_NAME=...
-
-# Database
-DATABASE_URL=postgresql://...
-
-# OpenAI / Azure OpenAI
-OPENAI_API_KEY=...
-AZURE_OPENAI_ENDPOINT=...
-
-# Security
-JWT_SECRET_KEY=...
-JWT_ALGORITHM=HS256
-```
-
----
+*Frontend runs on `:8080`, Backend runs on `:8000`.*
 
 ## 🗺️ Roadmap
 
