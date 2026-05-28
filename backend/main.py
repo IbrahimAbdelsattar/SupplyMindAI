@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .db import User, create_tables, get_db
+from db import User, create_tables, get_db
 
 
 # -----------------------------------------------------------------------------
