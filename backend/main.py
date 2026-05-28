@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import os
+import sys
+# Ensure we can import from backend.x
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -798,56 +802,47 @@ class InsightsGeneratePayload(BaseModel):
 @app.post("/api/v1/insights/generate")
 def insights_generate(payload: InsightsGeneratePayload, user: User = Depends(_get_current_user)):
     try:
-        rag = globals().get('RAG_SERVICE')
-        if rag is None:
-            raise Exception("RAG service is not initialized.")
+        from backend.agents.nodes import llm
+        from langchain_core.messages import SystemMessage, HumanMessage
+        from pydantic import BaseModel, Field
+        from typing import List
 
-        question = f"Analyze the recent forecasting, seasonality, and promotional trends for {payload.product_id}. Give me 4 actionable insights about this product. Format the response EXACTLY as valid JSON matching this schema: {{ 'insights': [ {{ 'title': 'string', 'description': 'string', 'impact': 'high|medium|low', 'direction': 'up|down|neutral', 'factor': 'string', 'confidence': number }} ], 'executive_summary': 'string', 'recommendations': ['string'] }}"
+        class InsightItem(BaseModel):
+            title: str = Field(description="A concise title for the insight")
+            description: str = Field(description="2-3 sentence explanation")
+            impact: str = Field(description="high, medium, or low")
+            direction: str = Field(description="up, down, or neutral")
+            factor: str = Field(description="The category name (e.g. Seasonality, Promotions)")
+            confidence: int = Field(description="Confidence score from 0 to 100")
 
-        result = rag.ask(question, payload.product_id)
-        ans = result["answer"]
+        class InsightsOutput(BaseModel):
+            insights: List[InsightItem]
+            executive_summary: str = Field(description="2-3 paragraph business summary")
+            recommendations: List[str] = Field(description="A list of actionable steps")
 
-        import json
-        import re
-        json_match = re.search(r'\{.*\}', ans, re.DOTALL)
-        if json_match:
-            try:
-                parsed = json.loads(json_match.group(0))
-                if "insights" in parsed and "executive_summary" in parsed:
-                    return parsed
-            except Exception as e:
-                pass
+        sys_msg = SystemMessage(content="You are SupplyMind AI, a senior supply chain intelligence analyst. Convert forecasting data and trends into clear, actionable business insights. ALWAYS respond strictly matching the requested JSON schema.")
+        user_msg = HumanMessage(content=f"Analyze the recent forecasting, seasonality, and promotional trends for {payload.product_id}. Give me 4 actionable insights about this product.")
 
-        return {
-            "insights": [
-                {
-                    "title": "Automated LLM Analysis",
-                    "description": ans[:200] + "...",
-                    "impact": "high",
-                    "direction": "neutral",
-                    "factor": "general",
-                    "confidence": 85
-                }
-            ],
-            "executive_summary": ans,
-            "recommendations": ["Review the details provided."]
-        }
+        structured_llm = llm.with_structured_output(InsightsOutput)
+        result = structured_llm.invoke([sys_msg, user_msg])
+
+        return result.model_dump()
+
     except Exception as e:
         print(f"Insights error: {e}")
-        # Return fallback mock so UI doesn't crash on 500 if RAG fails
         return {
             "insights": [
                 {
                     "title": "Fallback Analysis",
-                    "description": "The RAG service is currently unavailable or initializing. " + str(e),
+                    "description": "The AI insight generator encountered an error: " + str(e),
                     "impact": "low",
                     "direction": "neutral",
                     "factor": "system",
                     "confidence": 50
                 }
             ],
-            "executive_summary": "System is degraded.",
-            "recommendations": ["Try again later."]
+            "executive_summary": "System is currently unable to generate deep insights.",
+            "recommendations": ["Ensure ML models are fully loaded and API keys are valid."]
         }
 
 class ChatPayload(BaseModel):
@@ -858,28 +853,49 @@ class ChatPayload(BaseModel):
 @app.post("/api/v1/insights/chat")
 def insights_chat(payload: ChatPayload, user: User = Depends(_get_current_user)):
     try:
-        global RAG_SERVICE
-        if RAG_SERVICE is None:
-            raise Exception("RAG service is not initialized.")
+        from backend.agents.graph import app_graph
+        from langchain_core.messages import HumanMessage
 
-        result = RAG_SERVICE.ask(payload.message, payload.selected_sku)
+        initial_state = {
+            "messages": [HumanMessage(content=payload.message)],
+            "product_id": payload.selected_sku or "",
+            "current_intent": ""
+        }
+
+        result = app_graph.invoke(initial_state)
+        final_message = result['messages'][-1].content
 
         return {
-            "response": result["answer"],
-            "sources": result.get("sources", [])
+            "response": final_message,
+            "sources": []
         }
     except Exception as e:
         return {"response": f"I encountered an error while processing your request: {e}"}
 
+
+class ChatRequest(BaseModel):
+    question: str
+    selected_sku: Optional[str] = None
+
 @app.post("/api/v1/chat")
 def chat_endpoint(payload: ChatRequest):
     try:
-        global RAG_SERVICE
-        if RAG_SERVICE is None:
-            raise HTTPException(status_code=500, detail="RAG service not initialized")
+        from backend.agents.graph import app_graph
+        from langchain_core.messages import HumanMessage
 
-        result = RAG_SERVICE.ask(payload.question, payload.selected_sku)
-        return ChatResponse(**result)
+        initial_state = {
+            "messages": [HumanMessage(content=payload.question)],
+            "product_id": payload.selected_sku or "",
+            "current_intent": ""
+        }
+
+        result = app_graph.invoke(initial_state)
+        final_message = result['messages'][-1].content
+
+        return {"answer": final_message, "sources": []}
+    except Exception as exc:
+        print(f"Chat Graph Error: {exc}")
+        return {"answer": f"Error running LangGraph: {exc}", "sources": []}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
