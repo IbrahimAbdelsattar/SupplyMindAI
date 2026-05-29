@@ -431,6 +431,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.routers.knowledge import router as knowledge_router  # noqa: E402
+
+app.include_router(knowledge_router, prefix="/api/v1")
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
@@ -449,6 +453,16 @@ async def log_requests(request: Request, call_next):
 @app.get("/api/v1/health")
 def health() -> dict[str, Any]:
     data_ok = all((DATA_DIR / name).exists() for name in ["products.csv", "sales_daily.csv", "inventory.csv"])
+    try:
+        from backend.knowledge.client import is_supabase_available
+        from backend.knowledge.config import get_knowledge_settings
+
+        k_settings = get_knowledge_settings()
+        supabase_ok = is_supabase_available()
+    except Exception:
+        k_settings = None
+        supabase_ok = False
+
     return {
         "status": "ok",
         "time": _utc_now().isoformat(),
@@ -459,6 +473,9 @@ def health() -> dict[str, Any]:
             "rag_service": RAG_SERVICE is not None,
             "rag_loaded": bool(RAG_SERVICE and getattr(RAG_SERVICE, "is_initialized", True)),
             "openrouter_key": bool(os.getenv("OPENROUTER_API_KEY")),
+            "supabase_configured": bool(k_settings and k_settings.is_configured),
+            "supabase_connected": supabase_ok,
+            "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes"},
         },
     }
 
@@ -732,7 +749,30 @@ def forecast_predict(req: ForecastPredictRequest, user: User = Depends(_get_curr
         raise HTTPException(status_code=404, detail=f"Unknown product_id: {req.product_id}")
 
     series = _simple_forecast_series(req.product_id, req.horizon_days)
-    return ForecastPredictResponse(product_id=req.product_id, horizon_days=req.horizon_days, series=series)
+    resp = ForecastPredictResponse(product_id=req.product_id, horizon_days=req.horizon_days, series=series)
+
+    try:
+        from backend.knowledge.hooks import on_forecast_generated
+
+        summary_lines = [
+            f"Forecast for {req.product_id}, horizon {req.horizon_days} days.",
+            f"Points: {len(series)}.",
+        ]
+        if series:
+            summary_lines.append(
+                f"Sample: {series[0].date} forecast={series[0].forecast} "
+                f"(band {series[0].lower}-{series[0].upper})"
+            )
+        on_forecast_generated(
+            product_id=req.product_id,
+            horizon_days=req.horizon_days,
+            series_summary="\n".join(summary_lines),
+            user_id=str(user.id),
+        )
+    except Exception:
+        pass
+
+    return resp
 
 
 # -----------------------------------------------------------------------------
@@ -782,7 +822,22 @@ def inventory_optimize(limit: int = 10, user: User = Depends(_get_current_user))
     # prioritize high risk first
     risk_rank = {"high": 0, "medium": 1, "low": 2}
     recs.sort(key=lambda x: (risk_rank.get(x.riskLevel, 9), -x.costSavings))
-    return recs[: max(1, min(100, limit))]
+    out = recs[: max(1, min(100, limit))]
+
+    try:
+        from backend.knowledge.hooks import on_inventory_recommendations
+
+        lines = [f"Inventory optimization batch ({len(out)} SKUs):"]
+        for r in out[:10]:
+            lines.append(
+                f"- {r.product_id} {r.product_name}: stock={r.currentStock}, "
+                f"ROP={r.reorderPoint}, reorder={r.reorderQty}, risk={r.riskLevel}"
+            )
+        on_inventory_recommendations(recommendations_text="\n".join(lines), user_id=str(user.id))
+    except Exception:
+        pass
+
+    return out
 
 
 # -----------------------------------------------------------------------------
@@ -822,6 +877,17 @@ def reports_download(
         recs = inventory_optimize(limit=100, user=user)
         df = pd.DataFrame([r.model_dump() for r in recs])
         csv = df.to_csv(index=False)
+        try:
+            from backend.knowledge.hooks import on_report_generated
+
+            on_report_generated(
+                report_id=report_id,
+                title="Inventory Recommendations (CSV)",
+                content=csv[:8000],
+                user_id=str(user.id),
+            )
+        except Exception:
+            pass
         return Response(content=csv, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=inventory_recommendations.csv"})
 
     if report_id == "r_forecast":
@@ -856,6 +922,17 @@ def reports_download(
 
             df = pd.DataFrame(csv_data[:horizon_days])
             csv = df.to_csv(index=False)
+            try:
+                from backend.knowledge.hooks import on_report_generated
+
+                on_report_generated(
+                    report_id=report_id,
+                    title=f"Forecast Export {pid}",
+                    content=csv[:8000],
+                    user_id=str(user.id),
+                )
+            except Exception:
+                pass
             return Response(content=csv, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=forecast_export_{pid}.csv"})
         except Exception as e:
             print(f"Error in ML export predict, falling back to simple forecast: {e}")
@@ -942,7 +1019,7 @@ def mlops_metrics(user: User = Depends(_get_current_user)):
             "accuracy": round(base_accuracy + (0.5 - (i % 2)), 1)
         })
 
-    return {
+    payload = {
         "modelAccuracy": accuracy_trend,
         "dataDrift": [
             {"feature": "promotions_impact", "status": "healthy", "drift": 0.02},
@@ -959,6 +1036,16 @@ def mlops_metrics(user: User = Depends(_get_current_user)):
             "gpu": 25
         }
     }
+
+    try:
+        from backend.knowledge.hooks import on_mlops_snapshot
+
+        summary = f"MLOps metrics: accuracy trend {accuracy_trend}, drift {payload['dataDrift']}, retraining {payload['retrainingHistory']}"
+        on_mlops_snapshot(metrics_summary=summary[:4000], user_id=str(user.id))
+    except Exception:
+        pass
+
+    return payload
 
 
 class InsightsGeneratePayload(BaseModel):
@@ -991,21 +1078,8 @@ def insights_generate(payload: InsightsGeneratePayload, user: User = Depends(_ge
 
         structured_llm = llm.with_structured_output(InsightsOutput)
         result = structured_llm.invoke([sys_msg, user_msg])
-        dumped = result.model_dump()
 
-        # Index insight into Supabase knowledge layer
-        try:
-            from backend.knowledge.hooks import on_insight_generated
-            insight_text = dumped.get("executive_summary", "") + "\n" + str(dumped.get("insights", []))
-            on_insight_generated(
-                product_id=payload.product_id,
-                insight_text=insight_text[:4000],
-                user_id=str(user.id),
-            )
-        except Exception:
-            pass
-
-        return dumped
+        return result.model_dump()
 
     except Exception as e:
         print(f"Insights error: {e}")

@@ -5,6 +5,7 @@ import { DemandChart } from '@/components/dashboard/DemandChart';
 import { HeatmapChart } from '@/components/dashboard/HeatmapChart';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
+import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { TrendingUp, DollarSign, AlertTriangle, Package } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -87,6 +88,11 @@ const Dashboard = () => {
               delay={0.3}
             />
           </div>
+
+          <AISummaryCard
+            title="Executive AI Brief"
+            question="Summarize current supply chain risks, stock-out exposure, and top priorities from operational data and indexed knowledge."
+          />
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">

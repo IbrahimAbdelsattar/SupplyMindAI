@@ -4,7 +4,7 @@ import { MessageCircle, X, Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { apiFetch } from '@/lib/api';
+import { copilotChat } from '@/lib/knowledgeApi';
 import { chatResponses } from '@/lib/mockData';
 
 interface Message {
@@ -15,13 +15,13 @@ interface Message {
 }
 
 const quickQuestions = [
-  'Why did demand increase?',
-  'Which product has highest risk?',
-  'Explain inventory recommendation',
-  'How does this system work?',
+  'Why is stock-out risk increasing?',
+  'Which products need attention?',
+  'Explain forecast changes for this SKU',
+  'Show similar historical incidents',
 ];
 
-type ChatApiResponse = { answer: string; sources?: string[] };
+type ChatApiResponse = { answer: string; sources?: Array<{ title?: string }> };
 
 export const AIChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -74,15 +74,15 @@ export const AIChatbot = () => {
 
     let responseText: string;
     try {
-      const prefix =
-        mode === 'technical'
-          ? '[Technical mode] '
-          : '[Business mode] ';
-      const res = await apiFetch<ChatApiResponse>('/chat', {
-        method: 'POST',
-        body: JSON.stringify({ question: prefix + question }),
+      const res = await copilotChat({
+        message: question,
+        mode: mode === 'technical' ? 'technical' : 'business',
       });
-      responseText = res.answer || getMockResponse(question);
+      const sourcesNote =
+        res.sources?.length
+          ? `\n\nSources: ${res.sources.map((s) => s.title || 'doc').join(', ')}`
+          : '';
+      responseText = (res.answer || getMockResponse(question)) + sourcesNote;
     } catch {
       responseText = getMockResponse(question);
     }
@@ -136,8 +136,8 @@ export const AIChatbot = () => {
                   <Bot className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">AI Assistant</h3>
-                  <p className="text-xs text-muted-foreground">Powered by Supply Mind</p>
+                  <h3 className="font-semibold">SupplyMind Copilot</h3>
+                  <p className="text-xs text-muted-foreground">RAG + operational data</p>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>

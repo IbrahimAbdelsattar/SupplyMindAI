@@ -8,8 +8,23 @@ from backend.tools.forecasting_tools import generate_forecast
 from backend.tools.inventory_tools import analyze_inventory
 from backend.tools.rag_tools import query_inventory_knowledge
 from backend.tools.mlops_tools import get_mlops_metrics
+from backend.tools.knowledge_tools import (
+    search_forecast_knowledge,
+    search_inventory_knowledge,
+    search_insights_knowledge,
+    search_mlops_knowledge,
+)
 
-tools = [generate_forecast, analyze_inventory, query_inventory_knowledge, get_mlops_metrics]
+tools = [
+    generate_forecast,
+    analyze_inventory,
+    query_inventory_knowledge,
+    get_mlops_metrics,
+    search_forecast_knowledge,
+    search_inventory_knowledge,
+    search_insights_knowledge,
+    search_mlops_knowledge,
+]
 tool_node = ToolNode(tools)
 
 def router(state: AgentState):

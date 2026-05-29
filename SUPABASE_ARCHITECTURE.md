@@ -14,7 +14,7 @@ Supabase is the **AI intelligence layer** for SupplyMind. It does **not** replac
 Migration: `supabase/migrations/20260529000000_intelligence_layer.sql`
 
 | Table | Purpose |
-|-------|---------| 
+|-------|---------|
 | `documents` | Forecast summaries, reports, insights, MLOps events |
 | `embeddings` | Chunk vectors (`vector(384)`) linked to documents |
 | `conversations` | Copilot session messages |

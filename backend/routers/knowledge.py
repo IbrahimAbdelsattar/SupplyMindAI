@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field
 from backend.knowledge import copilot_chat, ingest_document, is_supabase_available, rag_query, semantic_search
 from backend.knowledge.config import get_knowledge_settings
 
+import backend.main
+
 router = APIRouter(tags=["knowledge"])
 
-
-import backend.main
 
 def _get_user(user: Any = Depends(backend.main._get_current_user)):
     return user
@@ -122,6 +122,7 @@ def copilot_chat_endpoint(payload: CopilotChatRequest, user: Any = Depends(_get_
         product_id=payload.product_id,
         mode=payload.mode,
     )
+<<<<<<< HEAD
 
 
 @router.post("/copilot/chat/stream")
@@ -142,3 +143,5 @@ async def copilot_chat_stream_endpoint(
         mode=payload.mode,
     )
     return StreamingResponse(generator, media_type="text/event-stream")
+=======
+>>>>>>> 4aa85a09232db90bda4ca97f2947aeed5a621c0c
