@@ -1,8 +1,2 @@
-fastapi
-uvicorn[standard]
-pydantic
-python-jose[cryptography]
-passlib[bcrypt]
-pandas
-python-multipart
-sqlalchemy
+# Install from repo root: pip install -r requirements.txt
+-r ../requirements.txt

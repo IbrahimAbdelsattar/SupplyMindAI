@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 
@@ -38,6 +39,9 @@ type InventoryRecommendation = {
 
 const Inventory = () => {
   const { isAuthenticated } = useAuth();
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const { data: inventoryRecommendations = [] } = useQuery({
     queryKey: ['inventory-optimize', 13],
@@ -48,6 +52,35 @@ const Inventory = () => {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || isChatLoading) return;
+
+    const question = chatInput.trim();
+    setChatMessages((prev) => [...prev, { role: 'user', content: question }]);
+    setChatInput('');
+    setIsChatLoading(true);
+
+    try {
+      const topRiskSku = inventoryRecommendations[0]?.product_id;
+      const res = await apiFetch<{ response: string }>('/insights/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message: question, selected_sku: topRiskSku }),
+      });
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: res.response }]);
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: err instanceof Error ? err.message : 'Unable to reach inventory assistant.',
+        },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
 
   const totalSavings = inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0);
 

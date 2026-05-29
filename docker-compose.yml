@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: supplymind
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: supplymind
+      POSTGRES_USER: ${POSTGRES_USER:-supplymind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-supplymind}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -36,10 +36,16 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://supplymind:password@postgres:5432/supplymind
+      - DATABASE_URL=${DATABASE_URL:-postgresql://supplymind:password@postgres:5432/supplymind}
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=dev-secret-change-me
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     depends_on:
       postgres:
         condition: service_healthy

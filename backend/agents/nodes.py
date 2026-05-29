@@ -7,11 +7,12 @@ from backend.tools.inventory_tools import analyze_inventory
 from backend.tools.rag_tools import query_inventory_knowledge
 from backend.tools.mlops_tools import get_mlops_metrics
 
+_openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
 llm = ChatOpenAI(
     model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
-    api_key=os.getenv("OPENROUTER_API_KEY", "dummy"),
-    base_url="https://openrouter.ai/api/v1" if "openrouter" in str(os.getenv("OPENROUTER_API_KEY", "")).lower() or os.getenv("OPENROUTER_API_KEY") else None,
-    temperature=0.2
+    api_key=_openrouter_key or "not-set",
+    base_url="https://openrouter.ai/api/v1" if _openrouter_key else None,
+    temperature=0.2,
 )
 
 forecasting_llm = llm.bind_tools([generate_forecast])

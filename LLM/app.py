@@ -3,9 +3,14 @@ from pydantic import BaseModel
 
 import json
 
-from context_builder import build_context
-from prompts import SYSTEM_PROMPT
-from llm_client import ask_gemini
+try:
+    from .context_builder import build_context
+    from .prompts import SYSTEM_PROMPT
+    from .llm_client import ask_gemini
+except ImportError:
+    from context_builder import build_context
+    from prompts import SYSTEM_PROMPT
+    from llm_client import ask_gemini
 
 # =====================================================
 # APP

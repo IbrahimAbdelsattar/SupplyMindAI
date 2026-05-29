@@ -3,9 +3,11 @@ uvicorn[standard]
 pydantic
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt<4.1
 pandas
 python-multipart
 sqlalchemy
+psycopg2-binary
 numpy
 xgboost
 scikit-learn
@@ -15,6 +17,9 @@ openai
 google-genai
 python-dotenv
 chromadb
-httpx
+httpx[http2]
 sentence-transformers
 requests
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+langgraph>=0.2.0

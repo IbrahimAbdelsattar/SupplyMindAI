@@ -14,16 +14,16 @@ tool_node = ToolNode(tools)
 
 def router(state: AgentState):
     intent = state.get("current_intent", "").lower()
-    if "forecasting" in intent:
+    if "forecast" in intent:
         return "forecasting"
-    elif "inventory" in intent:
+    if "inventory" in intent or "stock" in intent or "reorder" in intent:
         return "inventory"
-    elif "rag" in intent:
-        return "rag"
-    elif "mlops" in intent:
+    if "mlops" in intent or "drift" in intent or "model" in intent and "forecast" not in intent:
         return "mlops"
-    elif "finish" in intent:
+    if "finish" in intent:
         return END
+    if "rag" in intent or "document" in intent or "supplier" in intent:
+        return "rag"
     return "rag"
 
 workflow = StateGraph(AgentState)

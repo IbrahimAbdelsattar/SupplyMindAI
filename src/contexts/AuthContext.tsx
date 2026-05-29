@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { apiFetch, setToken, getToken } from '@/lib/api';
 
 interface User {
   id: string;
   name: string;
   email: string;
+  role?: string;
   avatar?: string;
 }
 
@@ -35,7 +36,7 @@ type LoginResponse = {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const res = await apiFetch<LoginResponse>('/auth/login', {
       method: 'POST',
       auth: false,
@@ -45,22 +46,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setToken(res.access_token);
     localStorage.setItem('supplymind_user', JSON.stringify(res.user));
     setUser(res.user);
-  };
+  }, []);
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = useCallback(async (name: string, email: string, password: string) => {
     await apiFetch<User>('/auth/register', {
       method: 'POST',
       auth: false,
       body: JSON.stringify({ name: name?.trim(), email: email?.trim(), password }),
     });
     await login(email, password);
-  };
+  }, [login]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     localStorage.removeItem('supplymind_user');
     setUser(null);
-  };
+  }, []);
 
   useEffect(() => {
     const token = getToken();
@@ -76,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = useMemo(
     () => ({ user, isAuthenticated: !!user, login, register, logout }),
-    [user]
+    [user, login, register, logout]
   );
 
   return (

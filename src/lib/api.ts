@@ -1,42 +1,56 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+type ApiFetchOptions = RequestInit & {
+  auth?: boolean;
+};
+
 export function getApiBaseUrl() {
-    return API_BASE;
+  return API_BASE;
 }
 
-export function setToken(token: string) {
+export function setToken(token: string | null) {
+  if (token) {
     localStorage.setItem('access_token', token);
+    return;
+  }
+
+  localStorage.removeItem('access_token');
 }
 
 export function getToken(): string | null {
-    return localStorage.getItem('access_token');
+  return localStorage.getItem('access_token');
 }
 
-export async function fetchApi(endpoint: string, options: RequestInit = {}) {
-    const token = getToken();
+export async function fetchApi(endpoint: string, options: ApiFetchOptions = {}) {
+  const { auth = true, headers: optionHeaders, ...fetchOptions } = options;
+  const token = getToken();
 
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...options.headers as Record<string, string>,
-    };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(optionHeaders as Record<string, string> | undefined),
+  };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+  if (auth && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers,
-    });
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...fetchOptions,
+    headers,
+  });
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `API error: ${response.status}`);
-    }
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `API error: ${response.status}`);
+  }
 
-    return response.json();
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
 }
 
-export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    return fetchApi(endpoint, options) as Promise<T>;
+export async function apiFetch<T>(endpoint: string, options: ApiFetchOptions = {}): Promise<T> {
+  return fetchApi(endpoint, options) as Promise<T>;
 }

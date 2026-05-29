@@ -3,6 +3,27 @@ import { fetchApi } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
+type Product = {
+  product_id: string;
+  product_name: string;
+};
+
+type Store = {
+  id: string;
+  name: string;
+};
+
+type HeatmapCell = {
+  product: string;
+  store: string;
+  demand: number;
+};
+
+type HeatmapResponse = {
+  stores: Store[];
+  data: HeatmapCell[];
+};
+
 const getHeatmapColor = (value: number) => {
   if (value < 80) return 'bg-primary/20';
   if (value < 120) return 'bg-primary/40';
@@ -11,21 +32,20 @@ const getHeatmapColor = (value: number) => {
 };
 
 export const HeatmapChart = () => {
-const [apiProducts, setApiProducts] = useState<any[]>([]);
-  const [apiStores, setApiStores] = useState<any[]>([{id: 'all', name: 'All Stores'}]);
-  const [apiData, setApiData] = useState<any[]>([]);
+  const [apiProducts, setApiProducts] = useState<Product[]>([]);
+  const [apiStores, setApiStores] = useState<Store[]>([{ id: 's1', name: 'Store 1' }]);
+  const [apiData, setApiData] = useState<HeatmapCell[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const prods = await fetchApi('/data/products');
+        const prods = await fetchApi('/data/products') as Product[];
         if (prods) setApiProducts(prods);
 
-        // Fetch actual heatmap layout from sales data
-        const heat = await fetchApi('/data/heatmap');
+        const heat = await fetchApi('/data/heatmap') as HeatmapResponse;
         if (heat) {
-            setApiData(heat.data);
-            if (heat.stores) setApiStores(heat.stores);
+          setApiData(heat.data);
+          if (heat.stores?.length) setApiStores(heat.stores);
         }
       } catch (err) {
         console.error(err);
@@ -48,7 +68,10 @@ const [apiProducts, setApiProducts] = useState<any[]>([]);
       <div className="overflow-x-auto">
         <div className="min-w-[500px]">
           {/* Header */}
-          <div className="grid grid-cols-6 gap-2 mb-2">
+          <div
+            className="grid gap-2 mb-2"
+            style={{ gridTemplateColumns: `minmax(140px, 1fr) repeat(${apiStores.length}, minmax(90px, 1fr))` }}
+          >
             <div className="text-xs text-muted-foreground font-medium"></div>
             {apiStores.map((store) => (
               <div key={store.id} className="text-xs text-muted-foreground font-medium text-center truncate">
@@ -64,13 +87,14 @@ const [apiProducts, setApiProducts] = useState<any[]>([]);
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: productIndex * 0.05 }}
-              className="grid grid-cols-6 gap-2 mb-2"
+              className="grid gap-2 mb-2"
+              style={{ gridTemplateColumns: `minmax(140px, 1fr) repeat(${apiStores.length}, minmax(90px, 1fr))` }}
             >
               <div className="text-xs text-muted-foreground font-medium flex items-center truncate pr-2">
                 {product.product_name}
               </div>
               {apiStores.map((store) => {
-                const data = heatmapData.find(
+                const data = apiData.find(
                   (d) => d.product === product.product_name && d.store === store.name
                 );
                 const value = data?.demand || 0;

@@ -15,7 +15,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-import { fetchApi } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useState, useEffect } from 'react';
 
 import { Activity, CheckCircle2, AlertTriangle, RefreshCw, Database, Cpu, Zap } from 'lucide-react';
@@ -23,33 +23,60 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
+type AccuracyPoint = {
+  date: string;
+  accuracy: number;
+};
+
+type DriftMetric = {
+  feature: string;
+  status: 'healthy' | 'warning';
+  drift: number;
+};
+
+type RetrainingEvent = {
+  date: string;
+  trigger: string;
+  status: string;
+  improvement: string;
+};
+
+type SystemMetrics = {
+  cpu: number;
+  memory: number;
+  gpu: number;
+};
+
+type MLOpsMetrics = {
+  modelAccuracy: AccuracyPoint[];
+  dataDrift: DriftMetric[];
+  retrainingHistory: RetrainingEvent[];
+  system: SystemMetrics;
+};
+
 const MLOps = () => {
   const { isAuthenticated } = useAuth();
-
-  const [metricsData, setMetricsData] = useState<any>(null);
+  const [metricsData, setMetricsData] = useState<MLOpsMetrics | null>(null);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const fetchMetrics = async () => {
       try {
-        const res = await fetchApi('/mlops/metrics');
-        if (res) {
-          setMetricsData(res);
-        }
+        const res = await apiFetch<MLOpsMetrics>('/mlops/metrics');
+        if (res) setMetricsData(res);
       } catch (e) {
-        console.error("Failed to fetch MLOps metrics", e);
+        console.error('Failed to fetch MLOps metrics', e);
       }
     };
-    fetchMetrics();
-  }, []);
-
-  if (!metricsData) {
-    return <div className="p-8">Loading MLOps metrics...</div>;
-  }
-
-
+    void fetchMetrics();
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!metricsData) {
+    return <div className="p-8">Loading MLOps metrics...</div>;
   }
 
   return (

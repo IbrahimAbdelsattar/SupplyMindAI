@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Response, status
@@ -35,6 +35,10 @@ load_dotenv(PROJECT_ROOT / ".env")
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
 JWT_ALG = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+VALID_ROLES = {"admin", "manager", "analyst", "viewer"}
+DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "analyst").strip().lower()
+if DEFAULT_USER_ROLE not in VALID_ROLES:
+    DEFAULT_USER_ROLE = "analyst"
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
@@ -63,8 +67,34 @@ def _utc_now() -> datetime:
 def _create_access_token(*, subject: str) -> str:
     now = _utc_now()
     exp = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": subject, "iat": now, "exp": exp}
+    payload = {"sub": subject, "iat": now, "exp": exp, "typ": "access", "jti": str(uuid.uuid4())}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+
+
+def _auth_error(detail: str = "Invalid token") -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _normalize_role(role: str | None) -> str:
+    normalized = (role or DEFAULT_USER_ROLE).strip().lower()
+    return normalized if normalized in VALID_ROLES else DEFAULT_USER_ROLE
+
+
+def _validate_password_for_registration(password: str) -> None:
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="Password must be 72 bytes or fewer")
+    if password.strip() != password:
+        raise HTTPException(status_code=400, detail="Password cannot start or end with whitespace")
+
+
+def _user_out(user: User) -> "UserOut":
+    return UserOut(id=user.id, name=user.name, email=user.email, role=_normalize_role(getattr(user, "role", None)))
 
 
 def _get_current_user(
@@ -73,15 +103,31 @@ def _get_current_user(
 ) -> User:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+        if payload.get("typ") != "access":
+            raise _auth_error()
         subject = payload.get("sub")
         if not subject:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise _auth_error()
         user = db.scalar(select(User).where(User.id == subject))
         if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise _auth_error("User not found")
+        if not getattr(user, "is_active", True):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
         return user
     except JWTError as e:
-        raise HTTPException(status_code=401, detail="Invalid token") from e
+        raise _auth_error() from e
+
+
+def _require_roles(*roles: str):
+    allowed = {_normalize_role(role) for role in roles}
+
+    def dependency(user: User = Depends(_get_current_user)) -> User:
+        user_role = _normalize_role(getattr(user, "role", None))
+        if user_role not in allowed:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+        return user
+
+    return dependency
 
 
 # -----------------------------------------------------------------------------
@@ -142,7 +188,13 @@ class UserOut(BaseModel):
     id: str
     name: str
     email: str
-    role: str = "analyst"
+    role: Literal["admin", "manager", "analyst", "viewer"] = "analyst"
+
+
+class UserAdminOut(UserOut):
+    is_active: bool
+    created_at: str
+    updated_at: Optional[str] = None
 
 
 class RegisterRequest(BaseModel):
@@ -159,7 +211,13 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    expires_in: int = ACCESS_TOKEN_EXPIRE_MINUTES * 60
     user: UserOut
+
+
+class UserUpdateRequest(BaseModel):
+    role: Optional[Literal["admin", "manager", "analyst", "viewer"]] = None
+    is_active: Optional[bool] = None
 
 
 class KPIResponse(BaseModel):
@@ -395,10 +453,23 @@ def _startup() -> None:
                     name="Demo User",
                     email=demo_email,
                     password_hash=_hash_password("demo"),
+                    role="admin",
+                    is_active=True,
                     created_at=_utc_now(),
                 )
             )
             db.commit()
+        else:
+            changed = False
+            if _normalize_role(getattr(existing, "role", None)) != "admin":
+                existing.role = "admin"
+                changed = True
+            if not getattr(existing, "is_active", True):
+                existing.is_active = True
+                changed = True
+            if changed:
+                existing.updated_at = _utc_now()
+                db.commit()
     finally:
         db.close()
 
@@ -411,8 +482,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
     email = req.email.strip().lower()
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Invalid email")
-    if len(req.password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    _validate_password_for_registration(req.password)
 
     existing = db.scalar(select(User).where(User.email == email))
     if existing is not None:
@@ -423,11 +493,14 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
         name=req.name.strip() or "User",
         email=email,
         password_hash=_hash_password(req.password),
+        role=DEFAULT_USER_ROLE,
+        is_active=True,
         created_at=_utc_now(),
     )
     db.add(user)
     db.commit()
-    return UserOut(id=user.id, name=user.name, email=user.email)
+    db.refresh(user)
+    return _user_out(user)
 
 
 @app.post("/api/v1/auth/login", response_model=LoginResponse)
@@ -436,17 +509,75 @@ def login(req: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
     user = db.scalar(select(User).where(User.email == email))
     if user is None or not _verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not getattr(user, "is_active", True):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
 
     token = _create_access_token(subject=user.id)
     return LoginResponse(
         access_token=token,
-        user=UserOut(id=user.id, name=user.name, email=user.email),
+        user=_user_out(user),
     )
 
 
 @app.get("/api/v1/auth/me", response_model=UserOut)
 def me(user: User = Depends(_get_current_user)) -> UserOut:
-    return UserOut(id=user.id, name=user.name, email=user.email)
+    return _user_out(user)
+
+
+@app.post("/api/v1/auth/refresh", response_model=LoginResponse)
+def refresh_token(user: User = Depends(_get_current_user)) -> LoginResponse:
+    return LoginResponse(access_token=_create_access_token(subject=user.id), user=_user_out(user))
+
+
+@app.get("/api/v1/auth/users", response_model=list[UserAdminOut])
+def list_users(user: User = Depends(_require_roles("admin")), db: Session = Depends(get_db)) -> list[UserAdminOut]:
+    users = db.scalars(select(User).order_by(User.created_at.desc())).all()
+    return [
+        UserAdminOut(
+            id=item.id,
+            name=item.name,
+            email=item.email,
+            role=_normalize_role(getattr(item, "role", None)),
+            is_active=bool(getattr(item, "is_active", True)),
+            created_at=item.created_at.isoformat() if item.created_at else "",
+            updated_at=item.updated_at.isoformat() if getattr(item, "updated_at", None) else None,
+        )
+        for item in users
+    ]
+
+
+@app.patch("/api/v1/auth/users/{user_id}", response_model=UserAdminOut)
+def update_user(
+    user_id: str,
+    req: UserUpdateRequest,
+    current_user: User = Depends(_require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> UserAdminOut:
+    target = db.scalar(select(User).where(User.id == user_id))
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target.id == current_user.id and req.is_active is False:
+        raise HTTPException(status_code=400, detail="You cannot disable your own account")
+
+    if req.role is not None:
+        target.role = _normalize_role(req.role)
+    if req.is_active is not None:
+        target.is_active = req.is_active
+    target.updated_at = _utc_now()
+
+    db.commit()
+    db.refresh(target)
+
+    return UserAdminOut(
+        id=target.id,
+        name=target.name,
+        email=target.email,
+        role=_normalize_role(getattr(target, "role", None)),
+        is_active=bool(getattr(target, "is_active", True)),
+        created_at=target.created_at.isoformat() if target.created_at else "",
+        updated_at=target.updated_at.isoformat() if getattr(target, "updated_at", None) else None,
+    )
 
 
 # -----------------------------------------------------------------------------

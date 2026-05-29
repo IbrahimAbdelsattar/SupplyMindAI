@@ -27,14 +27,25 @@ const iconStyles = {
   success: 'text-success',
 };
 
+type AlertType = keyof typeof alertIcons;
+
+type AlertItem = {
+  id: number;
+  type: AlertType;
+  title: string;
+  message: string;
+  product: string;
+  time: string;
+};
+
 export const AlertsPanel = () => {
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
-  const [apiAlerts, setApiAlerts] = useState<any[]>([]);
+  const [apiAlerts, setApiAlerts] = useState<AlertItem[]>([]);
 
   useEffect(() => {
     const loadAlerts = async () => {
       try {
-        const data = await fetchApi('/alerts/active');
+        const data = await fetchApi('/alerts/active') as AlertItem[];
         if (data) setApiAlerts(data);
       } catch (err) {
         console.error(err);
@@ -68,7 +79,7 @@ export const AlertsPanel = () => {
 
       <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
         {visibleAlerts.map((alert, index) => {
-          const Icon = alertIcons[alert.type as keyof typeof alertIcons];
+          const Icon = alertIcons[alert.type];
           return (
             <motion.div
               key={alert.id}
@@ -77,13 +88,13 @@ export const AlertsPanel = () => {
               transition={{ duration: 0.3, delay: index * 0.1 }}
               className={cn(
                 'flex items-start gap-3 p-4 rounded-xl border',
-                alertStyles[alert.type as keyof typeof alertStyles]
+                alertStyles[alert.type]
               )}
             >
               <Icon
                 className={cn(
                   'w-5 h-5 flex-shrink-0 mt-0.5',
-                  iconStyles[alert.type as keyof typeof iconStyles]
+                  iconStyles[alert.type]
                 )}
               />
               <div className="flex-1 min-w-0">

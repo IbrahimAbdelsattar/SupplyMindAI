@@ -4,6 +4,7 @@ import { MessageCircle, X, Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { apiFetch } from '@/lib/api';
 import { chatResponses } from '@/lib/mockData';
 
 interface Message {
@@ -20,13 +21,16 @@ const quickQuestions = [
   'How does this system work?',
 ];
 
+type ChatApiResponse = { answer: string; sources?: string[] };
+
 export const AIChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
       role: 'assistant',
-      content: "Hello! I'm your AI assistant for demand forecasting and inventory optimization. How can I help you today?",
+      content:
+        "Hello! I'm your AI assistant for demand forecasting and inventory optimization. How can I help you today?",
       timestamp: new Date(),
     },
   ]);
@@ -43,7 +47,7 @@ export const AIChatbot = () => {
     scrollToBottom();
   }, [messages]);
 
-  const getResponse = (query: string): string => {
+  const getMockResponse = (query: string): string => {
     const lowerQuery = query.toLowerCase();
     for (const [key, value] of Object.entries(chatResponses)) {
       if (key !== 'default' && lowerQuery.includes(key)) {
@@ -56,10 +60,11 @@ export const AIChatbot = () => {
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    const question = input.trim();
     const userMessage: Message = {
       id: messages.length,
       role: 'user',
-      content: input,
+      content: question,
       timestamp: new Date(),
     };
 
@@ -67,13 +72,25 @@ export const AIChatbot = () => {
     setInput('');
     setIsTyping(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
+    let responseText: string;
+    try {
+      const prefix =
+        mode === 'technical'
+          ? '[Technical mode] '
+          : '[Business mode] ';
+      const res = await apiFetch<ChatApiResponse>('/chat', {
+        method: 'POST',
+        body: JSON.stringify({ question: prefix + question }),
+      });
+      responseText = res.answer || getMockResponse(question);
+    } catch {
+      responseText = getMockResponse(question);
+    }
 
-    const response = getResponse(input);
     const assistantMessage: Message = {
       id: messages.length + 1,
       role: 'assistant',
-      content: response,
+      content: responseText,
       timestamp: new Date(),
     };
 
@@ -87,7 +104,6 @@ export const AIChatbot = () => {
 
   return (
     <>
-      {/* Chat Button */}
       <motion.button
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
@@ -105,7 +121,6 @@ export const AIChatbot = () => {
         </span>
       </motion.button>
 
-      {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -115,7 +130,6 @@ export const AIChatbot = () => {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-96 sm:h-[600px] bg-card border-0 sm:border sm:border-border sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50"
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-card">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -131,7 +145,6 @@ export const AIChatbot = () => {
               </Button>
             </div>
 
-            {/* Mode Toggle */}
             <div className="flex p-2 border-b border-border bg-muted/50">
               <button
                 onClick={() => setMode('business')}
@@ -157,17 +170,13 @@ export const AIChatbot = () => {
               </button>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map((message) => (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    'flex gap-3',
-                    message.role === 'user' && 'flex-row-reverse'
-                  )}
+                  className={cn('flex gap-3', message.role === 'user' && 'flex-row-reverse')}
                 >
                   <div
                     className={cn(
@@ -197,19 +206,24 @@ export const AIChatbot = () => {
               ))}
 
               {isTyping && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex gap-3"
-                >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
                   <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
                     <Bot className="w-4 h-4 text-accent" />
                   </div>
                   <div className="bg-muted p-3 rounded-2xl rounded-tl-sm">
                     <div className="flex gap-1">
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span
+                        className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
+                        style={{ animationDelay: '0ms' }}
+                      />
+                      <span
+                        className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
+                        style={{ animationDelay: '150ms' }}
+                      />
+                      <span
+                        className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
+                        style={{ animationDelay: '300ms' }}
+                      />
                     </div>
                   </div>
                 </motion.div>
@@ -218,7 +232,6 @@ export const AIChatbot = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Questions */}
             {messages.length <= 2 && (
               <div className="px-4 pb-2">
                 <p className="text-xs text-muted-foreground mb-2">Quick questions:</p>
@@ -236,12 +249,11 @@ export const AIChatbot = () => {
               </div>
             )}
 
-            {/* Input */}
             <div className="p-4 border-t border-border bg-card safe-area-bottom">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleSend();
+                  void handleSend();
                 }}
                 className="flex gap-2"
               >
