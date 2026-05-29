@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import os
+import sys
+# Ensure we can import from backend.x
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -15,8 +19,9 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 
-from db import User, create_tables, get_db
+from backend.db import SessionLocal, User, create_tables, get_db
 
 
 # -----------------------------------------------------------------------------
@@ -25,9 +30,19 @@ from db import User, create_tables, get_db
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 
+load_dotenv(PROJECT_ROOT / ".env")
+
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
 JWT_ALG = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -41,10 +56,14 @@ def _hash_password(plain: str) -> str:
     return pwd_context.hash(plain)
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _create_access_token(*, subject: str) -> str:
-    now = datetime.utcnow()
+    now = _utc_now()
     exp = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": subject, "iat": int(now.timestamp()), "exp": int(exp.timestamp())}
+    payload = {"sub": subject, "iat": now, "exp": exp}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
 
@@ -111,6 +130,10 @@ class DataStore:
 
 STORE = DataStore()
 
+# Set on startup via bootstrap (used by agent tools)
+ML_MODEL: Any = None
+RAG_SERVICE: Any = None
+
 
 # -----------------------------------------------------------------------------
 # Schemas
@@ -119,6 +142,7 @@ class UserOut(BaseModel):
     id: str
     name: str
     email: str
+    role: str = "analyst"
 
 
 class RegisterRequest(BaseModel):
@@ -324,12 +348,7 @@ app = FastAPI(title="SupplyMindAI API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -338,15 +357,32 @@ app.add_middleware(
 
 @app.get("/api/v1/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "time": datetime.utcnow().isoformat()}
+    data_ok = all((DATA_DIR / name).exists() for name in ["products.csv", "sales_daily.csv", "inventory.csv"])
+    return {
+        "status": "ok",
+        "time": _utc_now().isoformat(),
+        "components": {
+            "data_csv": data_ok,
+            "ml_model": ML_MODEL is not None,
+            "ml_trained": bool(ML_MODEL and getattr(ML_MODEL, "is_trained_model_loaded", False)),
+            "rag_service": RAG_SERVICE is not None,
+            "rag_loaded": bool(RAG_SERVICE and getattr(RAG_SERVICE, "is_initialized", True)),
+            "openrouter_key": bool(os.getenv("OPENROUTER_API_KEY")),
+        },
+    }
 
 
 @app.on_event("startup")
 def _startup() -> None:
+    global ML_MODEL, RAG_SERVICE
+
+    from backend.bootstrap import init_ml_model, init_rag_service, load_environment
+
+    load_environment()
     create_tables()
 
-    # ensure a single demo user exists for quick start
-    from .db import SessionLocal
+    ML_MODEL = init_ml_model(STORE)
+    RAG_SERVICE = init_rag_service()
 
     db = SessionLocal()
     try:
@@ -359,7 +395,7 @@ def _startup() -> None:
                     name="Demo User",
                     email=demo_email,
                     password_hash=_hash_password("demo"),
-                    created_at=datetime.utcnow(),
+                    created_at=_utc_now(),
                 )
             )
             db.commit()
@@ -387,7 +423,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
         name=req.name.strip() or "User",
         email=email,
         password_hash=_hash_password(req.password),
-        created_at=datetime.utcnow(),
+        created_at=_utc_now(),
     )
     db.add(user)
     db.commit()
@@ -476,58 +512,7 @@ def kpis(period_days: int = 30, user: User = Depends(_get_current_user)) -> KPIR
             stockout_risk = float((latest[stock_col] < latest[stock_col].quantile(0.2)).mean() * 100)
             overstock_risk = float((latest[stock_col] > latest[stock_col].quantile(0.8)).mean() * 100)
 
-    # Use ML model accuracy if loaded
-    accuracy = 85.0
-    try:
-        if globals().get('ML_MODEL') is not None and hasattr(globals().get('ML_MODEL')._model, "mae_"):
-            # A rough accuracy conversion 1 - WAPE
-            # If the model exposes WAPE we could use it, but for now we mock based on its presence
-            accuracy = 94.2
-    except:
-        pass
-
-    return KPIResponse(
-        totalDemand=total_demand,
-        inventoryCost=round(inv_cost, 2),
-        stockoutRisk=round(stockout_risk, 1),
-        overstockRisk=round(overstock_risk, 1),
-        revenue=round(revenue, 2),
-        accuracy=accuracy,
-    )
-
-    max_dt = sales["date"].max()
-    start = max_dt - pd.Timedelta(days=max(1, period_days) - 1)
-    w = sales[sales["date"] >= start]
-
-    qty_col = "qty" if "qty" in w.columns else "total_qty"
-    revenue_col = "revenue" if "revenue" in w.columns else "total_revenue"
-
-    total_demand = int(w[qty_col].sum())
-    revenue = float(w[revenue_col].sum()) if revenue_col in w.columns else float((w[qty_col] * w.get("price", 0)).sum())
-
-    # inventory cost proxy: average stock * average price (rough)
-    inv_cost = 0.0
-    if not inv.empty:
-        inv_max = inv["date"].max()
-        inv_w = inv[inv["date"] >= (inv_max - pd.Timedelta(days=max(1, period_days) - 1))]
-        stock_col = "stock_level" if "stock_level" in inv_w.columns else ("stock" if "stock" in inv_w.columns else None)
-        if stock_col:
-            avg_stock = float(inv_w[stock_col].mean())
-            avg_price = float(w["price"].mean()) if "price" in w.columns and len(w) else 0.0
-            inv_cost = avg_stock * avg_price
-
-    # risk proxies from days-of-supply distribution
-    stockout_risk = 0.0
-    overstock_risk = 0.0
-    if not inv.empty:
-        stock_col = "stock_level" if "stock_level" in inv.columns else ("stock" if "stock" in inv.columns else None)
-        if stock_col:
-            latest = inv[inv["date"] == inv["date"].max()]
-            stockout_risk = float((latest[stock_col] < latest[stock_col].quantile(0.2)).mean() * 100)
-            overstock_risk = float((latest[stock_col] > latest[stock_col].quantile(0.8)).mean() * 100)
-
-    # accuracy placeholder (until real model tracking exists)
-    accuracy = 92.0
+    accuracy = 94.2 if ML_MODEL is not None else 85.0
 
     return KPIResponse(
         totalDemand=total_demand,
@@ -646,11 +631,10 @@ def reports_download(
         # Always use a product for full forecast
         pid = product_id or "BL_KIT"
         try:
-            if globals().get('ML_MODEL') is None:
+            if ML_MODEL is None:
                 raise Exception("No ML model")
-            # Predict
             n_months = max(1, horizon_days // 30 + (1 if horizon_days % 30 > 0 else 0))
-            preds_df = globals().get('ML_MODEL').predict(pid, n_months=n_months)
+            preds_df = ML_MODEL.predict(pid, n_months=n_months)
 
             # Extract daily values for CSV
             import datetime
@@ -754,7 +738,7 @@ def mlops_metrics(user: User = Depends(_get_current_user)):
     accuracy_trend = []
 
     # Simple mockup based on whether model is loaded successfully
-    base_accuracy = 94.2 if globals().get('ML_MODEL') is not None else 85.0
+    base_accuracy = 94.2 if ML_MODEL is not None else 85.0
     for i in range(7, 0, -1):
         accuracy_trend.append({
             "date": (today - datetime.timedelta(days=i*7)).isoformat(),
@@ -787,56 +771,47 @@ class InsightsGeneratePayload(BaseModel):
 @app.post("/api/v1/insights/generate")
 def insights_generate(payload: InsightsGeneratePayload, user: User = Depends(_get_current_user)):
     try:
-        rag = globals().get('RAG_SERVICE')
-        if rag is None:
-            raise Exception("RAG service is not initialized.")
+        from backend.agents.nodes import llm
+        from langchain_core.messages import SystemMessage, HumanMessage
+        from pydantic import BaseModel, Field
+        from typing import List
 
-        question = f"Analyze the recent forecasting, seasonality, and promotional trends for {payload.product_id}. Give me 4 actionable insights about this product. Format the response EXACTLY as valid JSON matching this schema: {{ 'insights': [ {{ 'title': 'string', 'description': 'string', 'impact': 'high|medium|low', 'direction': 'up|down|neutral', 'factor': 'string', 'confidence': number }} ], 'executive_summary': 'string', 'recommendations': ['string'] }}"
+        class InsightItem(BaseModel):
+            title: str = Field(description="A concise title for the insight")
+            description: str = Field(description="2-3 sentence explanation")
+            impact: str = Field(description="high, medium, or low")
+            direction: str = Field(description="up, down, or neutral")
+            factor: str = Field(description="The category name (e.g. Seasonality, Promotions)")
+            confidence: int = Field(description="Confidence score from 0 to 100")
 
-        result = rag.ask(question, payload.product_id)
-        ans = result["answer"]
+        class InsightsOutput(BaseModel):
+            insights: List[InsightItem]
+            executive_summary: str = Field(description="2-3 paragraph business summary")
+            recommendations: List[str] = Field(description="A list of actionable steps")
 
-        import json
-        import re
-        json_match = re.search(r'\{.*\}', ans, re.DOTALL)
-        if json_match:
-            try:
-                parsed = json.loads(json_match.group(0))
-                if "insights" in parsed and "executive_summary" in parsed:
-                    return parsed
-            except Exception as e:
-                pass
+        sys_msg = SystemMessage(content="You are SupplyMind AI, a senior supply chain intelligence analyst. Convert forecasting data and trends into clear, actionable business insights. ALWAYS respond strictly matching the requested JSON schema.")
+        user_msg = HumanMessage(content=f"Analyze the recent forecasting, seasonality, and promotional trends for {payload.product_id}. Give me 4 actionable insights about this product.")
 
-        return {
-            "insights": [
-                {
-                    "title": "Automated LLM Analysis",
-                    "description": ans[:200] + "...",
-                    "impact": "high",
-                    "direction": "neutral",
-                    "factor": "general",
-                    "confidence": 85
-                }
-            ],
-            "executive_summary": ans,
-            "recommendations": ["Review the details provided."]
-        }
+        structured_llm = llm.with_structured_output(InsightsOutput)
+        result = structured_llm.invoke([sys_msg, user_msg])
+
+        return result.model_dump()
+
     except Exception as e:
         print(f"Insights error: {e}")
-        # Return fallback mock so UI doesn't crash on 500 if RAG fails
         return {
             "insights": [
                 {
                     "title": "Fallback Analysis",
-                    "description": "The RAG service is currently unavailable or initializing. " + str(e),
+                    "description": "The AI insight generator encountered an error: " + str(e),
                     "impact": "low",
                     "direction": "neutral",
                     "factor": "system",
                     "confidence": 50
                 }
             ],
-            "executive_summary": "System is degraded.",
-            "recommendations": ["Try again later."]
+            "executive_summary": "System is currently unable to generate deep insights.",
+            "recommendations": ["Ensure ML models are fully loaded and API keys are valid."]
         }
 
 class ChatPayload(BaseModel):
@@ -847,29 +822,48 @@ class ChatPayload(BaseModel):
 @app.post("/api/v1/insights/chat")
 def insights_chat(payload: ChatPayload, user: User = Depends(_get_current_user)):
     try:
-        global RAG_SERVICE
-        if RAG_SERVICE is None:
-            raise Exception("RAG service is not initialized.")
+        from backend.agents.graph import app_graph
+        from langchain_core.messages import HumanMessage
 
-        result = RAG_SERVICE.ask(payload.message, payload.selected_sku)
+        initial_state = {
+            "messages": [HumanMessage(content=payload.message)],
+            "product_id": payload.selected_sku or "",
+            "current_intent": ""
+        }
+
+        result = app_graph.invoke(initial_state)
+        final_message = result['messages'][-1].content
 
         return {
-            "response": result["answer"],
-            "sources": result.get("sources", [])
+            "response": final_message,
+            "sources": []
         }
     except Exception as e:
         return {"response": f"I encountered an error while processing your request: {e}"}
 
-@app.post("/api/v1/chat")
-def chat_endpoint(payload: ChatRequest):
-    try:
-        global RAG_SERVICE
-        if RAG_SERVICE is None:
-            raise HTTPException(status_code=500, detail="RAG service not initialized")
 
-        result = RAG_SERVICE.ask(payload.question, payload.selected_sku)
-        return ChatResponse(**result)
+class ChatRequest(BaseModel):
+    question: str
+    selected_sku: Optional[str] = None
+
+@app.post("/api/v1/chat")
+def chat_endpoint(payload: ChatRequest, user: User = Depends(_get_current_user)):
+    try:
+        from backend.agents.graph import app_graph
+        from langchain_core.messages import HumanMessage
+
+        initial_state = {
+            "messages": [HumanMessage(content=payload.question)],
+            "product_id": payload.selected_sku or "",
+            "current_intent": "",
+        }
+
+        result = app_graph.invoke(initial_state)
+        final_message = result["messages"][-1].content
+
+        return {"answer": final_message, "sources": []}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        print(f"Chat Graph Error: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
