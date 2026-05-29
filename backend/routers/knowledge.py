@@ -122,7 +122,6 @@ def copilot_chat_endpoint(payload: CopilotChatRequest, user: Any = Depends(_get_
         product_id=payload.product_id,
         mode=payload.mode,
     )
-<<<<<<< HEAD
 
 
 @router.post("/copilot/chat/stream")
@@ -143,5 +142,3 @@ async def copilot_chat_stream_endpoint(
         mode=payload.mode,
     )
     return StreamingResponse(generator, media_type="text/event-stream")
-=======
->>>>>>> 4aa85a09232db90bda4ca97f2947aeed5a621c0c
