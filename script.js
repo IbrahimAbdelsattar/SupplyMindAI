@@ -1,5 +1,5 @@
 /* BLUEPRINT-JS-START */
-// 🚀 Auto-generado para sql: 5/30/2026, 2:07:11 AM
+// 🚀 Auto-generado para sql: 5/30/2026, 2:09:23 AM
 
 'use strict';
 
