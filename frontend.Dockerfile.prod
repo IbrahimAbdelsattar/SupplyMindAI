@@ -1,0 +1,61 @@
+# ============================================================================
+# Frontend Dockerfile - Production-Ready
+# ============================================================================
+# Multi-stage build for optimized production image
+
+# ── Stage 1: Builder ─────────────────────────────────────────────────────
+FROM node:20-alpine as builder
+
+ENV NODE_ENV=production
+
+WORKDIR /build
+
+# Copy package files
+COPY package*.json ./
+COPY .eslintrc.js ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source files
+COPY . .
+
+# Build application
+RUN npm run build
+
+# ── Stage 2: Runtime ────────────────────────────────────────────────────
+FROM nginx:alpine
+
+# Set environment variables
+ENV NGINX_ENTRYPOINT_QUIET_LOGS=1
+
+# Create non-root nginx user
+RUN addgroup -S www-data && adduser -S www-data -G www-data
+
+# Remove default nginx config
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Create necessary directories
+RUN mkdir -p /app/dist && chown -R www-data:www-data /app
+
+# Copy built assets from builder
+COPY --from=builder --chown=www-data:www-data /build/dist /app/dist
+
+# Copy nginx configuration
+COPY --chown=www-data:www-data nginx.conf /etc/nginx/nginx.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost/health || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Drop capabilities for security
+RUN setcap -r /usr/sbin/nginx 2>/dev/null || true
+
+# Run as non-root user
+USER www-data
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
