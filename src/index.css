@@ -166,4 +166,48 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* 3D Perspective and Tilt utilities */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  /* Glowing sweep animation */
+  .sweep-glow {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sweep-glow::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      transparent,
+      hsl(var(--primary) / 0.3),
+      hsl(var(--accent) / 0.3),
+      transparent 30%
+    );
+    animation: rotate-sweep 6s linear infinite;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .sweep-glow:hover::after {
+    opacity: 1;
+  }
+
+  @keyframes rotate-sweep {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
 }

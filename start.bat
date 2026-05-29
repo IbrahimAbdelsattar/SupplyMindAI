@@ -22,10 +22,10 @@ if not exist ".env" (
 
 REM --- Frontend API URL for Vite ---
 if not exist ".env.local" (
-  echo VITE_API_URL=http://localhost:8000/api/v1> ".env.local"
+  echo VITE_API_URL=http://localhost:8081/api/v1> ".env.local"
 ) else (
   findstr /C:"VITE_API_URL" ".env.local" >nul 2>&1
-  if errorlevel 1 echo VITE_API_URL=http://localhost:8000/api/v1>> ".env.local"
+  if errorlevel 1 echo VITE_API_URL=http://localhost:8081/api/v1>> ".env.local"
 )
 
 REM --- Data CSV check ---
@@ -51,15 +51,16 @@ if not exist ".venv\Scripts\python.exe" (
     pause
     exit /b 1
   )
-)
-
-echo Installing Python dependencies...
-call ".venv\Scripts\python.exe" -m pip install -q --upgrade pip
-call ".venv\Scripts\python.exe" -m pip install -q -r requirements.txt
-if errorlevel 1 (
-  echo ERROR: pip install failed.
-  pause
-  exit /b 1
+  echo Installing Python dependencies...
+  call ".venv\Scripts\python.exe" -m pip install -q --upgrade pip
+  call ".venv\Scripts\python.exe" -m pip install -q -r requirements.txt
+  if errorlevel 1 (
+    echo ERROR: pip install failed.
+    pause
+    exit /b 1
+  )
+) else (
+  echo Python virtual environment found. Skipping pip install.
 )
 
 REM --- Node dependencies ---
@@ -82,14 +83,14 @@ if not exist "node_modules" (
 
 REM --- Start backend ---
 echo.
-echo Starting FastAPI backend on http://127.0.0.1:8000 ...
-start "SupplyMind Backend" cmd /k "cd /d "%~dp0" && .venv\Scripts\python.exe -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000"
+echo Starting FastAPI backend on http://127.0.0.1:8081 ...
+start "SupplyMind Backend" cmd /k "cd /d "%~dp0" && .venv\Scripts\python.exe -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8081"
 
 REM --- Wait for backend health ---
 echo Waiting for backend to become ready...
 set /a RETRIES=0
 :wait_backend
-powershell -NoProfile -Command "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/api/v1/health' -UseBasicParsing -TimeoutSec 3; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8081/api/v1/health' -UseBasicParsing -TimeoutSec 3; exit 0 } catch { exit 1 }" >nul 2>&1
 if not errorlevel 1 goto backend_ready
 set /a RETRIES+=1
 if !RETRIES! GEQ 30 (
@@ -111,8 +112,8 @@ echo ==============================================
 echo   SupplyMind AI is running
 echo ==============================================
 echo   Frontend:  http://127.0.0.1:8080
-echo   Backend:   http://127.0.0.1:8000
-echo   API docs:  http://127.0.0.1:8000/docs
+echo   Backend:   http://127.0.0.1:8081
+echo   API docs:  http://127.0.0.1:8081/docs
 echo   Demo login: demo@supplymind.ai / demo
 echo.
 echo   Optional: set OPENROUTER_API_KEY in .env for AI chat and insights.

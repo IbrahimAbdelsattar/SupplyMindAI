@@ -7,11 +7,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import uuid
 from datetime import date, datetime, timedelta, timezone
+import time
+import logging
 from pathlib import Path
 from typing import Any, Literal, Optional
 
 import pandas as pd
-from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Response, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -48,7 +50,16 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("backend")
+
+# Use pbkdf2_sha256 as primary for speed on Windows (native C via hashlib), keep bcrypt for backwards compatibility
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
@@ -404,6 +415,14 @@ def _simple_forecast_series(product_id: str, horizon_days: int) -> list[Forecast
 # -----------------------------------------------------------------------------
 app = FastAPI(title="SupplyMindAI API", version="0.1.0")
 
+# Mount knowledge / RAG / copilot router
+try:
+    from backend.routers.knowledge import router as knowledge_router
+    app.include_router(knowledge_router, prefix="/api/v1")
+    logger.info("Knowledge router mounted at /api/v1")
+except Exception as exc:
+    logger.warning("Knowledge router not loaded (Supabase layer inactive): %s", exc)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -411,6 +430,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    logger.info(
+        "Request: %s %s | Status: %s | Duration: %.4fs",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration
+    )
+    return response
 
 
 @app.get("/api/v1/health")
@@ -479,20 +512,30 @@ def _startup() -> None:
 # -----------------------------------------------------------------------------
 @app.post("/api/v1/auth/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
+    t0 = time.time()
     email = req.email.strip().lower()
+    logger.info("Register request received for email: %s", email)
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Invalid email")
     _validate_password_for_registration(req.password)
 
+    t1 = time.time()
     existing = db.scalar(select(User).where(User.email == email))
+    t2 = time.time()
+    logger.info("Database check completed in %.4f seconds", t2 - t1)
     if existing is not None:
         raise HTTPException(status_code=409, detail="Email already registered")
+
+    t3 = time.time()
+    password_hash = _hash_password(req.password)
+    t4 = time.time()
+    logger.info("Password hashing completed in %.4f seconds", t4 - t3)
 
     user = User(
         id=str(uuid.uuid4()),
         name=req.name.strip() or "User",
         email=email,
-        password_hash=_hash_password(req.password),
+        password_hash=password_hash,
         role=DEFAULT_USER_ROLE,
         is_active=True,
         created_at=_utc_now(),
@@ -500,19 +543,42 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
     db.add(user)
     db.commit()
     db.refresh(user)
+    t5 = time.time()
+    logger.info("User created and saved to DB in %.4f seconds", t5 - t4)
+    logger.info("Total registration time: %.4f seconds", t5 - t0)
     return _user_out(user)
 
 
 @app.post("/api/v1/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
+    t0 = time.time()
     email = req.email.strip().lower()
+    logger.info("Login request received for email: %s", email)
+    
+    t1 = time.time()
     user = db.scalar(select(User).where(User.email == email))
-    if user is None or not _verify_password(req.password, user.password_hash):
+    t2 = time.time()
+    logger.info("Database user lookup completed in %.4f seconds", t2 - t1)
+    
+    if user is None:
+        logger.warning("User %s not found in database", email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+    t3 = time.time()
+    verified = _verify_password(req.password, user.password_hash)
+    t4 = time.time()
+    logger.info("Password verification completed in %.4f seconds", t4 - t3)
+    
+    if not verified:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+        
     if not getattr(user, "is_active", True):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
 
     token = _create_access_token(subject=user.id)
+    t5 = time.time()
+    logger.info("Token creation and login success in %.4f seconds", t5 - t4)
+    logger.info("Total login time: %.4f seconds", t5 - t0)
     return LoginResponse(
         access_token=token,
         user=_user_out(user),
@@ -925,8 +991,21 @@ def insights_generate(payload: InsightsGeneratePayload, user: User = Depends(_ge
 
         structured_llm = llm.with_structured_output(InsightsOutput)
         result = structured_llm.invoke([sys_msg, user_msg])
+        dumped = result.model_dump()
 
-        return result.model_dump()
+        # Index insight into Supabase knowledge layer
+        try:
+            from backend.knowledge.hooks import on_insight_generated
+            insight_text = dumped.get("executive_summary", "") + "\n" + str(dumped.get("insights", []))
+            on_insight_generated(
+                product_id=payload.product_id,
+                insight_text=insight_text[:4000],
+                user_id=str(user.id),
+            )
+        except Exception:
+            pass
+
+        return dumped
 
     except Exception as e:
         print(f"Insights error: {e}")

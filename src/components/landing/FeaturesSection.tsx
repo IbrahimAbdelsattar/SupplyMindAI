@@ -6,25 +6,37 @@ const steps = [
     icon: Database,
     title: 'Data Collection',
     description: 'Real-time ingestion of sales, inventory, and market data from multiple sources.',
-    color: 'primary',
+    colorClass: 'text-primary',
+    bgClass: 'bg-primary/10 border-primary/20',
+    shadowClass: 'hover:shadow-primary/15',
+    glowColor: 'rgba(59, 130, 246, 0.35)',
   },
   {
     icon: Brain,
     title: 'AI Forecasting',
     description: 'Deep learning models analyze patterns and predict future demand with 95%+ accuracy.',
-    color: 'accent',
+    colorClass: 'text-accent',
+    bgClass: 'bg-accent/10 border-accent/20',
+    shadowClass: 'hover:shadow-accent/15',
+    glowColor: 'rgba(6, 182, 212, 0.35)',
   },
   {
     icon: Settings2,
     title: 'Optimization Engine',
     description: 'Mathematical optimization algorithms determine optimal inventory levels.',
-    color: 'success',
+    colorClass: 'text-success',
+    bgClass: 'bg-success/10 border-success/20',
+    shadowClass: 'hover:shadow-success/15',
+    glowColor: 'rgba(16, 185, 129, 0.35)',
   },
   {
     icon: LineChart,
     title: 'Business Decisions',
     description: 'Actionable insights and automated recommendations for smarter decisions.',
-    color: 'warning',
+    colorClass: 'text-warning',
+    bgClass: 'bg-warning/10 border-warning/20',
+    shadowClass: 'hover:shadow-warning/15',
+    glowColor: 'rgba(245, 158, 11, 0.35)',
   },
 ];
 
@@ -32,19 +44,20 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.2 },
+    transition: { staggerChildren: 0.25 },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
 
 export const FeaturesSection = () => {
   return (
-    <section className="py-16 sm:py-24 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.05),transparent_70%)]" />
+    <section className="py-20 sm:py-28 relative overflow-hidden bg-background">
+      {/* Soft overlay gradients */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.08),transparent_65%)] pointer-events-none" />
       
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <motion.div
@@ -52,11 +65,13 @@ export const FeaturesSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-10 sm:mb-16"
+          className="text-center mb-16 sm:mb-24"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">How It Works</h2>
-          <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Our AI platform transforms raw data into actionable business intelligence in four seamless steps.
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4 text-foreground">
+            How It Works
+          </h2>
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Our AI platform transforms raw operational metrics into clean, actionable intelligence in four dynamic steps.
           </p>
         </motion.div>
 
@@ -64,33 +79,42 @@ export const FeaturesSection = () => {
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8"
+          viewport={{ once: true, margin: '-100px' }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8"
         >
           {steps.map((step, index) => (
             <motion.div
               key={step.title}
               variants={itemVariants}
-              className="relative group"
+              className="relative group cursor-pointer"
             >
-              {/* Connector Line */}
+              {/* Connector Line - futuristic dot design */}
               {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-border to-transparent z-0" />
+                <div className="hidden lg:block absolute top-14 left-full w-full h-[1px] bg-gradient-to-r from-border/80 via-primary/20 to-transparent z-0 pointer-events-none" />
               )}
               
-              <div className="relative bg-card border border-border rounded-2xl p-5 sm:p-6 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
+              <div 
+                className={`relative bg-card/40 border border-border/60 backdrop-blur-md rounded-2xl p-6 sm:p-7 hover:border-primary/50 transition-all duration-350 hover:-translate-y-2 shadow-lg ${step.shadowClass} sweep-glow`}
+                style={{
+                  boxShadow: `0 0 0 rgba(0,0,0,0)`,
+                }}
+              >
                 {/* Step Number */}
-                <div className="absolute -top-3 -left-3 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs sm:text-sm font-bold">
+                <div 
+                  className="absolute -top-3.5 -left-3.5 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-extrabold shadow-md shadow-primary/20 tracking-wide"
+                >
                   {index + 1}
                 </div>
                 
-                {/* Icon */}
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-${step.color}/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  <step.icon className={`w-6 h-6 sm:w-7 sm:h-7 text-${step.color}`} />
+                {/* Icon Container with radial background glow */}
+                <div 
+                  className={`w-14 h-14 rounded-xl ${step.bgClass} border flex items-center justify-center mb-5 group-hover:scale-110 transition-all duration-300`}
+                >
+                  <step.icon className={`w-7 h-7 ${step.colorClass} drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]`} />
                 </div>
                 
-                <h3 className="text-lg sm:text-xl font-semibold mb-2">{step.title}</h3>
-                <p className="text-sm sm:text-base text-muted-foreground">{step.description}</p>
+                <h3 className="text-xl font-bold mb-3 text-foreground tracking-wide">{step.title}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{step.description}</p>
               </div>
             </motion.div>
           ))}
