@@ -1,13 +1,100 @@
-# Supply Mind RAG Architecture
+# SupplyMind RAG Architecture
 
-The RAG (Retrieval-Augmented Generation) system provides semantic search and grounding over deep operational documents.
+## Design principles
 
-## Components
+1. **Grounded answers** — LLM receives retrieved chunks + live operational snapshot only
+2. **No hallucinated metrics** — if retrieval is empty, the model states that explicitly
+3. **Operational DB unchanged** — CSV/SQLite facts injected at query time via `get_operational_snapshot()`
+4. **Layered retrieval** — Supabase pgvector first, Chroma legacy fallback, CSV last resort
 
-- **Vector Database:** Uses ChromaDB for persistence and scalability.
-- **Embeddings Model:** Typically `all-MiniLM-L6-v2` generating dense embeddings for text chunks.
-- **Integration with Agents:** Exposed via the `query_inventory_knowledge` LangChain tool.
-- **Ingestion Pipeline:** Uses splitters and chunkers to manage large operational datasets (found in `rag-powered-inventory-management/src/rag`).
+## Pipeline
 
-## Execution
-Instead of isolating the RAG to a distinct module, we have shifted to a **tool-calling architecture**. The raw document chunks and metadata are returned directly to the LangGraph state. The LLM then organically cites those retrieved components in its final output, drastically reducing hallucination probability.
+```
+Operational event (forecast, inventory, insight, report)
+        │
+        ▼
+  hooks.py (async thread pool)
+        │
+        ▼
+  ingestion.py → documents + embeddings (384-dim, MiniLM)
+        │
+        ▼
+  Supabase pgvector (HNSW index)
+```
+
+## Query flow
+
+```
+User question
+        │
+        ▼
+  embed_text(query)
+        │
+        ▼
+  match_documents RPC (metadata filters: source_type, product_id, user_id)
+        │
+        ▼
+  rag.py — build CONTEXT + OPERATIONAL_SNAPSHOT
+        │
+        ▼
+  LangChain ChatOpenAI (OpenRouter) — temperature 0.1
+        │
+        ▼
+  Answer + source citations
+```
+
+## LangChain / LangGraph
+
+| Component | Location |
+|-----------|----------|
+| RAG generation | `backend/knowledge/rag.py` |
+| Agent tools | `backend/tools/knowledge_tools.py`, `rag_tools.py` |
+| Multi-agent graph | `backend/agents/graph.py` |
+| Copilot graph | `backend/agents/copilot_graph.py` |
+
+Agent-specific retrieval tools:
+
+- `search_forecast_knowledge`
+- `search_inventory_knowledge`
+- `search_insights_knowledge`
+- `search_mlops_knowledge`
+- `query_inventory_knowledge` (Supabase → Chroma → CSV)
+
+## Metadata filtering
+
+Documents store `metadata` JSONB (e.g. `product_id`, `horizon_days`). Search filters:
+
+- `source_type`: forecast | inventory | insight | report | mlops
+- `product_id`: SKU filter
+- `user_id`: optional per-user scoping
+
+## Performance
+
+| Feature | Implementation |
+|---------|----------------|
+| Batch embeddings | `embed_texts_batch()` with configurable `KNOWLEDGE_BATCH_EMBED_SIZE` |
+| Embedding cache | SHA-256 keyed in-memory cache |
+| Async ingestion | `KNOWLEDGE_INGESTION_ASYNC=true` (ThreadPoolExecutor) |
+| Retrieval limit | `KNOWLEDGE_MATCH_COUNT`, `KNOWLEDGE_MATCH_THRESHOLD` |
+
+## API
+
+```http
+POST /api/v1/knowledge/search
+POST /api/v1/rag/query
+```
+
+Example RAG body:
+
+```json
+{
+  "question": "Why is stock-out risk increasing for BL_KIT?",
+  "product_id": "BL_KIT",
+  "source_type": "inventory",
+  "include_operational_context": true
+}
+```
+
+## LangSmith
+
+Set `LANGCHAIN_TRACING_V2=true` to trace RAG and copilot runs (latency, tokens, retrieval quality). See `LANGSMITH_SETUP.md`.

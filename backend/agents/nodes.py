@@ -6,6 +6,12 @@ from backend.tools.forecasting_tools import generate_forecast
 from backend.tools.inventory_tools import analyze_inventory
 from backend.tools.rag_tools import query_inventory_knowledge
 from backend.tools.mlops_tools import get_mlops_metrics
+from backend.tools.knowledge_tools import (
+    search_forecast_knowledge,
+    search_inventory_knowledge,
+    search_insights_knowledge,
+    search_mlops_knowledge,
+)
 
 _openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
 llm = ChatOpenAI(
@@ -15,10 +21,10 @@ llm = ChatOpenAI(
     temperature=0.2,
 )
 
-forecasting_llm = llm.bind_tools([generate_forecast])
-inventory_llm = llm.bind_tools([analyze_inventory])
-rag_llm = llm.bind_tools([query_inventory_knowledge])
-mlops_llm = llm.bind_tools([get_mlops_metrics])
+forecasting_llm = llm.bind_tools([generate_forecast, search_forecast_knowledge])
+inventory_llm = llm.bind_tools([analyze_inventory, search_inventory_knowledge])
+rag_llm = llm.bind_tools([query_inventory_knowledge, search_insights_knowledge])
+mlops_llm = llm.bind_tools([get_mlops_metrics, search_mlops_knowledge])
 
 supervisor_prompt = """You are the Supply Mind AI Orchestrator.
 Your job is to route the user's request to the correct specialized agent.
@@ -37,25 +43,25 @@ def supervisor_node(state: AgentState):
     return {"current_intent": response.content.strip()}
 
 def forecasting_node(state: AgentState):
-    sys_msg = SystemMessage(content="You are the Forecasting Agent. Use the `generate_forecast` tool to answer questions about future demand.")
+    sys_msg = SystemMessage(content="You are the Forecasting Agent. Use `generate_forecast` for predictions and `search_forecast_knowledge` for historical forecast context from Supabase.")
     messages = [sys_msg] + state['messages']
     response = forecasting_llm.invoke(messages)
     return {"messages": [response]}
 
 def inventory_node(state: AgentState):
-    sys_msg = SystemMessage(content="You are the Inventory Agent. Use the `analyze_inventory` tool to check stock health and recommend orders.")
+    sys_msg = SystemMessage(content="You are the Inventory Agent. Use `analyze_inventory` for live stock analysis and `search_inventory_knowledge` for similar past incidents.")
     messages = [sys_msg] + state['messages']
     response = inventory_llm.invoke(messages)
     return {"messages": [response]}
 
 def rag_node(state: AgentState):
-    sys_msg = SystemMessage(content="You are the RAG Knowledge Agent. Use `query_inventory_knowledge` to search historical documents.")
+    sys_msg = SystemMessage(content="You are the Insights Agent. Use `search_insights_knowledge` and `query_inventory_knowledge` for grounded document retrieval.")
     messages = [sys_msg] + state['messages']
     response = rag_llm.invoke(messages)
     return {"messages": [response]}
 
 def mlops_node(state: AgentState):
-    sys_msg = SystemMessage(content="You are the MLOps Agent. Use `get_mlops_metrics` to check model accuracy and data drift.")
+    sys_msg = SystemMessage(content="You are the MLOps Agent. Use `get_mlops_metrics` for live metrics and `search_mlops_knowledge` for drift/retraining history.")
     messages = [sys_msg] + state['messages']
     response = mlops_llm.invoke(messages)
     return {"messages": [response]}

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
+import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,12 @@ const Reports = () => {
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
+          <AISummaryCard
+            title="Report Q&A"
+            sourceType="report"
+            question="What do recent forecast and inventory reports indicate? Highlight anomalies planners should review."
+          />
+
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 sm:gap-6">
             {[

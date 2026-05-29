@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
+import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -111,6 +112,15 @@ const AIInsights = () => {
         <DashboardHeader title="AI Insights" subtitle="Explainable AI analysis of demand patterns" />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
+          {productId && (
+            <AISummaryCard
+              title="Context-Aware Insights"
+              productId={productId}
+              sourceType="insight"
+              question={`Provide context-aware reasoning for product ${productId}: drivers, risks, and recommended next actions.`}
+            />
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <Select value={productId} onValueChange={setSelectedProduct}>
               <SelectTrigger className="w-full sm:w-64">

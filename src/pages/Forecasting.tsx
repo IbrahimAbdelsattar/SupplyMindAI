@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
+import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -206,6 +207,15 @@ const Forecasting = () => {
               </CardContent>
             </Card>
           </motion.div>
+
+          {selectedProduct && (
+            <AISummaryCard
+              title="Forecast Explanation"
+              productId={selectedProduct}
+              sourceType="forecast"
+              question={`Explain forecast changes and drivers for product ${selectedProduct}. What should planners watch next?`}
+            />
+          )}
 
           {/* Forecast Chart */}
           <motion.div

@@ -33,9 +33,34 @@ def _csv_knowledge_fallback(query: str, product_id: str) -> str:
     return "\n".join(parts)
 
 
+def _supabase_knowledge(query: str, product_id: str) -> str | None:
+    try:
+        from backend.knowledge.client import is_supabase_available
+        from backend.knowledge.search import semantic_search
+
+        if not is_supabase_available():
+            return None
+        hits = semantic_search(query, product_id=product_id or None, match_count=8)
+        if not hits:
+            return None
+        parts = ["Knowledge retrieved (Supabase pgvector):"]
+        sources = []
+        for hit in hits:
+            parts.append(f"\n[{hit.get('source_type')}] {hit.get('title')}\n{str(hit.get('content', ''))[:800]}")
+            sources.append(str(hit.get("title", "doc")))
+        parts.append(f"\nSources: {', '.join(sorted(set(sources)))}")
+        return "\n".join(parts)
+    except Exception:
+        return None
+
+
 @tool("query_inventory_knowledge", args_schema=RAGQueryInput)
 def query_inventory_knowledge(query: str, product_id: str = "") -> str:
-    """Retrieves operational knowledge from the vector database or CSV datasets."""
+    """Retrieves operational knowledge from Supabase vectors, Chroma RAG, or CSV datasets."""
+    supabase_result = _supabase_knowledge(query, product_id)
+    if supabase_result:
+        return supabase_result
+
     import sys
 
     rag = None
@@ -65,6 +90,6 @@ def query_inventory_knowledge(query: str, product_id: str = "") -> str:
 
         context = "\n\n---\n\n".join(context_parts)
         sources_str = ", ".join(sorted(set(sources)))
-        return f"Knowledge retrieved:\n{context}\n\nSources consulted: {sources_str}"
+        return f"Knowledge retrieved (Chroma):\n{context}\n\nSources consulted: {sources_str}"
     except Exception as e:
         return f"Knowledge retrieved (CSV fallback):\n{_csv_knowledge_fallback(query, product_id)}\n\n(RAG error: {e})"
