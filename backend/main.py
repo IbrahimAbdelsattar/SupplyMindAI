@@ -415,14 +415,7 @@ def _simple_forecast_series(product_id: str, horizon_days: int) -> list[Forecast
 # -----------------------------------------------------------------------------
 app = FastAPI(title="SupplyMindAI API", version="0.1.0")
 
-# Mount knowledge / RAG / copilot router
-try:
-    from backend.routers.knowledge import router as knowledge_router
-    app.include_router(knowledge_router, prefix="/api/v1")
-    logger.info("Knowledge router mounted at /api/v1")
-except Exception as exc:
-    logger.warning("Knowledge router not loaded (Supabase layer inactive): %s", exc)
-
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -431,9 +424,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from backend.routers.knowledge import router as knowledge_router  # noqa: E402
+# Mount authentication router (Supabase)
+try:
+    from backend.routers.auth import router as auth_router
+    app.include_router(auth_router)
+    logger.info("Authentication router mounted")
+except Exception as exc:
+    logger.warning("Authentication router not loaded: %s", exc)
 
-app.include_router(knowledge_router, prefix="/api/v1")
+# Mount storage router (Supabase)
+try:
+    from backend.routers.storage import router as storage_router
+    app.include_router(storage_router)
+    logger.info("Storage router mounted")
+except Exception as exc:
+    logger.warning("Storage router not loaded: %s", exc)
+
+# Mount knowledge / RAG / copilot router
+try:
+    from backend.routers.knowledge import router as knowledge_router
+    app.include_router(knowledge_router, prefix="/api/v1")
+    logger.info("Knowledge router mounted at /api/v1")
+except Exception as exc:
+    logger.warning("Knowledge router not loaded (Supabase layer inactive): %s", exc)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
