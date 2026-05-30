@@ -4,7 +4,6 @@ import os
 import sys
 # Ensure we can import from backend.x
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 import uuid
 from datetime import date, datetime, timedelta, timezone
 import time
@@ -34,18 +33,19 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
-JWT_ALG = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-VALID_ROLES = {"admin", "manager", "analyst", "viewer"}
-DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "analyst").strip().lower()
-if DEFAULT_USER_ROLE not in VALID_ROLES:
-    DEFAULT_USER_ROLE = "analyst"
+from backend.dependencies import (
+    DEFAULT_USER_ROLE,
+    _get_current_user,
+    _normalize_role,
+    _require_roles,
+    _utc_now,
+    _validate_password_for_registration,
+)
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000",
+        "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
     ).split(",")
     if origin.strip()
 ]
@@ -58,87 +58,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("backend")
 
-# Use pbkdf2_sha256 as primary for speed on Windows (native C via hashlib), keep bcrypt for backwards compatibility
-pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
-
-def _verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
-
-
-def _hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def _create_access_token(*, subject: str) -> str:
-    now = _utc_now()
-    exp = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": subject, "iat": now, "exp": exp, "typ": "access", "jti": str(uuid.uuid4())}
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
-
-
-def _auth_error(detail: str = "Invalid token") -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=detail,
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-
-def _normalize_role(role: str | None) -> str:
-    normalized = (role or DEFAULT_USER_ROLE).strip().lower()
-    return normalized if normalized in VALID_ROLES else DEFAULT_USER_ROLE
-
-
-def _validate_password_for_registration(password: str) -> None:
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-    if len(password.encode("utf-8")) > 72:
-        raise HTTPException(status_code=400, detail="Password must be 72 bytes or fewer")
-    if password.strip() != password:
-        raise HTTPException(status_code=400, detail="Password cannot start or end with whitespace")
 
 
 def _user_out(user: User) -> "UserOut":
     return UserOut(id=user.id, name=user.name, email=user.email, role=_normalize_role(getattr(user, "role", None)))
 
 
-def _get_current_user(
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme),
-) -> User:
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
-        if payload.get("typ") != "access":
-            raise _auth_error()
-        subject = payload.get("sub")
-        if not subject:
-            raise _auth_error()
-        user = db.scalar(select(User).where(User.id == subject))
-        if user is None:
-            raise _auth_error("User not found")
-        if not getattr(user, "is_active", True):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
-        return user
-    except JWTError as e:
-        raise _auth_error() from e
 
-
-def _require_roles(*roles: str):
-    allowed = {_normalize_role(role) for role in roles}
-
-    def dependency(user: User = Depends(_get_current_user)) -> User:
-        user_role = _normalize_role(getattr(user, "role", None))
-        if user_role not in allowed:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
-        return user
-
-    return dependency
 
 
 # -----------------------------------------------------------------------------
@@ -424,13 +351,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount authentication router (Supabase)
-try:
-    from backend.routers.auth import router as auth_router
-    app.include_router(auth_router)
-    logger.info("Authentication router mounted")
-except Exception as exc:
-    logger.warning("Authentication router not loaded: %s", exc)
+# Note: JWT auth routes are defined directly below — /api/v1/auth/login, /register, /me, etc.
+# The Supabase auth router is NOT mounted here to avoid conflicting with those routes.
 
 # Mount storage router (Supabase)
 try:
@@ -447,6 +369,11 @@ try:
     logger.info("Knowledge router mounted at /api/v1")
 except Exception as exc:
     logger.warning("Knowledge router not loaded (Supabase layer inactive): %s", exc)
+
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "SupplyMindAI API is running"}
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -505,175 +432,18 @@ def _startup() -> None:
     ML_MODEL = init_ml_model(STORE)
     RAG_SERVICE = init_rag_service()
 
-    db = SessionLocal()
-    try:
-        demo_email = "demo@supplymind.ai"
-        existing = db.scalar(select(User).where(User.email == demo_email))
-        if existing is None:
-            db.add(
-                User(
-                    id=str(uuid.uuid4()),
-                    name="Demo User",
-                    email=demo_email,
-                    password_hash=_hash_password("demo"),
-                    role="admin",
-                    is_active=True,
-                    created_at=_utc_now(),
-                )
-            )
-            db.commit()
-        else:
-            changed = False
-            if _normalize_role(getattr(existing, "role", None)) != "admin":
-                existing.role = "admin"
-                changed = True
-            if not getattr(existing, "is_active", True):
-                existing.is_active = True
-                changed = True
-            if changed:
-                existing.updated_at = _utc_now()
-                db.commit()
-    finally:
-        db.close()
+    pass
 
 
 # -----------------------------------------------------------------------------
 # Auth
 # -----------------------------------------------------------------------------
-@app.post("/api/v1/auth/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
-    t0 = time.time()
-    email = req.email.strip().lower()
-    logger.info("Register request received for email: %s", email)
-    if not email or "@" not in email:
-        raise HTTPException(status_code=400, detail="Invalid email")
-    _validate_password_for_registration(req.password)
-
-    t1 = time.time()
-    existing = db.scalar(select(User).where(User.email == email))
-    t2 = time.time()
-    logger.info("Database check completed in %.4f seconds", t2 - t1)
-    if existing is not None:
-        raise HTTPException(status_code=409, detail="Email already registered")
-
-    t3 = time.time()
-    password_hash = _hash_password(req.password)
-    t4 = time.time()
-    logger.info("Password hashing completed in %.4f seconds", t4 - t3)
-
-    user = User(
-        id=str(uuid.uuid4()),
-        name=req.name.strip() or "User",
-        email=email,
-        password_hash=password_hash,
-        role=DEFAULT_USER_ROLE,
-        is_active=True,
-        created_at=_utc_now(),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    t5 = time.time()
-    logger.info("User created and saved to DB in %.4f seconds", t5 - t4)
-    logger.info("Total registration time: %.4f seconds", t5 - t0)
-    return _user_out(user)
-
-
-@app.post("/api/v1/auth/login", response_model=LoginResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
-    t0 = time.time()
-    email = req.email.strip().lower()
-    logger.info("Login request received for email: %s", email)
-    
-    t1 = time.time()
-    user = db.scalar(select(User).where(User.email == email))
-    t2 = time.time()
-    logger.info("Database user lookup completed in %.4f seconds", t2 - t1)
-    
-    if user is None:
-        logger.warning("User %s not found in database", email)
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-        
-    t3 = time.time()
-    verified = _verify_password(req.password, user.password_hash)
-    t4 = time.time()
-    logger.info("Password verification completed in %.4f seconds", t4 - t3)
-    
-    if not verified:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-        
-    if not getattr(user, "is_active", True):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
-
-    token = _create_access_token(subject=user.id)
-    t5 = time.time()
-    logger.info("Token creation and login success in %.4f seconds", t5 - t4)
-    logger.info("Total login time: %.4f seconds", t5 - t0)
-    return LoginResponse(
-        access_token=token,
-        user=_user_out(user),
-    )
-
-
-@app.get("/api/v1/auth/me", response_model=UserOut)
-def me(user: User = Depends(_get_current_user)) -> UserOut:
-    return _user_out(user)
-
-
-@app.post("/api/v1/auth/refresh", response_model=LoginResponse)
-def refresh_token(user: User = Depends(_get_current_user)) -> LoginResponse:
-    return LoginResponse(access_token=_create_access_token(subject=user.id), user=_user_out(user))
-
-
-@app.get("/api/v1/auth/users", response_model=list[UserAdminOut])
-def list_users(user: User = Depends(_require_roles("admin")), db: Session = Depends(get_db)) -> list[UserAdminOut]:
-    users = db.scalars(select(User).order_by(User.created_at.desc())).all()
-    return [
-        UserAdminOut(
-            id=item.id,
-            name=item.name,
-            email=item.email,
-            role=_normalize_role(getattr(item, "role", None)),
-            is_active=bool(getattr(item, "is_active", True)),
-            created_at=item.created_at.isoformat() if item.created_at else "",
-            updated_at=item.updated_at.isoformat() if getattr(item, "updated_at", None) else None,
-        )
-        for item in users
-    ]
-
-
-@app.patch("/api/v1/auth/users/{user_id}", response_model=UserAdminOut)
-def update_user(
-    user_id: str,
-    req: UserUpdateRequest,
-    current_user: User = Depends(_require_roles("admin")),
-    db: Session = Depends(get_db),
-) -> UserAdminOut:
-    target = db.scalar(select(User).where(User.id == user_id))
-    if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if target.id == current_user.id and req.is_active is False:
-        raise HTTPException(status_code=400, detail="You cannot disable your own account")
-
-    if req.role is not None:
-        target.role = _normalize_role(req.role)
-    if req.is_active is not None:
-        target.is_active = req.is_active
-    target.updated_at = _utc_now()
-
-    db.commit()
-    db.refresh(target)
-
-    return UserAdminOut(
-        id=target.id,
-        name=target.name,
-        email=target.email,
-        role=_normalize_role(getattr(target, "role", None)),
-        is_active=bool(getattr(target, "is_active", True)),
-        created_at=target.created_at.isoformat() if target.created_at else "",
-        updated_at=target.updated_at.isoformat() if getattr(target, "updated_at", None) else None,
-    )
+try:
+    from backend.routers.auth import router as auth_router
+    app.include_router(auth_router)
+    logger.info("Supabase auth router mounted")
+except Exception as exc:
+    logger.warning("Auth router not loaded: %s", exc)
 
 
 # -----------------------------------------------------------------------------

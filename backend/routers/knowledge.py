@@ -10,12 +10,12 @@ from pydantic import BaseModel, Field
 from backend.knowledge import copilot_chat, ingest_document, is_supabase_available, rag_query, semantic_search
 from backend.knowledge.config import get_knowledge_settings
 
-import backend.main
+from backend.dependencies import _get_current_user
 
 router = APIRouter(tags=["knowledge"])
 
 
-def _get_user(user: Any = Depends(backend.main._get_current_user)):
+def _get_user(user: Any = Depends(_get_current_user)):
     return user
 
 

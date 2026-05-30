@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await apiFetch<LoginResponse>('/auth/login', {
+    const res = await apiFetch<LoginResponse>('/auth/signin', {
       method: 'POST',
       auth: false,
       body: JSON.stringify({ email: email?.trim(), password: password?.trim() }),
@@ -49,11 +49,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
-    await apiFetch<User>('/auth/register', {
+    await apiFetch<User>('/auth/signup', {
       method: 'POST',
       auth: false,
       body: JSON.stringify({ name: name?.trim(), email: email?.trim(), password }),
     });
+    // Supabase auth handles login after signup, but we can do a login call here just in case
+    // if email confirmation is disabled, this will work.
     await login(email, password);
   }, [login]);
 

@@ -54,7 +54,12 @@ const Login = () => {
   const handleDemoLogin = async () => {
     setIsLoading(true);
     try {
-      await login('demo@supplymind.ai', 'demo');
+      try {
+        await login('demo@supplymind.ai', 'demopassword123');
+      } catch (err) {
+        // If demo user doesn't exist in Supabase, create it
+        await register('Demo User', 'demo@supplymind.ai', 'demopassword123');
+      }
       toast({
         title: 'Demo Mode Activated',
         description: 'Exploring as Demo User',
