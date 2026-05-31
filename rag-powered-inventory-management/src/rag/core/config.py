@@ -96,7 +96,7 @@ def load_settings() -> Settings:
     secret_file = project_root / ".txt"
     _load_dotenv(project_root / ".env")
 
-    openrouter_api_key = os.getenv("OPENROUTER_API_KEY") or _read_secret_file(secret_file)
+    openrouter_api_key = os.getenv("RAG_API_KEY") or os.getenv("OPENROUTER_API_KEY") or _read_secret_file(secret_file)
 
     return Settings(
         project_root=project_root,

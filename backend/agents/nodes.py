@@ -13,7 +13,7 @@ from backend.tools.knowledge_tools import (
     search_mlops_knowledge,
 )
 
-_openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+_openrouter_key = os.getenv("LLM_REASONING_API_KEY") or os.getenv("OPENROUTER_API_KEY", "").strip()
 llm = ChatOpenAI(
     model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
     api_key=_openrouter_key or "not-set",

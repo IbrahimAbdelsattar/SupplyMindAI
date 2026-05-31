@@ -38,7 +38,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
   <img src="https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis&logoColor=white"/>
-  <img src="https://img.shields.io/badge/OpenAI-LLM%20Powered-412991?style=for-the-badge&logo=openai&logoColor=white"/>
+  <img src="https://img.shields.io/badge/OpenRouter-LLM%20Powered-412991?style=for-the-badge&logo=openai&logoColor=white"/>
   <img src="https://img.shields.io/badge/License-Academic-lightgrey?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Status-Active%20Development-brightgreen?style=for-the-badge"/>
 </p>
@@ -74,7 +74,7 @@
 - 🤖 **Advanced ML Models** — XGBoost, LSTM, GRU, and Temporal Fusion Transformers
 - 🔍 **Explainability Layer** — SHAP-powered feature attribution and business insights
 - 📦 **Inventory Intelligence** — EOQ, Safety Stock, Reorder Point automation
-- 🧠 **LLM-Powered Analytics** — OpenAI/Azure OpenAI for natural-language supply chain reasoning
+- 🧠 **LLM-Powered Analytics** — OpenRouter (multi-model gateway) for natural-language supply chain reasoning
 - 🛡️ **Production MLOps** — Drift detection, automated retraining, MLflow registry
 - ☁️ **Azure Cloud Native** — AKS, Data Factory, Azure ML, App Insights
 
@@ -250,13 +250,13 @@ flowchart LR
     end
 
     subgraph CLOUD["☁️ Azure Infrastructure"]
-        llm["OpenAI / Azure OpenAI"]
+        llm["OpenRouter API"]
         monitor["Azure Monitor + App Insights"]
         deploy["Docker + GitHub Actions + AKS"]
     end
 
     user --> app
-    pages -.->|"Planned API"| gateway
+    pages -->|"API"| gateway
     forecastSvc --> postgres & registry
     inventorySvc --> postgres & optimizer & vector
     insightSvc --> forecastSvc & llm
@@ -277,7 +277,7 @@ flowchart LR
 
 ```mermaid
 graph LR
-    A["📥 Raw Data\n8 CSV Sources"] --> B["🧹 Ingestion & Validation\nGreat Expectations"]
+    A["📥 Raw Data\n8 CSV Sources"] --> B["🧹 Ingestion & Validation\nPandas + Pydantic"]
     B --> C["⚙️ Feature Engineering\nTime-series features\nSeasonality encoding\nPromotion flags"]
     C --> D["🏋️ Model Training\nXGBoost · LSTM · TFT\nGRU · ARIMA · Prophet"]
     D --> E["📊 Evaluation\nMAE · RMSE · MAPE\nMAPE < 5.8%"]
@@ -309,7 +309,7 @@ graph LR
 | **AutoML** | Scikit-learn + SHAP | Feature selection & explainability |
 | **MLOps** | MLflow + Azure ML | Model registry & tracking |
 | **Vector DB** | ChromaDB / Azure AI Search | RAG knowledge base |
-| **LLM** | OpenAI / Azure OpenAI | Natural language insights |
+| **LLM** | OpenRouter (GPT-4o, DeepSeek, etc.) | Natural language insights |
 | **Cloud** | Microsoft Azure (AKS, Data Factory, Blob) | Infrastructure |
 | **CI/CD** | GitHub Actions + Azure DevOps | Automated deployment |
 | **Containers** | Docker + Kubernetes | Scalable deployment |
@@ -393,13 +393,13 @@ graph TD
 
 | File / Directory | Owner | Area |
 |-----------------|-------|------|
-| `data/`, `ml_pipeline/feature_engineering/` | Rahma (M1) | Data |
+| `data/`, `data_analysis/`, `data/enriched data/` | Rahma (M1) | Data |
 | `src/pages/Dashboard.tsx`, `src/components/dashboard/` | Rahma (M1) | Frontend |
-| `ml_pipeline/training/`, `ml_pipeline/evaluation/`, `ml_pipeline/models/` | Karim (M2) | ML |
-| `src/pages/AIInsights.tsx`, `rag/insights/`, `backend/routers/insights.py` | Kenzi (M3) | LLM |
-| `src/pages/Inventory.tsx`, `rag/inventory/`, `backend/routers/inventory.py` | Ali Ehab (M4) | RAG |
-| `src/pages/MLOps.tsx`, `mlops/`, `backend/routers/mlops.py` | Ali S. (M5) | MLOps |
-| `backend/` (core), `deployment/`, `.github/`, `backend/routers/auth.py` | Ibrahim (M6) | Backend |
+| `Modeling/`, `demand_model_pipeline.pkl` | Karim (M2) | ML |
+| `src/pages/AIInsights.tsx`, `LLM/`, `backend/agents/nodes.py` | Kenzi (M3) | LLM |
+| `src/pages/Inventory.tsx`, `src/components/inventory/`, `rag-powered-inventory-management/` | Ali Ehab (M4) | RAG |
+| `src/pages/MLOps.tsx`, `backend/knowledge/` | Ali S. (M5) | MLOps |
+| `backend/` (core), `.github/`, `supabase/`, `scripts/`, `docker-compose.yml` | Ibrahim (M6) | Backend |
 | `src/pages/Forecasting.tsx` | M2 (data) + M6 (API) | Shared |
 
 ---
@@ -415,7 +415,7 @@ supplymind-ai/
 ├── 📄 README.md                       # Project overview & documentation
 ├── 📦 package.json                    # Vite + React + shadcn/ui + Recharts + Framer Motion
 │
-├── 📊 Data Sources (8 CSVs)
+├── 📊 Data Sources
 │   ├── bom.csv                        # Bill of Materials (40 rows)
 │   ├── contracts.csv                  # B2B Contracts (25 rows)
 │   ├── inventory.csv                  # Daily inventory 2020–2025 (23,753 rows)
@@ -423,10 +423,24 @@ supplymind-ai/
 │   ├── products.csv                   # Product catalog (13 products)
 │   ├── raw_materials.csv              # 6 raw materials with supplier links
 │   ├── sales_daily.csv                # Sales transactions 2020–2024 (15,001 rows)
-│   └── suppliers.csv                  # 8 suppliers with reliability scores
+│   ├── suppliers.csv                  # 8 suppliers with reliability scores
+│   └── enriched data/                 # 6 enriched analytical CSVs
 │
-├── 🖥️ src/
+├── 🤖 ML Platform
+│   ├── Modeling/                      # Demand forecasting pipeline
+│   │   ├── demand_forecasting_pipeline.py
+│   │   └── IMPLEMENTATION_SUMMARY.md
+│   ├── demand_model_pipeline.pkl      # Trained XGBoost model artifact
+│   ├── LLM/                           # LLM reasoning engine
+│   │   ├── llm_client.py              # OpenRouter client
+│   │   ├── context_builder.py         # RAG context builder
+│   │   └── prompts.py                 # System prompts
+│   └── data_analysis/                 # Jupyter notebooks
+│       └── demand_forcasting_data_analysis.ipynb
+│
+├── 🖥️ frontend/src/
 │   ├── App.tsx                        # Root component: routing & providers
+│   ├── main.tsx                       # Entry point
 │   ├── index.css                      # CSS variables, dark/light theme tokens
 │   │
 │   ├── 📄 pages/
@@ -434,14 +448,20 @@ supplymind-ai/
 │   │   ├── Login.tsx                  # Auth with demo access & roles
 │   │   ├── Dashboard.tsx              # KPIs, demand chart, heatmap, alerts
 │   │   ├── Forecasting.tsx            # Forecast visualization + CSV export
-│   │   ├── Inventory.tsx              # Inventory optimization & recommendations
+│   │   ├── Inventory.tsx              # Inventory optimization & RAG chatbot
 │   │   ├── AIInsights.tsx             # SHAP insights, factor weights, patterns
-│   │   ├── MLOps.tsx                  # Accuracy trend, drift, retraining, resources
+│   │   ├── MLOps.tsx                  # Accuracy trend, drift, retraining
 │   │   ├── Reports.tsx                # Report list with download
-│   │   └── Settings.tsx               # User preferences, theme, notifications
+│   │   ├── Settings.tsx               # User preferences, theme, notifications
+│   │   └── NotFound.tsx               # 404 page
 │   │
 │   ├── 🧩 components/
-│   │   ├── chatbot/AIChatbot.tsx      # Floating AI chatbot
+│   │   ├── ai/AISummaryCard.tsx       # AI-powered summary card
+│   │   ├── chatbot/AIChatbot.tsx      # Floating AI chatbot (general)
+│   │   ├── inventory/
+│   │   │   ├── InventoryTable.tsx     # Searchable inventory table
+│   │   │   ├── StockChart.tsx         # Stock by category chart
+│   │   │   └── ChatBot.tsx            # RAG inventory chatbot (Ask Stock Mind)
 │   │   ├── dashboard/
 │   │   │   ├── AlertsPanel.tsx        # Dismissible alert cards
 │   │   │   ├── DashboardHeader.tsx    # Search, date range, notifications
@@ -453,18 +473,120 @@ supplymind-ai/
 │   │   │   ├── HeroSection.tsx        # Hero with CTA and animated stats
 │   │   │   ├── FeaturesSection.tsx    # Feature cards grid
 │   │   │   ├── MetricsSection.tsx     # Animated business metrics
-│   │   │   └── UseCasesSection.tsx    # Use case showcase
+│   │   │   ├── UseCasesSection.tsx    # Use case showcase
+│   │   │   ├── LandingNavbar.tsx      # Landing page navigation
+│   │   │   └── Footer.tsx             # Landing page footer
 │   │   └── ui/                        # 50 shadcn/ui primitives
 │   │
-│   └── 📚 lib/
-│       ├── mockData.ts                # KPIs, alerts, products, chatbot responses
-│       └── utils.ts                   # cn() class merging utility
+│   ├── 📚 lib/
+│   │   ├── api.ts                     # API client with auth headers
+│   │   ├── knowledgeApi.ts            # Knowledge/RAG API utilities
+│   │   ├── mockData.ts                # Mock data for development
+│   │   └── utils.ts                   # cn() class merging utility
+│   │
+│   ├── 🔐 contexts/
+│   │   ├── AuthContext.tsx            # Authentication state
+│   │   └── ThemeContext.tsx           # Dark/light theme
+│   │
+│   └── 🧪 test/                       # Test setup & examples
+│       ├── setup.ts
+│       └── example.test.ts
+│
+├── ⚙️ Backend (FastAPI)
+│   ├── main.py                        # App entry, 20+ endpoints, auth, JWT
+│   ├── db.py                          # SQLAlchemy models (User, etc.)
+│   ├── dependencies.py                # Auth dependencies
+│   ├── bootstrap.py                   # ML model + RAG initialization
+│   ├── ml_adapter.py                  # ML model wrapper
+│   ├── analytics.py                   # Business logic helpers
+│   ├── routers/
+│   │   ├── auth.py                    # Supabase auth router
+│   │   ├── knowledge.py               # Knowledge ingestion/search router
+│   │   └── storage.py                 # File storage router
+│   ├── agents/
+│   │   ├── graph.py                   # LangGraph agent orchestration
+│   │   ├── copilot_graph.py           # Copilot multi-agent workflow
+│   │   ├── nodes.py                   # Agent nodes (LLM, tools)
+│   │   └── state.py                   # Agent state schema
+│   ├── tools/
+│   │   ├── forecasting_tools.py       # Forecast tool for agents
+│   │   ├── inventory_tools.py         # Inventory tool for agents
+│   │   ├── knowledge_tools.py         # Knowledge search tools
+│   │   ├── mlops_tools.py             # MLOps metrics tool
+│   │   └── rag_tools.py               # RAG query tool
+│   ├── knowledge/
+│   │   ├── rag.py                     # Production RAG generation
+│   │   ├── search.py                  # Semantic search (Supabase pgvector)
+│   │   ├── embeddings.py              # Text embedding generation
+│   │   ├── ingestion.py               # Document ingestion pipeline
+│   │   ├── memory.py                  # Agent conversation memory
+│   │   ├── hooks.py                   # Operational hooks
+│   │   ├── copilot.py                 # Copilot orchestration
+│   │   ├── config.py                  # Knowledge settings
+│   │   ├── client.py                  # Supabase client
+│   │   ├── auth.py                    # Knowledge auth
+│   │   ├── langsmith_tracing.py       # LangSmith observability
+│   │   ├── storage.py                 # File storage
+│   │   └── stream.py                  # SSE streaming
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── Dockerfile.prod
+│
+├── 🔍 RAG Sub-Project
+│   ├── rag-powered-inventory-management/
+│   │   ├── src/rag/                   # RAG pipeline (ChromaDB, OpenRouter)
+│   │   ├── lovable-page/              # Standalone inventory frontend
+│   │   ├── data/chroma_db/            # Vector store
+│   │   └── notebooks/                 # RAG analysis notebooks
+│
+├── 🗄️ Supabase
+│   ├── supabase/migrations/           # SQL migrations (intelligence layer, auth)
+│   ├── SUPABASE_ARCHITECTURE.md
+│   └── SUPABASE_AUTH_STORAGE_SETUP.md
+│
+├── 🐳 Docker & Deployment
+│   ├── docker-compose.yml
+│   ├── docker-compose.prod.yml
+│   ├── frontend.Dockerfile
+│   ├── frontend.Dockerfile.prod
+│   ├── nginx.conf
+│   ├── scripts/
+│   │   ├── deploy.sh
+│   │   ├── healthcheck.sh
+│   │   └── init-db.sql
+│   ├── start.bat / start.sh
+│   └── stop.bat
+│
+├── ⚙️ CI/CD
+│   └── .github/workflows/ci.yml
+│
+├── 📋 Docs & Plans
+│   ├── docs/
+│   │   ├── images/                    # Architecture & pipeline diagrams
+│   │   └── architecture-diagrams.md
+│   ├── plans/implementation_plan.md
+│   ├── DEPLOYMENT.md
+│   ├── PRODUCTION_DEPLOYMENT.md
+│   ├── PRODUCTION_CHECKLIST.md
+│   └── LANGSMITH_SETUP.md
+│
+├── 🔐 Environment
+│   ├── .env                           # Active environment config
+│   ├── .env.example                   # Template with defaults
+│   ├── .env.local                     # Local overrides
+│   └── .env.production                # Production template
 │
 └── ⚙️ Config
     ├── vite.config.ts                 # Vite dev server on :8080
-    ├── tailwind.config.ts             # Tailwind v3 + design tokens + animations
+    ├── vitest.config.ts               # Test runner config
+    ├── tailwind.config.ts             # Tailwind v3 + design tokens
+    ├── postcss.config.js
+    ├── eslint.config.js
     ├── tsconfig.json                  # TypeScript project references
-    └── vitest.config.ts               # Test runner configuration
+    ├── tsconfig.app.json
+    ├── tsconfig.node.json
+    ├── components.json                # shadcn/ui config
+    └── .dockerignore
 ```
 
 </details>
@@ -495,7 +617,7 @@ npm install
 npm run dev
 ```
 
-### Backend Setup *(Planned)*
+### Backend Setup
 
 ```bash
 # Create Python virtual environment
@@ -504,32 +626,47 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # Install backend dependencies
 pip install -r backend/requirements.txt
+pip install -r LLM/requirements.txt
 
 # Set up environment variables
 cp .env.example .env
-# Edit .env with your Azure & OpenAI credentials
+# Edit .env with your API keys
 
 # Start FastAPI server
 uvicorn backend.main:app --reload --port 8000
 ```
 
-### Environment Variables *(Planned)*
+### Environment Variables
 
 ```env
-# Azure
-AZURE_STORAGE_CONNECTION_STRING=...
-AZURE_ML_WORKSPACE_NAME=...
+# ── LLM / AI (OpenRouter) ─────────────────────────────────────
+CHATBOT_API_KEY=sk-or-...       # General chatbot
+LLM_REASONING_API_KEY=sk-or-... # LLM reasoning / insights
+RAG_API_KEY=sk-or-...           # RAG knowledge retrieval
+LLM_MODEL=moonshotai/kimi-k2.6:free
+EMBEDDING_MODEL=all-MiniLM-L6-v2
 
-# Database
-DATABASE_URL=postgresql://...
+# ── Supabase (Auth, Vector Store, File Storage) ──────────────
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=eyJhbGci...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
 
-# OpenAI / Azure OpenAI
-OPENAI_API_KEY=...
-AZURE_OPENAI_ENDPOINT=...
+# ── LangSmith Observability (Optional) ────────────────────────
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=lsv2_pt_...
+LANGCHAIN_PROJECT=supplymind-ai
 
-# Security
-JWT_SECRET_KEY=...
-JWT_ALGORITHM=HS256
+# ── Security ──────────────────────────────────────────────────
+JWT_SECRET=your-jwt-secret
+SESSION_SECRET=your-session-secret
+
+# ── Database (Optional - uses SQLite by default) ─────────────
+# DATABASE_URL=postgresql://user:pass@host:5432/supplymind
+
+# ── MLOps ─────────────────────────────────────────────────────
+MODEL_PATH=./Modeling/demand_model_pipeline.pkl
+DRIFT_THRESHOLD=0.05
+LOG_LEVEL=INFO
 ```
 
 ---
@@ -538,22 +675,22 @@ JWT_ALGORITHM=HS256
 
 ```mermaid
 gantt
-    title SupplyMind AI — 8-Week Sprint Plan
+    title SupplyMind AI — Sprint Plan
     dateFormat  YYYY-MM-DD
     section Foundation
     FastAPI Backend Setup        :done, 2026-04-01, 7d
     Data Pipeline & Feature Eng  :done, 2026-04-01, 7d
     section ML Models
-    XGBoost Baseline Training    :active, 2026-04-08, 7d
-    LSTM / TFT Model Training    :2026-04-15, 7d
+    XGBoost Baseline Training    :done, 2026-04-08, 7d
+    LSTM / TFT Model Training    :done, 2026-04-15, 7d
     section Integration
-    API ↔ Frontend Connection    :2026-04-22, 7d
-    LLM + RAG Integration        :2026-04-22, 7d
+    API ↔ Frontend Connection    :done, 2026-04-22, 7d
+    LLM + RAG Integration        :done, 2026-04-22, 7d
     section MLOps
-    Drift Detection Pipeline     :2026-04-29, 7d
-    Automated Retraining         :2026-04-29, 7d
+    Drift Detection Pipeline     :done, 2026-04-29, 7d
+    Automated Retraining         :done, 2026-04-29, 7d
     section Deployment
-    Docker + Azure AKS Deploy    :2026-05-06, 7d
+    Docker + Azure AKS Deploy    :active, 2026-05-06, 7d
     CI/CD & Monitoring Setup     :2026-05-06, 7d
     section Polish
     Testing & QA                 :2026-05-13, 7d

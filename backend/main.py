@@ -33,13 +33,14 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 load_dotenv(PROJECT_ROOT / ".env")
 
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+
 from backend.dependencies import (
     DEFAULT_USER_ROLE,
     _get_current_user,
     _normalize_role,
     _require_roles,
     _utc_now,
-    _validate_password_for_registration,
 )
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -412,7 +413,7 @@ def health() -> dict[str, Any]:
             "ml_trained": bool(ML_MODEL and getattr(ML_MODEL, "is_trained_model_loaded", False)),
             "rag_service": RAG_SERVICE is not None,
             "rag_loaded": bool(RAG_SERVICE and getattr(RAG_SERVICE, "is_initialized", True)),
-            "openrouter_key": bool(os.getenv("OPENROUTER_API_KEY")),
+            "openrouter_key": bool(os.getenv("CHATBOT_API_KEY") or os.getenv("LLM_REASONING_API_KEY") or os.getenv("RAG_API_KEY")),
             "supabase_configured": bool(k_settings and k_settings.is_configured),
             "supabase_connected": supabase_ok,
             "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes"},
@@ -907,6 +908,112 @@ def insights_chat(payload: ChatPayload, user: User = Depends(_get_current_user))
         }
     except Exception as e:
         return {"response": f"I encountered an error while processing your request: {e}"}
+
+
+class InventoryItemOut(BaseModel):
+    sku: str
+    name: str
+    category: str
+    productType: str = ""
+    active: bool = True
+    stock: int = 0
+    averageDailyDemand: float = 0.0
+    coverageDays: float | None = None
+    coverageLabel: str = ""
+    stockStatus: str = "Healthy"
+    lastUpdated: str = ""
+    sourceText: str = ""
+
+class InventorySummaryOut(BaseModel):
+    asOf: str = ""
+    totalProducts: int = 0
+    activeProducts: int = 0
+    inactiveProducts: int = 0
+    totalUnits: int = 0
+    criticalProducts: int = 0
+    lowProducts: int = 0
+    healthyProducts: int = 0
+
+@app.get("/api/v1/inventory")
+def inventory_list(user: User = Depends(_get_current_user)) -> dict:
+    prods = STORE.products()
+    inv = STORE.inventory()
+    sales = STORE.sales_daily()
+    max_date = inv["date"].max().isoformat() if not inv.empty else date.today().isoformat()
+
+    items = []
+    total_units = 0
+    critical = low = healthy = 0
+    active_count = inactive_count = 0
+
+    for _, r in prods.iterrows():
+        pid = str(r["product_id"])
+        pname = str(r.get("product_name", pid))
+        cat = str(r.get("category", ""))
+        ptype = str(r.get("type", ""))
+
+        latest = inv[inv["product_id"] == pid]
+        stock = int(latest.sort_values("date").iloc[-1]["stock"]) if not latest.empty else 0
+
+        sales_sub = sales[sales["product_id"] == pid]
+        qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
+        demand = float(sales_sub[qty_col].tail(60).mean()) if not sales_sub.empty else 0.0
+
+        coverage = stock / demand if demand > 0 else None
+        if coverage is None:
+            label = "No demand data"
+            status = "Healthy"
+        elif coverage >= 14:
+            label = f"Covers {coverage:.1f} days ({round(coverage / 30, 1)} months)"
+            status = "Healthy"
+        elif coverage >= 5:
+            label = f"Covers {coverage:.1f} days"
+            status = "Low"
+        else:
+            label = f"Only {coverage:.1f} days left"
+            status = "Critical"
+
+        total_units += stock
+        active_count += 1
+        if status == "Critical":
+            critical += 1
+        elif status == "Low":
+            low += 1
+        else:
+            healthy += 1
+
+        items.append(InventoryItemOut(
+            sku=pid,
+            name=pname,
+            category=cat,
+            productType=ptype,
+            active=True,
+            stock=stock,
+            averageDailyDemand=round(demand, 2),
+            coverageDays=round(coverage, 2) if coverage is not None else None,
+            coverageLabel=label,
+            stockStatus=status,
+            lastUpdated=max_date,
+            sourceText=f"{pname} ({pid}) | Category: {cat} | Stock: {stock} | Demand: {demand:.2f}/day | Status: {status}",
+        ))
+
+    summary = InventorySummaryOut(
+        asOf=max_date,
+        totalProducts=len(prods),
+        activeProducts=active_count,
+        inactiveProducts=inactive_count,
+        totalUnits=total_units,
+        criticalProducts=critical,
+        lowProducts=low,
+        healthyProducts=healthy,
+    )
+
+    lang = "en"
+    return {
+        "summary": summary.model_dump(),
+        "items": [i.model_dump() for i in items],
+        "lang": lang,
+    }
 
 
 class ChatRequest(BaseModel):

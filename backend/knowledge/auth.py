@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 class AuthUser(BaseModel):
     """Supabase authenticated user."""
     id: str
-    email: EmailStr
+    email: str
     user_metadata: dict[str, Any] = {}
     app_metadata: dict[str, Any] = {}
     created_at: str

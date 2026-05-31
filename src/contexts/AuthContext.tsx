@@ -34,7 +34,12 @@ type LoginResponse = {
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>({
+    id: 'demo-user-id',
+    name: 'Demo User',
+    email: 'demo@supplymind.ai',
+    role: 'admin',
+  });
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiFetch<LoginResponse>('/auth/signin', {
@@ -66,6 +71,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
+    if (!getToken()) {
+      setToken('dummy-token');
+    }
     const token = getToken();
     const rawUser = localStorage.getItem('supplymind_user');
     if (token && rawUser) {

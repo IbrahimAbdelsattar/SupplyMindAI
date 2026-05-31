@@ -35,7 +35,7 @@ _copilot_tools = [
 ]
 _copilot_tool_node = ToolNode(_copilot_tools)
 
-_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+_key = os.getenv("CHATBOT_API_KEY") or os.getenv("OPENROUTER_API_KEY", "").strip()
 _copilot_llm = ChatOpenAI(
     model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
     api_key=_key or "not-set",

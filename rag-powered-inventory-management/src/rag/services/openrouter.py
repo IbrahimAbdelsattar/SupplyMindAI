@@ -31,7 +31,7 @@ class OpenRouterClient:
     ) -> str:
         if not self.settings.openrouter_api_key:
             raise RuntimeError(
-                "OpenRouter API key is missing. Set OPENROUTER_API_KEY or keep the root .txt file."
+                "OpenRouter API key is missing. Set RAG_API_KEY or OPENROUTER_API_KEY in .env or keep the root .txt file."
             )
 
         context = format_context_documents(retrieved_documents)

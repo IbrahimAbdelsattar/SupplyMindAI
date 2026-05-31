@@ -27,7 +27,7 @@ Rules:
 
 
 def _llm() -> ChatOpenAI:
-    key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    key = os.getenv("RAG_API_KEY") or os.getenv("OPENROUTER_API_KEY", "").strip()
     return ChatOpenAI(
         model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
         api_key=key or "not-set",

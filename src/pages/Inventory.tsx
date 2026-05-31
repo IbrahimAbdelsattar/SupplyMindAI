@@ -3,8 +3,6 @@ import { useState } from 'react';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 
-
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,8 +22,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
-import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { apiFetch } from '@/lib/api';
+import InventoryTable, { type InventoryItem } from '@/components/inventory/InventoryTable';
+import StockChart, { type InventorySummary } from '@/components/inventory/StockChart';
+import ChatBot from '@/components/inventory/ChatBot';
 
 type InventoryRecommendation = {
   product_id: string;
@@ -39,11 +39,14 @@ type InventoryRecommendation = {
   riskLevel: 'low' | 'medium' | 'high';
 };
 
+interface InventoryData {
+  summary: InventorySummary;
+  items: InventoryItem[];
+}
+
 const Inventory = () => {
   const { isAuthenticated } = useAuth();
-  const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
-  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   const { data: inventoryRecommendations = [] } = useQuery({
     queryKey: ['inventory-optimize', 13],
@@ -51,38 +54,17 @@ const Inventory = () => {
     enabled: isAuthenticated,
   });
 
+  const { data: inventoryData } = useQuery({
+    queryKey: ['inventory-list'],
+    queryFn: () => apiFetch<InventoryData>('/inventory'),
+    enabled: isAuthenticated,
+  });
+
+  const items = inventoryData?.items ?? [];
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || isChatLoading) return;
-
-    const question = chatInput.trim();
-    setChatMessages((prev) => [...prev, { role: 'user', content: question }]);
-    setChatInput('');
-    setIsChatLoading(true);
-
-    try {
-      const topRiskSku = inventoryRecommendations[0]?.product_id;
-      const res = await apiFetch<{ response: string }>('/insights/chat', {
-        method: 'POST',
-        body: JSON.stringify({ message: question, selected_sku: topRiskSku }),
-      });
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: res.response }]);
-    } catch (err) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: err instanceof Error ? err.message : 'Unable to reach inventory assistant.',
-        },
-      ]);
-    } finally {
-      setIsChatLoading(false);
-    }
-  };
 
   const totalSavings = inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0);
 
@@ -176,11 +158,49 @@ const Inventory = () => {
             </motion.div>
           </div>
 
-          {/* Recommendations */}
+          {/* Stock Overview + Chat Sidebar */}
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+            <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
+              {inventoryData?.summary && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.25 }}
+                >
+                  <StockChart data={items} summary={inventoryData.summary} />
+                </motion.div>
+              )}
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+              >
+                <InventoryTable
+                  data={items}
+                  selectedSku={selectedItem?.sku ?? null}
+                  onSelectItem={setSelectedItem}
+                />
+              </motion.div>
+            </div>
+
+            <div className="w-full lg:w-[380px] shrink-0">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 }}
+                className="h-[500px] lg:h-[calc(100vh-16rem)]"
+              >
+                <ChatBot focusedItem={selectedItem} />
+              </motion.div>
+            </div>
+          </div>
+
+          {/* AI Recommendations */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
@@ -197,7 +217,6 @@ const Inventory = () => {
                     className="p-3 sm:p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors"
                   >
                     <div className="flex flex-col gap-3 sm:gap-4">
-                      {/* Product header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                           <h4 className="text-sm sm:text-lg font-semibold">{item.product_name}</h4>
@@ -228,7 +247,6 @@ const Inventory = () => {
                         </div>
                       </div>
 
-                      {/* Stats grid */}
                       <div className="grid grid-cols-4 gap-2 sm:gap-4">
                         <div className="text-center">
                           <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Stock</p>
@@ -253,13 +271,11 @@ const Inventory = () => {
                         </div>
                       </div>
 
-                      {/* Mobile savings row */}
                       <div className="flex items-center justify-between sm:hidden text-xs text-muted-foreground">
                         <span>Lead time: {item.leadTime} days</span>
                         <span className="font-bold text-success">+${item.costSavings.toLocaleString()}</span>
                       </div>
 
-                      {/* Stock Level Progress */}
                       <div className="pt-3 border-t border-border">
                         <div className="flex items-center justify-between text-xs sm:text-sm mb-1.5">
                           <span className="text-muted-foreground">Stock Level</span>
@@ -283,7 +299,7 @@ const Inventory = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
@@ -320,60 +336,8 @@ const Inventory = () => {
               </CardContent>
             </Card>
           </motion.div>
-
-          {/* RAG Assistant */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.5 }}
-          >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Inventory Assistant</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Ask questions about inventory policies and status</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col h-80 space-y-4">
-                  <div className="flex-1 overflow-y-auto space-y-4 border rounded-md p-4 bg-muted/20">
-                    {chatMessages.length === 0 && (
-                      <div className="text-sm text-muted-foreground text-center mt-10">
-                        Ask a question like "Which product is at risk of stockout?" or "What's the lead time for BL_KIT?"
-                      </div>
-                    )}
-                    {chatMessages.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] rounded-lg p-3 text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                          {msg.content}
-                        </div>
-                      </div>
-                    ))}
-                    {isChatLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted rounded-lg p-3 text-sm animate-pulse">Thinking...</div>
-                      </div>
-                    )}
-                  </div>
-                  <form onSubmit={handleChatSubmit} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Ask about inventory..."
-                      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                    <button type="submit" disabled={isChatLoading || !chatInput.trim()} className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                      Send
-                    </button>
-                  </form>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
         </main>
       </div>
-
-      <AIChatbot />
     </div>
   );
 };

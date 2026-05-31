@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { copilotChat } from '@/lib/knowledgeApi';
-import { chatResponses } from '@/lib/mockData';
 
 interface Message {
   id: number;
@@ -15,13 +14,11 @@ interface Message {
 }
 
 const quickQuestions = [
-  'Why is stock-out risk increasing?',
-  'Which products need attention?',
-  'Explain forecast changes for this SKU',
-  'Show similar historical incidents',
+  'How accurate are the demand forecasts?',
+  'What factors affect inventory levels?',
+  'Explain the MLOps monitoring system',
+  'How do I interpret the dashboard KPIs?',
 ];
-
-type ChatApiResponse = { answer: string; sources?: Array<{ title?: string }> };
 
 export const AIChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,13 +27,12 @@ export const AIChatbot = () => {
       id: 0,
       role: 'assistant',
       content:
-        "Hello! I'm your AI assistant for demand forecasting and inventory optimization. How can I help you today?",
+        "Hello! I'm your SupplyMind AI assistant. How can I help you today?",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [mode, setMode] = useState<'business' | 'technical'>('business');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -46,16 +42,6 @@ export const AIChatbot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const getMockResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
-    for (const [key, value] of Object.entries(chatResponses)) {
-      if (key !== 'default' && lowerQuery.includes(key)) {
-        return value;
-      }
-    }
-    return chatResponses.default;
-  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -72,30 +58,26 @@ export const AIChatbot = () => {
     setInput('');
     setIsTyping(true);
 
-    let responseText: string;
     try {
-      const res = await copilotChat({
-        message: question,
-        mode: mode === 'technical' ? 'technical' : 'business',
-      });
-      const sourcesNote =
-        res.sources?.length
-          ? `\n\nSources: ${res.sources.map((s) => s.title || 'doc').join(', ')}`
-          : '';
-      responseText = (res.answer || getMockResponse(question)) + sourcesNote;
+      const res = await copilotChat({ message: question });
+      const assistantMessage: Message = {
+        id: messages.length + 1,
+        role: 'assistant',
+        content: res.answer,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch {
-      responseText = getMockResponse(question);
+      const assistantMessage: Message = {
+        id: messages.length + 1,
+        role: 'assistant',
+        content: "I'm sorry, I couldn't process your request. Please try again later.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } finally {
+      setIsTyping(false);
     }
-
-    const assistantMessage: Message = {
-      id: messages.length + 1,
-      role: 'assistant',
-      content: responseText,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, assistantMessage]);
-    setIsTyping(false);
   };
 
   const handleQuickQuestion = (question: string) => {
@@ -137,37 +119,12 @@ export const AIChatbot = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold">SupplyMind Copilot</h3>
-                  <p className="text-xs text-muted-foreground">RAG + operational data</p>
+                  <p className="text-xs text-muted-foreground">AI Assistant</p>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
                 <X className="w-5 h-5" />
               </Button>
-            </div>
-
-            <div className="flex p-2 border-b border-border bg-muted/50">
-              <button
-                onClick={() => setMode('business')}
-                className={cn(
-                  'flex-1 py-2 text-sm font-medium rounded-lg transition-colors',
-                  mode === 'business'
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                Business Mode
-              </button>
-              <button
-                onClick={() => setMode('technical')}
-                className={cn(
-                  'flex-1 py-2 text-sm font-medium rounded-lg transition-colors',
-                  mode === 'technical'
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                Technical Mode
-              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

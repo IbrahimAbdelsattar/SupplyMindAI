@@ -18,7 +18,7 @@ load_dotenv()
 #   - nvidia/nemotron-3-super-120b-a12b:free
 #   - openai/gpt-oss-120b:free
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = os.getenv("LLM_REASONING_API_KEY") or os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 FREE_MODEL = "deepseek/deepseek-v4-flash:free"
 

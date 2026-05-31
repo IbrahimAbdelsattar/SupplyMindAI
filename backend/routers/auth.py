@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, HTTPException, status, Depends, Response
+from pydantic import BaseModel
 
 from backend.knowledge.auth import (
     signup_with_email,
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 class SignupRequest(BaseModel):
     """User signup request."""
-    email: EmailStr
+    email: str
     password: str
     name: Optional[str] = None
     company: Optional[str] = None
@@ -38,7 +38,7 @@ class SignupRequest(BaseModel):
 
 class SigninRequest(BaseModel):
     """User signin request."""
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -62,7 +62,7 @@ class UpdatePasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     """Password reset request."""
-    email: EmailStr
+    email: str
 
 
 class AuthResponse(BaseModel):
@@ -212,14 +212,15 @@ async def get_current_user_info(
         raise
 
 
-@router.post("/signout", status_code=status.HTTP_204_NO_CONTENT)
-async def signout_user(authorization: str = None) -> None:
+@router.post("/signout", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+async def signout_user(authorization: str = None) -> Response:
     """Sign out current user."""
     await verify_auth_configured()
     
     try:
         user = await get_current_user(authorization)
         await signout(authorization)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     except HTTPException:
         raise
 
