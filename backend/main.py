@@ -119,6 +119,9 @@ STORE = DataStore()
 ML_MODEL: Any = None
 RAG_SERVICE: Any = None
 
+# Forecast intelligence service (loaded from future_forecast.csv)
+FORECAST_INTELLIGENCE: Any = None
+
 
 # -----------------------------------------------------------------------------
 # Schemas
@@ -170,10 +173,7 @@ class KPIResponse(BaseModel):
 
 class ForecastPredictRequest(BaseModel):
     product_id: str = Field(..., description="Product ID from products.csv")
-    horizon_days: int = Field(14, ge=1, le=90)
-    store_id: Optional[str] = None
-    include_seasonality: Optional[bool] = True
-    include_promotions: Optional[bool] = True
+    horizon_days: int = Field(30, ge=1, le=180)
 
 
 class ForecastPoint(BaseModel):
@@ -184,10 +184,19 @@ class ForecastPoint(BaseModel):
     upper: int
 
 
+class MonthlyPrediction(BaseModel):
+    period: str
+    predicted_demand: int
+    confidence_level: float
+    demand_trend: str
+    revenue_forecast: Optional[float] = None
+
+
 class ForecastPredictResponse(BaseModel):
     product_id: str
     horizon_days: int
     series: list[ForecastPoint]
+    monthly_summary: Optional[list[MonthlyPrediction]] = None
 
 
 class InventoryRecommendation(BaseModel):
@@ -371,6 +380,22 @@ try:
 except Exception as exc:
     logger.warning("Knowledge router not loaded (Supabase layer inactive): %s", exc)
 
+# Mount forecast intelligence router
+try:
+    from backend.routers.forecast_intelligence import router as fi_router
+    app.include_router(fi_router)
+    logger.info("Forecast intelligence router mounted")
+except Exception as exc:
+    logger.warning("Forecast intelligence router not loaded: %s", exc)
+
+# Mount forecast insights router
+try:
+    from backend.routers.forecast_insights import router as fi_insights_router
+    app.include_router(fi_insights_router)
+    logger.info("Forecast insights router mounted")
+except Exception as exc:
+    logger.warning("Forecast insights router not loaded: %s", exc)
+
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "SupplyMindAI API is running"}
@@ -423,7 +448,7 @@ def health() -> dict[str, Any]:
 
 @app.on_event("startup")
 def _startup() -> None:
-    global ML_MODEL, RAG_SERVICE
+    global ML_MODEL, RAG_SERVICE, FORECAST_INTELLIGENCE
 
     from backend.bootstrap import init_ml_model, init_rag_service, load_environment
 
@@ -432,6 +457,13 @@ def _startup() -> None:
 
     ML_MODEL = init_ml_model(STORE)
     RAG_SERVICE = init_rag_service()
+
+    # Initialize forecast intelligence service
+    from pathlib import Path
+    from backend.services.forecast_intelligence_service import ForecastIntelligenceService
+
+    csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "Modeling" / "future_forecast.csv")))
+    FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
 
     pass
 
@@ -525,6 +557,42 @@ def kpis(period_days: int = 30, user: User = Depends(_get_current_user)) -> KPIR
 # -----------------------------------------------------------------------------
 # Forecast
 # -----------------------------------------------------------------------------
+def _monthly_summary_from_series(series: list[ForecastPoint]) -> list[MonthlyPrediction]:
+    """Aggregate daily forecast points into monthly predictions."""
+    from collections import OrderedDict
+
+    months: dict[str, list[ForecastPoint]] = OrderedDict()
+    for pt in series:
+        key = pt.date[:7]
+        months.setdefault(key, []).append(pt)
+
+    out: list[MonthlyPrediction] = []
+    for i, (period, pts) in enumerate(months.items()):
+        total = sum(p.forecast for p in pts)
+        n = len(pts)
+        avg_forecast = total / n if n else 0
+        avg_lower = sum(p.lower for p in pts) / n
+        avg_upper = sum(p.upper for p in pts) / n
+        band_pct = ((avg_upper - avg_lower) / avg_forecast * 100) if avg_forecast > 0 else 0
+        confidence = round(max(0, min(100, 100 - band_pct)), 1)
+
+        trend: str = "stable"
+        if i > 0:
+            prev_total = sum(p.forecast for p in months[list(months.keys())[i - 1]])
+            if total > prev_total * 1.1:
+                trend = "increasing"
+            elif total < prev_total * 0.9:
+                trend = "decreasing"
+
+        out.append(MonthlyPrediction(
+            period=period,
+            predicted_demand=total,
+            confidence_level=confidence,
+            demand_trend=trend,
+        ))
+    return out
+
+
 @app.post("/api/v1/forecast/predict", response_model=ForecastPredictResponse)
 def forecast_predict(req: ForecastPredictRequest, user: User = Depends(_get_current_user)) -> ForecastPredictResponse:
     # Validate product_id exists
@@ -533,7 +601,8 @@ def forecast_predict(req: ForecastPredictRequest, user: User = Depends(_get_curr
         raise HTTPException(status_code=404, detail=f"Unknown product_id: {req.product_id}")
 
     series = _simple_forecast_series(req.product_id, req.horizon_days)
-    resp = ForecastPredictResponse(product_id=req.product_id, horizon_days=req.horizon_days, series=series)
+    monthly = _monthly_summary_from_series(series)
+    resp = ForecastPredictResponse(product_id=req.product_id, horizon_days=req.horizon_days, series=series, monthly_summary=monthly)
 
     try:
         from backend.knowledge.hooks import on_forecast_generated

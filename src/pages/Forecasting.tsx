@@ -6,7 +6,6 @@ import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -34,16 +33,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, TrendingUp, Calendar, Sun, Tag } from 'lucide-react';
+import { Download, Calendar, Package } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 
 type Product = { product_id: string; product_name: string; category?: string };
-type Store = { id: string; name: string; region?: string };
 type ForecastPoint = { date: string; actual?: number | null; forecast: number; lower: number; upper: number };
-type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[] };
+type MonthlyPrediction = { period: string; predicted_demand: number; confidence_level: number; demand_trend: string; revenue_forecast?: number | null };
+type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[]; monthly_summary?: MonthlyPrediction[] | null };
+
+const HORIZON_OPTIONS = [
+  { label: '1 Month', value: 30 },
+  { label: '3 Months', value: 90 },
+  { label: '6 Months', value: 180 },
+];
 
 const Forecasting = () => {
   const { isAuthenticated } = useAuth();
@@ -52,14 +57,8 @@ const Forecasting = () => {
     queryFn: () => apiFetch<Product[]>('/data/products'),
   });
 
-  // Stores aren't in your datasets yet; keep UI but provide a single default option.
-  const stores: Store[] = [{ id: 'default', name: 'All Regions' }];
-
   const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [selectedStore, setSelectedStore] = useState(stores[0].id);
-  const [horizon, setHorizon] = useState('14');
-  const [includeSeasonality, setIncludeSeasonality] = useState(true);
-  const [includePromotions, setIncludePromotions] = useState(false);
+  const [horizon, setHorizon] = useState('90');
 
   useMemo(() => {
     if (!selectedProduct && products?.[0]?.product_id) setSelectedProduct(products[0].product_id);
@@ -76,11 +75,21 @@ const Forecasting = () => {
   });
 
   const chartData = useMemo(() => forecastMutation.data?.series ?? [], [forecastMutation.data]);
+  const monthlyData = useMemo(() => forecastMutation.data?.monthly_summary ?? [], [forecastMutation.data]);
+
+  const summary = useMemo(() => {
+    if (!monthlyData.length) return null;
+    const totalDemand = monthlyData.reduce((s, m) => s + m.predicted_demand, 0);
+    const avgConfidence = monthlyData.reduce((s, m) => s + m.confidence_level, 0) / monthlyData.length;
+    const latestTrend = monthlyData[monthlyData.length - 1]?.demand_trend ?? 'stable';
+    const totalRevenue = monthlyData.reduce((s, m) => s + (m.revenue_forecast ?? 0), 0);
+    return { totalDemand, avgConfidence, latestTrend, totalRevenue };
+  }, [monthlyData]);
 
   useMemo(() => {
     void forecastMutation.mutateAsync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProduct, horizon, includeSeasonality, includePromotions, selectedStore]);
+  }, [selectedProduct, horizon]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -106,7 +115,7 @@ const Forecasting = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader 
           title="Demand Forecasting" 
-          subtitle="AI-powered predictions with confidence intervals" 
+          subtitle="Product demand forecasting powered by ML" 
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
@@ -119,13 +128,13 @@ const Forecasting = () => {
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Forecast Parameters</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Configure the forecast model inputs</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Select a product and forecast future demand</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-lg">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-xs sm:text-sm">
-                      <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       Product
                     </Label>
                     <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -144,25 +153,6 @@ const Forecasting = () => {
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-xs sm:text-sm">
-                      <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      Store / Region
-                    </Label>
-                    <Select value={selectedStore} onValueChange={setSelectedStore}>
-                      <SelectTrigger className="bg-background h-9 sm:h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover">
-                        {stores.map((store) => (
-                          <SelectItem key={store.id} value={store.id}>
-                            {store.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-xs sm:text-sm">
                       <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       Forecast Horizon
                     </Label>
@@ -171,42 +161,69 @@ const Forecasting = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover">
-                        <SelectItem value="7">7 Days</SelectItem>
-                        <SelectItem value="14">14 Days</SelectItem>
-                        <SelectItem value="30">30 Days</SelectItem>
-                        <SelectItem value="60">60 Days</SelectItem>
+                        {HORIZON_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={String(opt.value)}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="seasonality" className="flex items-center gap-2 text-xs sm:text-sm">
-                        <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        Seasonality
-                      </Label>
-                      <Switch
-                        id="seasonality"
-                        checked={includeSeasonality}
-                        onCheckedChange={setIncludeSeasonality}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="promotions" className="flex items-center gap-2 text-xs sm:text-sm">
-                        <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        Promotions
-                      </Label>
-                      <Switch
-                        id="promotions"
-                        checked={includePromotions}
-                        onCheckedChange={setIncludePromotions}
-                      />
-                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Summary Cards */}
+          {summary && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.05 }}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
+            >
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Forecast Demand</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl">
+                    {summary.totalDemand.toLocaleString()}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Units</p>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Confidence Level</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl">
+                    {Math.round(summary.avgConfidence)}%
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Average across horizon</p>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Demand Trend</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl capitalize">
+                    {summary.latestTrend}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Latest period</p>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">Revenue Forecast</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl">
+                    {summary.totalRevenue > 0
+                      ? `$${summary.totalRevenue.toLocaleString()}`
+                      : '—'}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {summary.totalRevenue > 0 ? 'Projected revenue' : 'N/A (model pending)'}
+                  </p>
+                </CardHeader>
+              </Card>
+            </motion.div>
+          )}
 
           {selectedProduct && (
             <AISummaryCard
@@ -227,7 +244,7 @@ const Forecasting = () => {
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-6">
                 <div>
                   <CardTitle className="text-base sm:text-lg">Forecast Visualization</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Predicted demand with confidence bands</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">Historical demand with predicted demand and confidence bands</CardDescription>
                 </div>
                 <Button onClick={handleExport} variant="outline" className="gap-2 w-full sm:w-auto" size="sm">
                   <Download className="w-4 h-4" />
@@ -300,7 +317,7 @@ const Forecasting = () => {
             </Card>
           </motion.div>
 
-          {/* Forecast Table */}
+          {/* Monthly Forecast Table */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -308,44 +325,47 @@ const Forecasting = () => {
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Predicted Quantities</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Daily forecast breakdown with confidence intervals</CardDescription>
+                <CardTitle className="text-base sm:text-lg">Monthly Forecast Breakdown</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Predicted demand by period with confidence and trend</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="max-h-80 overflow-auto -mx-3 sm:mx-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs sm:text-sm">Date</TableHead>
-                        <TableHead className="text-right text-xs sm:text-sm">Actual</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Period</TableHead>
                         <TableHead className="text-right text-xs sm:text-sm">Forecast</TableHead>
-                        <TableHead className="text-right text-xs sm:text-sm hidden sm:table-cell">Lower</TableHead>
-                        <TableHead className="text-right text-xs sm:text-sm hidden sm:table-cell">Upper</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Confidence</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Trend</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {chartData.slice(-14).map((row, index) => (
+                      {monthlyData.map((row, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
-                            {new Date(row.date).toLocaleDateString('en-US', {
+                            {new Date(row.period + '-01').toLocaleDateString('en-US', {
+                              year: 'numeric',
                               month: 'short',
-                              day: 'numeric',
                             })}
                           </TableCell>
-                          <TableCell className="text-right text-xs sm:text-sm">
-                            {row.actual ? row.actual.toLocaleString() : '—'}
-                          </TableCell>
                           <TableCell className="text-right font-medium text-primary text-xs sm:text-sm">
-                            {row.forecast.toLocaleString()}
+                            {row.predicted_demand.toLocaleString()}
                           </TableCell>
-                          <TableCell className="text-right text-muted-foreground text-xs sm:text-sm hidden sm:table-cell">
-                            {row.lower.toLocaleString()}
+                          <TableCell className="text-right text-xs sm:text-sm">
+                            {row.confidence_level}%
                           </TableCell>
-                          <TableCell className="text-right text-muted-foreground text-xs sm:text-sm hidden sm:table-cell">
-                            {row.upper.toLocaleString()}
+                          <TableCell className="text-right text-xs sm:text-sm capitalize">
+                            {row.demand_trend}
                           </TableCell>
                         </TableRow>
                       ))}
+                      {!monthlyData.length && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground text-xs sm:text-sm py-8">
+                            Select a product to view the forecast breakdown
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </div>

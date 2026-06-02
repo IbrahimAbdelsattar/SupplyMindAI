@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import Boolean, DateTime, String, create_engine, inspect, text
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
@@ -36,6 +36,28 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ForecastResult(Base):
+    __tablename__ = "forecast_results"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    product_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    period: Mapped[str] = mapped_column(String(7), nullable=False)
+    predicted_demand: Mapped[int] = mapped_column(Integer, nullable=False)
+    confidence_level: Mapped[float] = mapped_column(Float, nullable=False)
+    demand_trend: Mapped[str] = mapped_column(String(20), nullable=False)
+    current_stock: Mapped[int] = mapped_column(Integer, nullable=False)
+    stock_risk_level: Mapped[str] = mapped_column(String(10), nullable=False)
+    recommended_order_qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    supplier_score: Mapped[float] = mapped_column(Float, nullable=False)
+    best_supplier: Mapped[str] = mapped_column(String(100), nullable=False)
+    lead_time_days: Mapped[float] = mapped_column(Float, nullable=False)
+    delay_risk: Mapped[str] = mapped_column(String(10), nullable=False)
+    avg_delay: Mapped[float] = mapped_column(Float, nullable=False)
+    profit_margin: Mapped[float] = mapped_column(Float, nullable=False)
+    revenue_forecast: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 def create_tables() -> None:
