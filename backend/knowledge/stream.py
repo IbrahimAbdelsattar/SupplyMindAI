@@ -6,7 +6,6 @@ import json
 import logging
 from typing import AsyncGenerator
 from langchain_core.messages import HumanMessage, SystemMessage
-from backend.knowledge.client import is_supabase_available
 from backend.knowledge.copilot import _save_conversation_turn, _use_langgraph_copilot
 from backend.knowledge.rag import GROUNDED_SYSTEM, build_context_block, get_operational_snapshot, _llm
 

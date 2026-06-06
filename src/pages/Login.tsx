@@ -57,7 +57,7 @@ const Login = () => {
       try {
         await login('demo@supplymind.ai', 'demopassword123');
       } catch (err) {
-        // If demo user doesn't exist in Supabase, create it
+        // Create the local demo account on first use.
         await register('Demo User', 'demo@supplymind.ai', 'demopassword123');
       }
       toast({

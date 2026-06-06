@@ -33,17 +33,17 @@ def _csv_knowledge_fallback(query: str, product_id: str) -> str:
     return "\n".join(parts)
 
 
-def _supabase_knowledge(query: str, product_id: str) -> str | None:
+def _database_knowledge(query: str, product_id: str) -> str | None:
     try:
-        from backend.knowledge.client import is_supabase_available
+        from backend.knowledge.client import is_knowledge_available
         from backend.knowledge.search import semantic_search
 
-        if not is_supabase_available():
+        if not is_knowledge_available():
             return None
         hits = semantic_search(query, product_id=product_id or None, match_count=8)
         if not hits:
             return None
-        parts = ["Knowledge retrieved (Supabase pgvector):"]
+        parts = ["Knowledge retrieved (local vector database):"]
         sources = []
         for hit in hits:
             parts.append(f"\n[{hit.get('source_type')}] {hit.get('title')}\n{str(hit.get('content', ''))[:800]}")
@@ -56,10 +56,10 @@ def _supabase_knowledge(query: str, product_id: str) -> str | None:
 
 @tool("query_inventory_knowledge", args_schema=RAGQueryInput)
 def query_inventory_knowledge(query: str, product_id: str = "") -> str:
-    """Retrieves operational knowledge from Supabase vectors, Chroma RAG, or CSV datasets."""
-    supabase_result = _supabase_knowledge(query, product_id)
-    if supabase_result:
-        return supabase_result
+    """Retrieves operational knowledge from local vectors, Chroma RAG, or CSV datasets."""
+    database_result = _database_knowledge(query, product_id)
+    if database_result:
+        return database_result
 
     import sys
 

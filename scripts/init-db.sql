@@ -20,7 +20,7 @@ ALTER ROLE supplymind_prod_app SET search_path = public, app;
 -- Create audit schema
 CREATE SCHEMA IF NOT EXISTS audit AUTHORIZATION supplymind_prod_app;
 
--- Enable row-level security (if using Supabase)
+-- Store the application JWT secret in deployment secrets, not in SQL.
 ALTER DATABASE supplymind_prod SET "app.jwt_secret" = 'change-me-in-production';
 
 -- Create function to track updates

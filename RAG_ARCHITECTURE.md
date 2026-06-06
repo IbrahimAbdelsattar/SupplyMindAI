@@ -5,7 +5,7 @@
 1. **Grounded answers** — LLM receives retrieved chunks + live operational snapshot only
 2. **No hallucinated metrics** — if retrieval is empty, the model states that explicitly
 3. **Operational DB unchanged** — CSV/SQLite facts injected at query time via `get_operational_snapshot()`
-4. **Layered retrieval** — Supabase pgvector first, Chroma legacy fallback, CSV last resort
+4. **Layered retrieval** — application vector database first, Chroma legacy fallback, CSV last resort
 
 ## Pipeline
 
@@ -19,7 +19,7 @@ Operational event (forecast, inventory, insight, report)
   ingestion.py → documents + embeddings (384-dim, MiniLM)
         │
         ▼
-  Supabase pgvector (HNSW index)
+  Application database embeddings (cosine similarity)
 ```
 
 ## Query flow
@@ -58,7 +58,7 @@ Agent-specific retrieval tools:
 - `search_inventory_knowledge`
 - `search_insights_knowledge`
 - `search_mlops_knowledge`
-- `query_inventory_knowledge` (Supabase → Chroma → CSV)
+- `query_inventory_knowledge` (application database → Chroma → CSV)
 
 ## Metadata filtering
 

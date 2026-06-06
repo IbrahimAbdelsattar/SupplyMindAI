@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
-from backend.knowledge.client import get_supabase_client, is_supabase_available
+from backend.db import Conversation
+from backend.knowledge.client import is_knowledge_available, knowledge_session
 from backend.knowledge.langsmith_tracing import configure_langsmith, trace_run
 from backend.knowledge.memory import recall_memory, upsert_memory
 from backend.knowledge.rag import get_operational_snapshot, rag_query
@@ -23,21 +25,21 @@ def _save_conversation_turn(
     content: str,
     metadata: dict[str, Any] | None = None,
 ) -> None:
-    if not is_supabase_available():
-        return
-    client = get_supabase_client()
-    if client is None:
+    if not is_knowledge_available():
         return
     try:
-        client.table("conversations").insert(
-            {
-                "user_id": user_id,
-                "session_id": session_id,
-                "role": role,
-                "content": content,
-                "metadata": metadata or {},
-            }
-        ).execute()
+        with knowledge_session() as db:
+            db.add(
+                Conversation(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    session_id=session_id,
+                    role=role,
+                    content=content,
+                    conversation_metadata=metadata or {},
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
     except Exception as exc:
         LOGGER.warning("Conversation persist failed: %s", exc)
 

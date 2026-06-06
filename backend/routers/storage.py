@@ -1,11 +1,11 @@
-"""Storage router — Supabase storage file management endpoints."""
+"""Storage API for local file management."""
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, status, UploadFile, File, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
 
 from backend.knowledge.storage import (
     upload_file,
@@ -16,7 +16,7 @@ from backend.knowledge.storage import (
     move_file,
     copy_file,
     StorageBucket,
-    is_supabase_storage_available,
+    is_storage_available,
 )
 from backend.knowledge.auth import get_user_from_token
 
@@ -28,15 +28,15 @@ router = APIRouter(prefix="/api/v1/storage", tags=["storage"])
 # ─────────────────────────────────────────────────────────────────────────
 
 async def verify_storage_configured() -> None:
-    """Verify that Supabase storage is configured."""
-    if not is_supabase_storage_available():
+    """Verify that local storage is available."""
+    if not is_storage_available():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Storage service not available. Please configure Supabase."
+            detail="Storage service not available."
         )
 
 
-async def get_current_user_id(authorization: str = None) -> str:
+async def get_current_user_id(authorization: str | None = None) -> str:
     """Extract user ID from authorization token."""
     if not authorization:
         raise HTTPException(
@@ -66,7 +66,7 @@ async def get_current_user_id(authorization: str = None) -> str:
 @router.post("/documents/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Upload document to storage.
     
@@ -139,7 +139,7 @@ async def upload_document(
 @router.post("/data/upload")
 async def upload_data_file(
     file: UploadFile = File(...),
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Upload data file (CSV, Excel) for import.
     
@@ -199,7 +199,7 @@ async def upload_data_file(
 @router.post("/reports/upload")
 async def upload_report(
     file: UploadFile = File(...),
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Upload report file (PDF, DOCX).
     
@@ -264,7 +264,7 @@ async def upload_report(
 async def list_user_files(
     bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
     folder: str = Query(""),
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """List files in user's storage bucket."""
     await verify_storage_configured()
@@ -298,7 +298,7 @@ async def list_user_files(
 async def delete_user_file(
     file_name: str,
     bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, str]:
     """Delete file from storage."""
     await verify_storage_configured()
@@ -339,7 +339,7 @@ async def get_file_url(
     file_name: str,
     bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
     expires_in: int = Query(3600, description="URL expiration in seconds"),
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Get public or signed URL for file."""
     await verify_storage_configured()
@@ -382,10 +382,30 @@ async def get_file_url(
 # Storage Health Check
 # ─────────────────────────────────────────────────────────────────────────
 
+@router.get("/files/{file_name}/download")
+async def download_user_file(
+    file_name: str,
+    bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
+    authorization: str | None = Header(default=None),
+) -> Response:
+    """Download a file owned by the authenticated user."""
+    await verify_storage_configured()
+    user_id = await get_current_user_id(authorization)
+    result = await download_file(bucket=bucket, file_path=file_name, user_id=user_id)
+    if not result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    content, content_type = result
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
+    )
+
+
 @router.get("/health")
 async def storage_health() -> dict[str, Any]:
     """Check storage service health."""
-    is_available = is_supabase_storage_available()
+    is_available = is_storage_available()
     
     return {
         "status": "healthy" if is_available else "unavailable",

@@ -11,7 +11,7 @@ The **SupplyMind Copilot** is the central AI assistant for supply chain operator
 - Show similar historical incidents
 - Recommend next actions
 
-It combines **vector memory** (Supabase), **live operational data** (CSV `DataStore`), and **LangGraph tool orchestration**.
+It combines **database-backed vector memory**, **live operational data** (CSV `DataStore`), and **LangGraph tool orchestration**.
 
 ## Engines
 
@@ -36,13 +36,13 @@ copilot_agent_node (ChatOpenAI + tools)
 
 Tools available to the copilot:
 
-- Supabase: `search_*_knowledge`, `recall_agent_memory`
+- Knowledge database: `search_*_knowledge`, `recall_agent_memory`
 - Legacy RAG: `query_inventory_knowledge`
 - Live ops: `generate_forecast`, `analyze_inventory`, `get_mlops_metrics`
 
 ## Multi-agent integration
 
-Existing supervisor graph (`backend/agents/graph.py`) routes to specialized agents. Each agent now binds Supabase retrieval tools:
+Existing supervisor graph (`backend/agents/graph.py`) routes to specialized agents. Each agent binds database-backed retrieval tools:
 
 | Agent | Retrieval tool |
 |-------|----------------|
@@ -109,4 +109,4 @@ Enable LangSmith (`LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJEC
 
 ## Security note
 
-Copilot uses **existing JWT auth** (`_get_current_user`). Supabase is accessed only server-side with the service role key.
+Copilot uses **existing JWT auth** (`_get_current_user`). Knowledge and memory are accessed server-side through SQLAlchemy.

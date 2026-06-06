@@ -1,19 +1,28 @@
-"""Supabase Authentication Manager — handles user auth and session management."""
+"""Application authentication backed by the primary SQL database."""
 
 from __future__ import annotations
 
-import logging
+import os
+import uuid
+import hashlib
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
 from typing import Any, Optional
 
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 from pydantic import BaseModel
+from sqlalchemy import select
 
-LOGGER = logging.getLogger(__name__)
+from backend.db import AuthSession, SessionLocal, User
+
+JWT_SECRET = os.getenv("JWT_SECRET", "development-only-change-me")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+REFRESH_TOKEN_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+PASSWORD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class AuthUser(BaseModel):
-    """Supabase authenticated user."""
     id: str
     email: str
     user_metadata: dict[str, Any] = {}
@@ -21,319 +30,213 @@ class AuthUser(BaseModel):
     created_at: str
     updated_at: str
     last_sign_in_at: Optional[str] = None
-    
+
     @property
     def role(self) -> str:
-        """Extract role from app_metadata."""
         return self.app_metadata.get("role", "analyst")
 
 
 class AuthResponse(BaseModel):
-    """Authentication response."""
     user: AuthUser
     session: dict[str, Any]
     access_token: str
     refresh_token: Optional[str] = None
 
 
-@lru_cache(maxsize=1)
-def get_supabase_auth_client() -> Any:
-    """Get Supabase client configured for authentication."""
-    try:
-        from supabase import create_client
-        import os
-        
-        supabase_url = os.getenv("SUPABASE_URL", "").strip()
-        supabase_anon_key = os.getenv("SUPABASE_ANON_KEY", "").strip()
-        
-        if not supabase_url or not supabase_anon_key:
-            LOGGER.warning("Supabase auth not configured (missing URL or ANON_KEY)")
-            return None
-            
-        return create_client(supabase_url, supabase_anon_key)
-    except Exception as exc:
-        LOGGER.exception("Failed to initialize Supabase auth client: %s", exc)
-        return None
+def is_auth_available() -> bool:
+    return True
 
 
-def is_supabase_auth_available() -> bool:
-    """Check if Supabase authentication is available."""
-    return get_supabase_auth_client() is not None
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
-async def signup_with_email(email: str, password: str, metadata: dict[str, Any] | None = None) -> AuthResponse:
-    """Sign up a new user with email and password.
-    
-    Args:
-        email: User email address
-        password: User password (min 8 chars)
-        metadata: Optional user metadata (name, company, etc.)
-    
-    Returns:
-        AuthResponse with user and session info
-        
-    Raises:
-        ValueError: If email already exists or password too weak
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        user_metadata = metadata or {}
-        
-        response = client.auth.sign_up({
-            "email": email,
-            "password": password,
-            "options": {
-                "data": user_metadata,
-                "redirect_to": f"{client.base_url}/auth/callback"
-            }
-        })
-        
-        if not response.user:
-            raise ValueError("Failed to create user")
-        
-        user = AuthUser(**response.user.model_dump())
-        session_data = response.session.model_dump() if response.session else {}
-        
-        LOGGER.info(f"User signed up: {email}")
-        
-        return AuthResponse(
-            user=user,
-            session=session_data,
-            access_token=session_data.get("access_token", ""),
-            refresh_token=session_data.get("refresh_token")
+def _user_model(user: User, *, last_sign_in_at: str | None = None) -> AuthUser:
+    created = user.created_at or _now()
+    updated = user.updated_at or created
+    return AuthUser(
+        id=user.id,
+        email=user.email,
+        user_metadata={"name": user.name},
+        app_metadata={"role": user.role},
+        created_at=created.isoformat(),
+        updated_at=updated.isoformat(),
+        last_sign_in_at=last_sign_in_at,
+    )
+
+
+def _token(user: User, token_type: str, expires_delta: timedelta, session_id: str) -> str:
+    now = _now()
+    return jwt.encode(
+        {
+            "sub": user.id,
+            "email": user.email,
+            "role": user.role,
+            "type": token_type,
+            "sid": session_id,
+            "iat": now,
+            "exp": now + expires_delta,
+        },
+        JWT_SECRET,
+        algorithm=JWT_ALGORITHM,
+    )
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _auth_response(user: User) -> AuthResponse:
+    session_id = str(uuid.uuid4())
+    access = _token(user, "access", timedelta(minutes=ACCESS_TOKEN_MINUTES), session_id)
+    refresh = _token(user, "refresh", timedelta(days=REFRESH_TOKEN_DAYS), session_id)
+    expires_at = _now() + timedelta(minutes=ACCESS_TOKEN_MINUTES)
+    with SessionLocal() as db:
+        db.add(
+            AuthSession(
+                id=session_id,
+                user_id=user.id,
+                refresh_token_hash=_token_hash(refresh),
+                is_active=True,
+                expires_at=_now() + timedelta(days=REFRESH_TOKEN_DAYS),
+                created_at=_now(),
+                updated_at=_now(),
+            )
         )
-    except Exception as exc:
-        LOGGER.error(f"Signup failed for {email}: {exc}")
-        raise ValueError(f"Signup failed: {str(exc)}")
+        db.commit()
+    return AuthResponse(
+        user=_user_model(user, last_sign_in_at=_now().isoformat()),
+        session={"access_token": access, "refresh_token": refresh, "expires_at": expires_at.isoformat()},
+        access_token=access,
+        refresh_token=refresh,
+    )
+
+
+def _decode(token: str, expected_type: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except JWTError as exc:
+        raise ValueError("Invalid or expired token") from exc
+    if payload.get("type") != expected_type or not payload.get("sub") or not payload.get("sid"):
+        raise ValueError("Invalid token")
+    return payload
+
+
+async def signup_with_email(
+    email: str, password: str, metadata: dict[str, Any] | None = None
+) -> AuthResponse:
+    email = email.strip().lower()
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters")
+    with SessionLocal() as db:
+        if db.scalar(select(User).where(User.email == email)):
+            raise ValueError("An account with this email already exists")
+        now = _now()
+        user = User(
+            id=str(uuid.uuid4()),
+            name=str((metadata or {}).get("name") or email.split("@")[0]),
+            email=email,
+            password_hash=PASSWORD_CONTEXT.hash(password),
+            role="analyst",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return _auth_response(user)
 
 
 async def signin_with_email(email: str, password: str) -> AuthResponse:
-    """Sign in user with email and password.
-    
-    Args:
-        email: User email address
-        password: User password
-    
-    Returns:
-        AuthResponse with user and session info
-        
-    Raises:
-        ValueError: If credentials invalid
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        response = client.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-        
-        if not response.user:
-            raise ValueError("Invalid credentials")
-        
-        user = AuthUser(**response.user.model_dump())
-        session_data = response.session.model_dump() if response.session else {}
-        
-        LOGGER.info(f"User signed in: {email}")
-        
-        return AuthResponse(
-            user=user,
-            session=session_data,
-            access_token=session_data.get("access_token", ""),
-            refresh_token=session_data.get("refresh_token")
-        )
-    except Exception as exc:
-        LOGGER.error(f"Signin failed for {email}: {exc}")
-        raise ValueError("Invalid email or password")
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.email == email.strip().lower()))
+        if not user or not user.is_active or not PASSWORD_CONTEXT.verify(password, user.password_hash):
+            raise ValueError("Invalid email or password")
+        return _auth_response(user)
 
 
 async def get_user_from_token(access_token: str) -> AuthUser:
-    """Get user information from access token.
-    
-    Args:
-        access_token: JWT access token from Supabase
-    
-    Returns:
-        AuthUser information
-        
-    Raises:
-        ValueError: If token invalid or expired
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        response = client.auth.get_user(access_token)
-        
-        if not response:
-            raise ValueError("Invalid token")
-        
-        user = AuthUser(**response.model_dump())
-        return user
-    except Exception as exc:
-        LOGGER.error(f"Failed to get user from token: {exc}")
-        raise ValueError("Invalid or expired token")
+    payload = _decode(access_token, "access")
+    with SessionLocal() as db:
+        auth_session = db.get(AuthSession, payload["sid"])
+        if not auth_session or not auth_session.is_active or auth_session.user_id != payload["sub"]:
+            raise ValueError("Session is no longer active")
+        user = db.get(User, payload["sub"])
+        if not user or not user.is_active:
+            raise ValueError("User not found or inactive")
+        return _user_model(user)
 
 
 async def refresh_session(refresh_token: str) -> AuthResponse:
-    """Refresh user session with refresh token.
-    
-    Args:
-        refresh_token: Refresh token from previous session
-    
-    Returns:
-        AuthResponse with new tokens
-        
-    Raises:
-        ValueError: If refresh token invalid
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        response = client.auth.refresh_session({
-            "refresh_token": refresh_token
-        })
-        
-        if not response.user:
-            raise ValueError("Failed to refresh session")
-        
-        user = AuthUser(**response.user.model_dump())
-        session_data = response.session.model_dump() if response.session else {}
-        
-        return AuthResponse(
-            user=user,
-            session=session_data,
-            access_token=session_data.get("access_token", ""),
-            refresh_token=session_data.get("refresh_token")
-        )
-    except Exception as exc:
-        LOGGER.error(f"Session refresh failed: {exc}")
-        raise ValueError("Failed to refresh session")
+    payload = _decode(refresh_token, "refresh")
+    with SessionLocal() as db:
+        auth_session = db.get(AuthSession, payload["sid"])
+        if (
+            not auth_session
+            or not auth_session.is_active
+            or auth_session.user_id != payload["sub"]
+            or auth_session.refresh_token_hash != _token_hash(refresh_token)
+        ):
+            raise ValueError("Refresh session is no longer active")
+        auth_session.is_active = False
+        auth_session.updated_at = _now()
+        db.commit()
+        user = db.get(User, payload["sub"])
+        if not user or not user.is_active:
+            raise ValueError("User not found or inactive")
+        return _auth_response(user)
 
 
 async def signout(access_token: str) -> None:
-    """Sign out user and invalidate session.
-    
-    Args:
-        access_token: User's access token
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        client.auth.sign_out()
-        LOGGER.info("User signed out")
-    except Exception as exc:
-        LOGGER.error(f"Signout failed: {exc}")
-        raise ValueError("Failed to sign out")
+    payload = _decode(access_token.removeprefix("Bearer ").strip(), "access")
+    with SessionLocal() as db:
+        auth_session = db.get(AuthSession, payload["sid"])
+        if auth_session:
+            auth_session.is_active = False
+            auth_session.updated_at = _now()
+            db.commit()
 
 
 async def update_user_metadata(access_token: str, metadata: dict[str, Any]) -> AuthUser:
-    """Update user metadata.
-    
-    Args:
-        access_token: User's access token
-        metadata: Metadata to update
-    
-    Returns:
-        Updated AuthUser
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        response = client.auth.update_user(
-            {"user_metadata": metadata},
-            access_token
-        )
-        
-        if not response:
-            raise ValueError("Failed to update metadata")
-        
-        user = AuthUser(**response.model_dump())
-        return user
-    except Exception as exc:
-        LOGGER.error(f"Failed to update user metadata: {exc}")
-        raise ValueError("Failed to update profile")
+    payload = _decode(access_token.removeprefix("Bearer ").strip(), "access")
+    with SessionLocal() as db:
+        user = db.get(User, payload["sub"])
+        if not user:
+            raise ValueError("User not found")
+        if metadata.get("name"):
+            user.name = str(metadata["name"]).strip()
+        user.updated_at = _now()
+        db.commit()
+        db.refresh(user)
+        return _user_model(user)
 
 
 async def reset_password(email: str) -> None:
-    """Request password reset for user.
-    
-    Args:
-        email: User email address
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        client.auth.reset_password_for_email(
-            email,
-            options={"redirect_to": f"{client.base_url}/auth/reset"}
-        )
-        LOGGER.info(f"Password reset email sent to {email}")
-    except Exception as exc:
-        LOGGER.error(f"Failed to send password reset: {exc}")
-        # Don't expose error to user
-        pass
+    # Email delivery is intentionally provider-neutral. Do not reveal account existence.
+    return None
 
 
 async def update_password(access_token: str, new_password: str) -> AuthUser:
-    """Update user password.
-    
-    Args:
-        access_token: User's access token
-        new_password: New password
-    
-    Returns:
-        Updated AuthUser
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        response = client.auth.update_user(
-            {"password": new_password},
-            access_token
-        )
-        
-        if not response:
-            raise ValueError("Failed to update password")
-        
-        user = AuthUser(**response.model_dump())
-        return user
-    except Exception as exc:
-        LOGGER.error(f"Failed to update password: {exc}")
-        raise ValueError("Failed to update password")
+    if len(new_password) < 8:
+        raise ValueError("Password must be at least 8 characters")
+    payload = _decode(access_token.removeprefix("Bearer ").strip(), "access")
+    with SessionLocal() as db:
+        user = db.get(User, payload["sub"])
+        if not user:
+            raise ValueError("User not found")
+        user.password_hash = PASSWORD_CONTEXT.hash(new_password)
+        user.updated_at = _now()
+        db.commit()
+        db.refresh(user)
+        return _user_model(user)
 
 
 async def delete_user(access_token: str) -> None:
-    """Delete user account.
-    
-    Args:
-        access_token: User's access token
-    """
-    client = get_supabase_auth_client()
-    if not client:
-        raise ValueError("Supabase authentication not configured")
-    
-    try:
-        # First, delete user's data
-        # Then delete user account
-        client.auth.admin.delete_user(access_token)
-        LOGGER.info(f"User account deleted")
-    except Exception as exc:
-        LOGGER.error(f"Failed to delete user: {exc}")
-        raise ValueError("Failed to delete account")
+    payload = _decode(access_token.removeprefix("Bearer ").strip(), "access")
+    with SessionLocal() as db:
+        user = db.get(User, payload["sub"])
+        if not user:
+            raise ValueError("User not found")
+        db.delete(user)
+        db.commit()

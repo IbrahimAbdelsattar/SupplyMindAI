@@ -43,7 +43,7 @@ def supervisor_node(state: AgentState):
     return {"current_intent": response.content.strip()}
 
 def forecasting_node(state: AgentState):
-    sys_msg = SystemMessage(content="You are the Forecasting Agent. Use `generate_forecast` for predictions and `search_forecast_knowledge` for historical forecast context from Supabase.")
+    sys_msg = SystemMessage(content="You are the Forecasting Agent. Use `generate_forecast` for predictions and `search_forecast_knowledge` for historical forecast context.")
     messages = [sys_msg] + state['messages']
     response = forecasting_llm.invoke(messages)
     return {"messages": [response]}

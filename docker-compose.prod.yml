@@ -82,9 +82,7 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-v4-flash:free}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - STORAGE_PATH=/app/data/storage
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
       - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT}
@@ -93,6 +91,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - app_data:/app/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)\" || exit 1"]
       interval: 30s
@@ -173,6 +173,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  app_data:
     driver: local
 
 networks:

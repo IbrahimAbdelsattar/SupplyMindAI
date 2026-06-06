@@ -1,4 +1,4 @@
-"""Document ingestion into Supabase (documents + embeddings)."""
+"""Document ingestion into the application knowledge database."""
 
 from __future__ import annotations
 
@@ -7,12 +7,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from backend.knowledge.client import get_supabase_client, is_supabase_available
-from backend.knowledge.config import get_knowledge_settings
+from backend.db import KnowledgeDocument, KnowledgeEmbedding
+from backend.knowledge.client import is_knowledge_available, knowledge_session
 from backend.knowledge.embeddings import chunk_text, embed_texts_batch
 
 LOGGER = logging.getLogger(__name__)
-
 SourceType = str
 
 
@@ -25,151 +24,108 @@ def ingest_document(
     user_id: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    """Store document and embedding chunks in Supabase."""
-    if not is_supabase_available():
+    if not is_knowledge_available():
         return None
 
-    client = get_supabase_client()
-    if client is None:
-        return None
-
+    now = datetime.now(timezone.utc)
+    document_id = str(uuid.uuid4())
     meta = dict(metadata or {})
-    meta.setdefault("ingested_at", datetime.now(timezone.utc).isoformat())
-
-    doc_row = {
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "source_type": source_type,
-        "source_id": source_id,
-        "title": title,
-        "content": content,
-        "metadata": meta,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
+    meta.setdefault("ingested_at", now.isoformat())
+    chunks = chunk_text(content) or [content[:2000] if content else title]
 
     try:
-        client.table("documents").insert(doc_row).execute()
+        vectors = embed_texts_batch(chunks)
+        with knowledge_session() as db:
+            db.add(
+                KnowledgeDocument(
+                    id=document_id,
+                    user_id=user_id,
+                    source_type=source_type,
+                    source_id=source_id,
+                    title=title,
+                    content=content,
+                    document_metadata=meta,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            db.add_all(
+                [
+                    KnowledgeEmbedding(
+                        id=str(uuid.uuid4()),
+                        document_id=document_id,
+                        embedding=vector,
+                        chunk_index=index,
+                        chunk_content=chunk,
+                        embedding_metadata=meta,
+                        created_at=now,
+                    )
+                    for index, (chunk, vector) in enumerate(zip(chunks, vectors))
+                ]
+            )
     except Exception as exc:
-        LOGGER.exception("Document insert failed: %s", exc)
-        return None
-
-    chunks = chunk_text(content)
-    if not chunks:
-        chunks = [content[:2000] if content else title]
-
-    vectors = embed_texts_batch(chunks)
-    embed_rows = []
-    for idx, (chunk, vector) in enumerate(zip(chunks, vectors)):
-        embed_rows.append(
-            {
-                "id": str(uuid.uuid4()),
-                "document_id": doc_row["id"],
-                "embedding": vector,
-                "chunk_index": idx,
-                "metadata": {**meta, "chunk": chunk[:200]},
-            }
-        )
-
-    try:
-        client.table("embeddings").insert(embed_rows).execute()
-    except Exception as exc:
-        LOGGER.exception("Embedding insert failed: %s", exc)
-        client.table("documents").delete().eq("id", doc_row["id"]).execute()
+        LOGGER.exception("Knowledge ingestion failed: %s", exc)
         return None
 
     return {
-        "document_id": doc_row["id"],
+        "document_id": document_id,
         "source_type": source_type,
         "source_id": source_id,
-        "chunks": len(embed_rows),
+        "chunks": len(chunks),
     }
 
 
 def ingest_forecast_summary(
-    *,
-    product_id: str,
-    horizon_days: int,
-    summary: str,
-    user_id: str | None = None,
+    *, product_id: str, horizon_days: int, summary: str, user_id: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    meta = {"product_id": product_id, "horizon_days": horizon_days, **(extra or {})}
     return ingest_document(
         title=f"Forecast: {product_id} ({horizon_days}d)",
         content=summary,
         source_type="forecast",
         source_id=product_id,
         user_id=user_id,
-        metadata=meta,
+        metadata={"product_id": product_id, "horizon_days": horizon_days, **(extra or {})},
     )
 
 
 def ingest_inventory_recommendation(
-    *,
-    product_id: str,
-    summary: str,
-    user_id: str | None = None,
+    *, product_id: str, summary: str, user_id: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    meta = {"product_id": product_id, **(extra or {})}
     return ingest_document(
-        title=f"Inventory recommendation: {product_id}",
-        content=summary,
-        source_type="inventory",
-        source_id=product_id,
-        user_id=user_id,
-        metadata=meta,
+        title=f"Inventory recommendation: {product_id}", content=summary,
+        source_type="inventory", source_id=product_id, user_id=user_id,
+        metadata={"product_id": product_id, **(extra or {})},
     )
 
 
 def ingest_insight(
-    *,
-    product_id: str,
-    summary: str,
-    user_id: str | None = None,
+    *, product_id: str, summary: str, user_id: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    meta = {"product_id": product_id, **(extra or {})}
     return ingest_document(
-        title=f"AI insight: {product_id}",
-        content=summary,
-        source_type="insight",
-        source_id=product_id,
-        user_id=user_id,
-        metadata=meta,
+        title=f"AI insight: {product_id}", content=summary, source_type="insight",
+        source_id=product_id, user_id=user_id,
+        metadata={"product_id": product_id, **(extra or {})},
     )
 
 
 def ingest_report(
-    *,
-    report_id: str,
-    title: str,
-    content: str,
-    user_id: str | None = None,
+    *, report_id: str, title: str, content: str, user_id: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     return ingest_document(
-        title=title,
-        content=content,
-        source_type="report",
-        source_id=report_id,
-        user_id=user_id,
-        metadata=extra or {},
+        title=title, content=content, source_type="report", source_id=report_id,
+        user_id=user_id, metadata=extra or {},
     )
 
 
 def ingest_mlops_event(
-    *,
-    event_id: str,
-    summary: str,
-    user_id: str | None = None,
+    *, event_id: str, summary: str, user_id: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     return ingest_document(
-        title=f"MLOps: {event_id}",
-        content=summary,
-        source_type="mlops",
-        source_id=event_id,
-        user_id=user_id,
-        metadata=extra or {},
+        title=f"MLOps: {event_id}", content=summary, source_type="mlops",
+        source_id=event_id, user_id=user_id, metadata=extra or {},
     )

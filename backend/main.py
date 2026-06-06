@@ -404,9 +404,9 @@ app.add_middleware(
 )
 
 # Note: JWT auth routes are defined directly below — /api/v1/auth/login, /register, /me, etc.
-# The Supabase auth router is NOT mounted here to avoid conflicting with those routes.
+# Authentication routes are mounted below.
 
-# Mount storage router (Supabase)
+# Mount local storage router
 try:
     from backend.routers.storage import router as storage_router
     app.include_router(storage_router)
@@ -420,7 +420,7 @@ try:
     app.include_router(knowledge_router, prefix="/api/v1")
     logger.info("Knowledge router mounted at /api/v1")
 except Exception as exc:
-    logger.warning("Knowledge router not loaded (Supabase layer inactive): %s", exc)
+    logger.warning("Knowledge router not loaded: %s", exc)
 
 # Mount forecast intelligence router
 try:
@@ -462,14 +462,14 @@ async def log_requests(request: Request, call_next):
 def health() -> dict[str, Any]:
     data_ok = all((DATA_DIR / name).exists() for name in ["products.csv", "sales_daily.csv", "inventory.csv"])
     try:
-        from backend.knowledge.client import is_supabase_available
+        from backend.knowledge.client import is_knowledge_available
         from backend.knowledge.config import get_knowledge_settings
 
         k_settings = get_knowledge_settings()
-        supabase_ok = is_supabase_available()
+        knowledge_ok = is_knowledge_available()
     except Exception:
         k_settings = None
-        supabase_ok = False
+        knowledge_ok = False
 
     return {
         "status": "ok",
@@ -481,8 +481,8 @@ def health() -> dict[str, Any]:
             "rag_service": RAG_SERVICE is not None,
             "rag_loaded": bool(RAG_SERVICE and getattr(RAG_SERVICE, "is_initialized", True)),
             "openrouter_key": bool(os.getenv("CHATBOT_API_KEY") or os.getenv("LLM_REASONING_API_KEY") or os.getenv("RAG_API_KEY")),
-            "supabase_configured": bool(k_settings and k_settings.is_configured),
-            "supabase_connected": supabase_ok,
+            "knowledge_configured": bool(k_settings and k_settings.is_configured),
+            "knowledge_connected": knowledge_ok,
             "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes"},
         },
     }
@@ -516,7 +516,7 @@ def _startup() -> None:
 try:
     from backend.routers.auth import router as auth_router
     app.include_router(auth_router)
-    logger.info("Supabase auth router mounted")
+    logger.info("Database auth router mounted")
 except Exception as exc:
     logger.warning("Auth router not loaded: %s", exc)
 

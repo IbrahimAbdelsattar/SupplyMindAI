@@ -23,6 +23,5 @@ requests
 langchain-core>=0.3.0
 langchain-openai>=0.2.0
 langgraph>=0.2.0
-supabase>=2.10.0
 langsmith>=0.1.0
 email-validator>=2.0.0

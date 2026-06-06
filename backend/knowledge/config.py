@@ -1,4 +1,4 @@
-"""Supabase intelligence layer configuration."""
+"""Local knowledge layer configuration."""
 
 from __future__ import annotations
 
@@ -9,9 +9,6 @@ from functools import lru_cache
 
 @dataclass(frozen=True)
 class KnowledgeSettings:
-    supabase_url: str
-    supabase_anon_key: str
-    supabase_service_role_key: str
     embedding_model: str
     embedding_dimension: int
     match_threshold: float
@@ -23,15 +20,12 @@ class KnowledgeSettings:
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.supabase_url and self.supabase_service_role_key)
+        return True
 
 
 @lru_cache(maxsize=1)
 def get_knowledge_settings() -> KnowledgeSettings:
     return KnowledgeSettings(
-        supabase_url=os.getenv("SUPABASE_URL", "").strip(),
-        supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", "").strip(),
-        supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip(),
         embedding_model=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
         embedding_dimension=int(os.getenv("EMBEDDING_DIMENSION", "384")),
         match_threshold=float(os.getenv("KNOWLEDGE_MATCH_THRESHOLD", "0.45")),

@@ -38,7 +38,7 @@ Before deploying to production, ensure the following:
 
 ### Application
 - [ ] Update frontend API URL to production domain
-- [ ] Configure Supabase for vector embeddings (optional but recommended)
+- [ ] Configure the application database and persistent storage volume
 - [ ] Set up LLM API key (OpenRouter, OpenAI, etc.)
 - [ ] Test all critical user flows
 - [ ] Run security scanning on dependencies
@@ -79,7 +79,7 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 
 # API Keys
 OPENROUTER_API_KEY=sk-or-...
-SUPABASE_SERVICE_ROLE_KEY=...
+STORAGE_PATH=/app/data/storage
 
 # LLM Configuration
 LLM_MODEL=deepseek/deepseek-v4-flash:free  # or your preferred model
@@ -278,7 +278,7 @@ GRANT CONNECT ON DATABASE supplymind_prod TO supplymind_prod_app;
 GRANT USAGE ON SCHEMA public TO supplymind_prod_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO supplymind_prod_app;
 
--- Enable row-level security (if using Supabase)
+-- Apply database permissions appropriate for the deployment role
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY users_isolation ON users USING (auth.uid() = user_id);
 

@@ -45,7 +45,7 @@
 - [ ] API URLs point to production domain
 - [ ] CORS properly configured
 - [ ] LLM API keys set
-- [ ] Supabase credentials configured (if using)
+- [ ] `JWT_SECRET`, `DATABASE_URL`, and `STORAGE_PATH` configured
 
 ### Deployment
 - [ ] Docker images built and tested locally

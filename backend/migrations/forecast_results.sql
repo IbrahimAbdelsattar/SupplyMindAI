@@ -1,5 +1,5 @@
 -- SupplyMind AI: Forecast Results Table
--- Run this in Supabase SQL Editor to create the forecast_results table.
+-- Run this against the application PostgreSQL database to create forecast_results.
 
 CREATE TABLE IF NOT EXISTS forecast_results (
     id              TEXT PRIMARY KEY,

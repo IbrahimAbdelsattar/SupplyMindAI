@@ -1,4 +1,4 @@
-"""LangGraph tools — Supabase retrieval per agent."""
+"""LangGraph tools for database-backed knowledge retrieval."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class KnowledgeSearchInput(BaseModel):
 
 def _format_hits(hits: list) -> str:
     if not hits:
-        return "No matching knowledge found in Supabase."
+        return "No matching knowledge found in the knowledge database."
     lines = []
     for h in hits:
         lines.append(
@@ -32,7 +32,7 @@ def _format_hits(hits: list) -> str:
 
 @tool("search_forecast_knowledge", args_schema=KnowledgeSearchInput)
 def search_forecast_knowledge(query: str, product_id: str = "", source_type: str = "") -> str:
-    """Retrieve historical forecasts and forecast summaries from Supabase."""
+    """Retrieve historical forecasts and forecast summaries."""
     hits = semantic_search(
         query,
         source_type=source_type or "forecast",

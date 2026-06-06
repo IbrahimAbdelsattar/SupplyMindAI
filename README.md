@@ -399,7 +399,7 @@ graph TD
 | `src/pages/AIInsights.tsx`, `LLM/`, `backend/agents/nodes.py` | Kenzi (M3) | LLM |
 | `src/pages/Inventory.tsx`, `src/components/inventory/`, `rag-powered-inventory-management/` | Ali Ehab (M4) | RAG |
 | `src/pages/MLOps.tsx`, `backend/knowledge/` | Ali S. (M5) | MLOps |
-| `backend/` (core), `.github/`, `supabase/`, `scripts/`, `docker-compose.yml` | Ibrahim (M6) | Backend |
+| `backend/` (core), `.github/`, `scripts/`, `docker-compose.yml` | Ibrahim (M6) | Backend |
 | `src/pages/Forecasting.tsx` | M2 (data) + M6 (API) | Shared |
 
 ---
@@ -500,7 +500,7 @@ supplymind-ai/
 │   ├── ml_adapter.py                  # ML model wrapper
 │   ├── analytics.py                   # Business logic helpers
 │   ├── routers/
-│   │   ├── auth.py                    # Supabase auth router
+│   │   ├── auth.py                    # Database/JWT auth router
 │   │   ├── knowledge.py               # Knowledge ingestion/search router
 │   │   └── storage.py                 # File storage router
 │   ├── agents/
@@ -516,14 +516,14 @@ supplymind-ai/
 │   │   └── rag_tools.py               # RAG query tool
 │   ├── knowledge/
 │   │   ├── rag.py                     # Production RAG generation
-│   │   ├── search.py                  # Semantic search (Supabase pgvector)
+│   │   ├── search.py                  # Local semantic vector search
 │   │   ├── embeddings.py              # Text embedding generation
 │   │   ├── ingestion.py               # Document ingestion pipeline
 │   │   ├── memory.py                  # Agent conversation memory
 │   │   ├── hooks.py                   # Operational hooks
 │   │   ├── copilot.py                 # Copilot orchestration
 │   │   ├── config.py                  # Knowledge settings
-│   │   ├── client.py                  # Supabase client
+│   │   ├── client.py                  # Knowledge database sessions
 │   │   ├── auth.py                    # Knowledge auth
 │   │   ├── langsmith_tracing.py       # LangSmith observability
 │   │   ├── storage.py                 # File storage
@@ -539,10 +539,9 @@ supplymind-ai/
 │   │   ├── data/chroma_db/            # Vector store
 │   │   └── notebooks/                 # RAG analysis notebooks
 │
-├── 🗄️ Supabase
-│   ├── supabase/migrations/           # SQL migrations (intelligence layer, auth)
-│   ├── SUPABASE_ARCHITECTURE.md
-│   └── SUPABASE_AUTH_STORAGE_SETUP.md
+├── 🗄️ Self-hosted data services
+│   ├── backend/db.py                   # Users, knowledge, memory, conversations
+│   └── data/storage/                   # User-isolated local file storage
 │
 ├── 🐳 Docker & Deployment
 │   ├── docker-compose.yml
@@ -646,10 +645,9 @@ RAG_API_KEY=sk-or-...           # RAG knowledge retrieval
 LLM_MODEL=moonshotai/kimi-k2.6:free
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 
-# ── Supabase (Auth, Vector Store, File Storage) ──────────────
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=eyJhbGci...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
+# ── Self-hosted auth, knowledge, and file storage ────────────
+JWT_SECRET=replace-with-a-random-secret
+STORAGE_PATH=./data/storage
 
 # ── LangSmith Observability (Optional) ────────────────────────
 LANGCHAIN_TRACING_V2=true

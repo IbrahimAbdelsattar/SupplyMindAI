@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.knowledge import copilot_chat, ingest_document, is_supabase_available, rag_query, semantic_search
+from backend.knowledge import copilot_chat, ingest_document, is_knowledge_available, rag_query, semantic_search
 from backend.knowledge.config import get_knowledge_settings
 
 from backend.dependencies import _get_current_user
@@ -20,10 +20,10 @@ def _get_user(user: Any = Depends(_get_current_user)):
 
 
 def _require_knowledge() -> None:
-    if not is_supabase_available():
+    if not is_knowledge_available():
         raise HTTPException(
             status_code=503,
-            detail="Supabase intelligence layer is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+            detail="Knowledge database is unavailable.",
         )
 
 
@@ -67,7 +67,7 @@ def knowledge_status(user: Any = Depends(_get_user)) -> dict[str, Any]:
     settings = get_knowledge_settings()
     return {
         "configured": settings.is_configured,
-        "available": is_supabase_available(),
+        "available": is_knowledge_available(),
         "embedding_model": settings.embedding_model,
         "embedding_dimension": settings.embedding_dimension,
     }

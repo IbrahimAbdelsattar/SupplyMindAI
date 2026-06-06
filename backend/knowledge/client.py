@@ -1,31 +1,32 @@
-"""Supabase client for the intelligence layer (service role, server-side only)."""
+"""Database access helpers for the local knowledge layer."""
 
 from __future__ import annotations
 
-import logging
-from functools import lru_cache
-from typing import Any
+from contextlib import contextmanager
+from typing import Iterator
 
-from backend.knowledge.config import get_knowledge_settings
+from sqlalchemy.orm import Session
 
-LOGGER = logging.getLogger(__name__)
+from backend.db import SessionLocal, engine
 
 
-@lru_cache(maxsize=1)
-def get_supabase_client() -> Any | None:
-    settings = get_knowledge_settings()
-    if not settings.is_configured:
-        LOGGER.warning("Supabase not configured — intelligence layer disabled")
-        return None
-
+@contextmanager
+def knowledge_session() -> Iterator[Session]:
+    session = SessionLocal()
     try:
-        from supabase import create_client
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
-        return create_client(settings.supabase_url, settings.supabase_service_role_key)
-    except Exception as exc:
-        LOGGER.exception("Failed to create Supabase client: %s", exc)
-        return None
 
-
-def is_supabase_available() -> bool:
-    return get_supabase_client() is not None
+def is_knowledge_available() -> bool:
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+        return True
+    except Exception:
+        return False

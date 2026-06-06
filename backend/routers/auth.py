@@ -1,35 +1,31 @@
-"""Authentication router — Supabase-powered authentication endpoints."""
+"""Authentication API backed by the application database."""
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, status, Depends, Response
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from pydantic import BaseModel
 
 from backend.knowledge.auth import (
-    signup_with_email,
-    signin_with_email,
-    get_user_from_token,
-    refresh_session,
-    signout,
-    update_user_metadata,
-    reset_password,
-    update_password,
-    delete_user,
+    AuthResponse as ServiceAuthResponse,
     AuthUser,
-    is_supabase_auth_available,
+    delete_user,
+    get_user_from_token,
+    is_auth_available,
+    refresh_session,
+    reset_password,
+    signin_with_email,
+    signout,
+    signup_with_email,
+    update_password,
+    update_user_metadata,
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# Request/Response Models
-# ─────────────────────────────────────────────────────────────────────────
-
 class SignupRequest(BaseModel):
-    """User signup request."""
     email: str
     password: str
     name: Optional[str] = None
@@ -37,18 +33,15 @@ class SignupRequest(BaseModel):
 
 
 class SigninRequest(BaseModel):
-    """User signin request."""
     email: str
     password: str
 
 
 class RefreshRequest(BaseModel):
-    """Session refresh request."""
     refresh_token: str
 
 
 class UpdateMetadataRequest(BaseModel):
-    """User metadata update request."""
     name: Optional[str] = None
     company: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -56,17 +49,14 @@ class UpdateMetadataRequest(BaseModel):
 
 
 class UpdatePasswordRequest(BaseModel):
-    """Password update request."""
     new_password: str
 
 
 class ResetPasswordRequest(BaseModel):
-    """Password reset request."""
     email: str
 
 
 class AuthResponse(BaseModel):
-    """Authentication response."""
     user: dict[str, Any]
     session: Optional[dict[str, Any]] = None
     access_token: str
@@ -74,266 +64,121 @@ class AuthResponse(BaseModel):
     message: str = "Success"
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# Utilities
-# ─────────────────────────────────────────────────────────────────────────
+def _response(result: ServiceAuthResponse, message: str) -> AuthResponse:
+    public_user = {
+        "id": result.user.id,
+        "name": result.user.user_metadata.get("name", ""),
+        "email": result.user.email,
+        "role": result.user.role,
+    }
+    return AuthResponse(
+        user=public_user,
+        session=result.session,
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
+        message=message,
+    )
 
-async def verify_auth_configured() -> None:
-    """Verify that Supabase authentication is configured."""
-    if not is_supabase_auth_available():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service not available. Please configure Supabase."
-        )
 
-
-async def get_current_user(authorization: str = None) -> AuthUser:
-    """Extract and validate user from Authorization header."""
+def _bearer(authorization: str | None) -> str:
     if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authorization header"
-        )
-    
+        raise HTTPException(status_code=401, detail="Missing authorization header")
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid authorization scheme")
+    return parts[1]
+
+
+async def get_current_user(authorization: str | None) -> AuthUser:
     try:
-        # Extract token from "Bearer <token>"
-        scheme, token = authorization.split(" ")
-        if scheme.lower() != "bearer":
-            raise ValueError("Invalid authorization scheme")
-        
-        user = await get_user_from_token(token)
-        return user
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token"
-        )
+        return await get_user_from_token(_bearer(authorization))
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
-
-# ─────────────────────────────────────────────────────────────────────────
-# Endpoints
-# ─────────────────────────────────────────────────────────────────────────
 
 @router.post("/signup", response_model=AuthResponse)
 async def signup(request: SignupRequest) -> AuthResponse:
-    """Sign up new user with email and password."""
-    await verify_auth_configured()
-    
     try:
-        # Prepare metadata
-        metadata = {}
-        if request.name:
-            metadata["name"] = request.name
-        if request.company:
-            metadata["company"] = request.company
-        
-        # Sign up user
-        auth_response = await signup_with_email(
-            email=request.email,
-            password=request.password,
-            metadata=metadata
+        result = await signup_with_email(
+            request.email,
+            request.password,
+            {"name": request.name, "company": request.company},
         )
-        
-        return AuthResponse(
-            user=auth_response.user.model_dump(),
-            session=auth_response.session,
-            access_token=auth_response.access_token,
-            refresh_token=auth_response.refresh_token,
-            message="Signup successful. Please check your email to confirm."
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        )
+        return _response(result, "Signup successful")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/signin", response_model=AuthResponse)
 async def signin(request: SigninRequest) -> AuthResponse:
-    """Sign in user with email and password."""
-    await verify_auth_configured()
-    
     try:
-        auth_response = await signin_with_email(
-            email=request.email,
-            password=request.password
-        )
-        
-        return AuthResponse(
-            user=auth_response.user.model_dump(),
-            session=auth_response.session,
-            access_token=auth_response.access_token,
-            refresh_token=auth_response.refresh_token,
-            message="Signin successful"
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc)
-        )
+        return _response(await signin_with_email(request.email, request.password), "Signin successful")
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
 
 @router.post("/refresh", response_model=AuthResponse)
 async def refresh(request: RefreshRequest) -> AuthResponse:
-    """Refresh user session with refresh token."""
-    await verify_auth_configured()
-    
     try:
-        auth_response = await refresh_session(request.refresh_token)
-        
-        return AuthResponse(
-            user=auth_response.user.model_dump(),
-            session=auth_response.session,
-            access_token=auth_response.access_token,
-            refresh_token=auth_response.refresh_token,
-            message="Session refreshed"
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Failed to refresh session"
-        )
+        return _response(await refresh_session(request.refresh_token), "Session refreshed")
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Failed to refresh session") from exc
 
 
 @router.get("/me")
-async def get_current_user_info(
-    authorization: str = None,
+async def current_user_info(
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
-    """Get current user information."""
-    await verify_auth_configured()
-    
-    try:
-        user = await get_current_user(authorization)
-        return {
-            "user": user.model_dump(),
-            "message": "User information retrieved"
-        }
-    except HTTPException:
-        raise
+    user = await get_current_user(authorization)
+    return {"user": user.model_dump(), "message": "User information retrieved"}
 
 
-@router.post("/signout", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
-async def signout_user(authorization: str = None) -> Response:
-    """Sign out current user."""
-    await verify_auth_configured()
-    
-    try:
-        user = await get_current_user(authorization)
-        await signout(authorization)
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-    except HTTPException:
-        raise
+@router.post("/signout", status_code=204, response_class=Response)
+async def signout_user(authorization: str | None = Header(default=None)) -> Response:
+    await signout(_bearer(authorization))
+    return Response(status_code=204)
 
 
 @router.put("/me/metadata")
 async def update_user_info(
     request: UpdateMetadataRequest,
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
-    """Update current user's metadata (profile)."""
-    await verify_auth_configured()
-    
-    try:
-        user = await get_current_user(authorization)
-        
-        # Build metadata dict
-        metadata = {}
-        if request.name:
-            metadata["name"] = request.name
-        if request.company:
-            metadata["company"] = request.company
-        if request.avatar_url:
-            metadata["avatar_url"] = request.avatar_url
-        if request.preferences:
-            metadata["preferences"] = request.preferences
-        
-        updated_user = await update_user_metadata(authorization, metadata)
-        
-        return {
-            "user": updated_user.model_dump(),
-            "message": "Profile updated successfully"
-        }
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        )
+    user = await update_user_metadata(_bearer(authorization), request.model_dump(exclude_none=True))
+    return {"user": user.model_dump(), "message": "Profile updated successfully"}
 
 
 @router.post("/password/reset")
 async def reset_user_password(request: ResetPasswordRequest) -> dict[str, str]:
-    """Request password reset email."""
-    await verify_auth_configured()
-    
-    try:
-        await reset_password(request.email)
-        return {
-            "message": "Password reset email sent. Check your inbox."
-        }
-    except Exception as exc:
-        # Don't expose actual error to user
-        return {
-            "message": "If account exists, password reset email will be sent."
-        }
+    await reset_password(request.email)
+    return {"message": "If the account exists, password reset instructions will be sent."}
 
 
 @router.post("/password/update")
 async def update_user_password(
     request: UpdatePasswordRequest,
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
-    """Update user's password."""
-    await verify_auth_configured()
-    
     try:
-        user = await get_current_user(authorization)
-        updated_user = await update_password(authorization, request.new_password)
-        
-        return {
-            "user": updated_user.model_dump(),
-            "message": "Password updated successfully"
-        }
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        )
+        user = await update_password(_bearer(authorization), request.new_password)
+        return {"user": user.model_dump(), "message": "Password updated successfully"}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.delete("/me")
 async def delete_user_account(
-    authorization: str = None,
+    authorization: str | None = Header(default=None),
 ) -> dict[str, str]:
-    """Delete user account (irreversible)."""
-    await verify_auth_configured()
-    
-    try:
-        user = await get_current_user(authorization)
-        await delete_user(authorization)
-        
-        return {
-            "message": "User account deleted successfully"
-        }
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        )
+    await delete_user(_bearer(authorization))
+    return {"message": "User account deleted successfully"}
 
 
 @router.get("/health")
 async def auth_health() -> dict[str, Any]:
-    """Check authentication service health."""
-    is_available = is_supabase_auth_available()
-    
+    available = is_auth_available()
     return {
-        "status": "healthy" if is_available else "unavailable",
-        "authentication_available": is_available,
-        "message": "Authentication service is available" if is_available else "Authentication not configured"
+        "status": "healthy" if available else "unavailable",
+        "authentication_available": available,
+        "message": "Authentication service is available" if available else "Authentication unavailable",
     }
