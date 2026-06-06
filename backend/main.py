@@ -79,6 +79,8 @@ class DataStore:
     def _read_csv(self, name: str, *, parse_dates: Optional[list[str]] = None) -> pd.DataFrame:
         path = DATA_DIR / name
         if not path.exists():
+            path = DATA_DIR / "enriched data" / name
+        if not path.exists():
             raise HTTPException(status_code=500, detail=f"Missing dataset: {name}")
         return pd.read_csv(path, parse_dates=parse_dates)
 
@@ -111,6 +113,46 @@ class DataStore:
         if "bom" not in self._cache:
             self._cache["bom"] = self._read_csv("bom.csv")
         return self._cache["bom"]
+
+    def contracts(self) -> pd.DataFrame:
+        if "contracts" not in self._cache:
+            self._cache["contracts"] = self._read_csv("contracts.csv")
+        return self._cache["contracts"]
+
+    def production_schedule(self) -> pd.DataFrame:
+        if "production_schedule" not in self._cache:
+            self._cache["production_schedule"] = self._read_csv("production_schedule.csv", parse_dates=["date"])
+        return self._cache["production_schedule"]
+
+    def sales_enriched(self) -> pd.DataFrame:
+        if "sales_enriched" not in self._cache:
+            self._cache["sales_enriched"] = self._read_csv("sales_enriched.csv", parse_dates=["date"])
+        return self._cache["sales_enriched"]
+
+    def inventory_enriched(self) -> pd.DataFrame:
+        if "inventory_enriched" not in self._cache:
+            self._cache["inventory_enriched"] = self._read_csv("inventory_enriched.csv", parse_dates=["date"])
+        return self._cache["inventory_enriched"]
+
+    def production_enriched(self) -> pd.DataFrame:
+        if "production_enriched" not in self._cache:
+            self._cache["production_enriched"] = self._read_csv("production_enriched.csv", parse_dates=["date"])
+        return self._cache["production_enriched"]
+
+    def monthly_sales(self) -> pd.DataFrame:
+        if "monthly_sales" not in self._cache:
+            self._cache["monthly_sales"] = self._read_csv("monthly_sales.csv")
+        return self._cache["monthly_sales"]
+
+    def demand_compliance(self) -> pd.DataFrame:
+        if "demand_compliance" not in self._cache:
+            self._cache["demand_compliance"] = self._read_csv("demand_compliance.csv")
+        return self._cache["demand_compliance"]
+
+    def product_mat_cost(self) -> pd.DataFrame:
+        if "product_mat_cost" not in self._cache:
+            self._cache["product_mat_cost"] = self._read_csv("product_mat_cost.csv")
+        return self._cache["product_mat_cost"]
 
 
 STORE = DataStore()
@@ -593,6 +635,21 @@ def _monthly_summary_from_series(series: list[ForecastPoint]) -> list[MonthlyPre
     return out
 
 
+def _model_df_to_monthly_predictions(df: pd.DataFrame) -> list[MonthlyPrediction]:
+    """Convert ForecastModel DataFrame to list of MonthlyPrediction."""
+    out: list[MonthlyPrediction] = []
+    for _, r in df.iterrows():
+        out.append(MonthlyPrediction(
+            period=str(r.get("period", "")),
+            predicted_demand=int(r.get("predicted_demand", 0)),
+            confidence_level=round(float(r.get("confidence_level", 0)), 1),
+            demand_trend=str(r.get("demand_trend", "stable")),
+            revenue_forecast=round(float(r.get("revenue_forecast", 0)), 2)
+            if pd.notna(r.get("revenue_forecast")) else None,
+        ))
+    return out
+
+
 @app.post("/api/v1/forecast/predict", response_model=ForecastPredictResponse)
 def forecast_predict(req: ForecastPredictRequest, user: User = Depends(_get_current_user)) -> ForecastPredictResponse:
     # Validate product_id exists
@@ -601,7 +658,23 @@ def forecast_predict(req: ForecastPredictRequest, user: User = Depends(_get_curr
         raise HTTPException(status_code=404, detail=f"Unknown product_id: {req.product_id}")
 
     series = _simple_forecast_series(req.product_id, req.horizon_days)
-    monthly = _monthly_summary_from_series(series)
+
+    # Use trained ML model for monthly predictions if available
+    monthly: list[MonthlyPrediction] | None = None
+    if ML_MODEL is not None:
+        try:
+            model = ML_MODEL
+            if hasattr(model, "is_trained_model_loaded") and model.is_trained_model_loaded:
+                n_months = max(1, round(req.horizon_days / 30))
+                df = model.predict(req.product_id, n_months=n_months)
+                if isinstance(df, pd.DataFrame) and not df.empty:
+                    monthly = _model_df_to_monthly_predictions(df)
+        except Exception as exc:
+            logger.warning("ML model predict failed for %s: %s", req.product_id, exc)
+
+    if monthly is None:
+        monthly = _monthly_summary_from_series(series)
+
     resp = ForecastPredictResponse(product_id=req.product_id, horizon_days=req.horizon_days, series=series, monthly_summary=monthly)
 
     try:

@@ -11,11 +11,19 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SQLITE_PATH = PROJECT_ROOT / "backend" / "supplymind.db"
 
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_SQLITE_PATH.as_posix()}")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://supplymind:password@localhost:5433/supplymind",
+)
+
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args={"check_same_thread": False} if _is_sqlite else {},
+    pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+    pool_pre_ping=True,
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
@@ -62,33 +70,45 @@ class ForecastResult(Base):
 
 def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
-    _ensure_user_columns()
+    _ensure_user_columns() or _ensure_postgres_extensions()
 
 
-def _ensure_user_columns() -> None:
+def _ensure_postgres_extensions() -> None:
+    if _is_sqlite:
+        return
+    try:
+        with engine.begin() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
+    except Exception:
+        pass
+
+
+def _ensure_user_columns() -> bool:
     inspector = inspect(engine)
     if "users" not in inspector.get_table_names():
-        return
+        return False
 
     existing_columns = {column["name"] for column in inspector.get_columns("users")}
-    dialect = engine.dialect.name
 
     statements: list[str] = []
     if "role" not in existing_columns:
-        statements.append("ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'analyst'")
+        default = "'analyst'"
+        statements.append(f"ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT {default}")
     if "is_active" not in existing_columns:
-        default_value = "1" if dialect == "sqlite" else "true"
-        statements.append(f"ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT {default_value}")
+        default = "true" if not _is_sqlite else "1"
+        statements.append(f"ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT {default}")
     if "updated_at" not in existing_columns:
-        column_type = "DATETIME" if dialect == "sqlite" else "TIMESTAMP"
-        statements.append(f"ALTER TABLE users ADD COLUMN updated_at {column_type}")
+        col_type = "TIMESTAMP WITH TIME ZONE" if not _is_sqlite else "DATETIME"
+        statements.append(f"ALTER TABLE users ADD COLUMN updated_at {col_type}")
 
     if not statements:
-        return
+        return True
 
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
+    return True
 
 
 def get_db() -> Session:

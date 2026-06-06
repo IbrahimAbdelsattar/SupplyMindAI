@@ -1,8 +1,9 @@
-"""Demand forecast service: optional pickle model, CSV heuristic fallback."""
+"""Demand forecast service: uses trained XGBoost model (ForecastModel wrapper)."""
 
 from __future__ import annotations
 
-import os
+import logging
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -12,21 +13,42 @@ import pandas as pd
 if TYPE_CHECKING:
     from backend.main import DataStore
 
+LOGGER = logging.getLogger(__name__)
+
+# Ensure Modeling/ is importable
+_proj_root = Path(__file__).resolve().parents[1]
+_modeling = str(_proj_root)
+if _modeling not in sys.path:
+    sys.path.insert(0, _modeling)
+
 
 class DemandForecastService:
-    """Unified predict() API for agent tools and report exports."""
+    """Unified predict() that delegates to the trained XGBoost ForecastModel."""
 
     def __init__(self, store: "DataStore", model_path: Path | None = None) -> None:
         self._store = store
-        self._pipeline: Any = None
-        path = self._resolve_model_path(model_path)
-        if path is not None and path.exists():
-            try:
-                import joblib
+        self._forecast_model: Any = None
+        self._load_forecast_model(model_path)
 
-                self._pipeline = joblib.load(path)
-            except Exception:
-                self._pipeline = None
+    def _load_forecast_model(self, model_path: Path | None = None) -> None:
+        path = self._resolve_model_path(model_path)
+        if path is None or not path.exists():
+            LOGGER.info("No model pickle found at %s — will use CSV fallback", path)
+            return
+
+        try:
+            from Modeling.demand_forecasting_pipeline import ForecastModel
+
+            self._forecast_model = ForecastModel.load()
+            LOGGER.info(
+                "ForecastModel loaded from %s (products=%d)",
+                path,
+                len(self._forecast_model._df["product_id"].unique())
+                if self._forecast_model._df is not None else 0,
+            )
+        except Exception as exc:
+            LOGGER.warning("Failed to load ForecastModel: %s — will use CSV fallback", exc)
+            self._forecast_model = None
 
     @staticmethod
     def _resolve_model_path(model_path: Path | None = None) -> Path | None:
@@ -34,7 +56,7 @@ class DemandForecastService:
         if model_path is not None:
             candidates.append(model_path)
 
-        env_path = os.getenv("MODEL_PATH")
+        env_path = __import__("os").getenv("MODEL_PATH")
         if env_path:
             candidates.append(Path(env_path))
 
@@ -53,16 +75,16 @@ class DemandForecastService:
 
     @property
     def is_trained_model_loaded(self) -> bool:
-        return self._pipeline is not None
+        return self._forecast_model is not None
 
     def predict(self, product_id: str, n_months: int = 3) -> pd.DataFrame:
-        if self._pipeline is not None and hasattr(self._pipeline, "predict"):
+        if self._forecast_model is not None:
             try:
-                out = self._pipeline.predict(product_id, n_months=n_months)
+                out = self._forecast_model.predict(product_id, n_months=n_months)
                 if isinstance(out, pd.DataFrame) and not out.empty:
                     return out
-            except Exception:
-                pass
+            except Exception as exc:
+                LOGGER.warning("ForecastModel.predict failed for %s: %s", product_id, exc)
         return self._predict_from_csv(product_id, n_months)
 
     def _predict_from_csv(self, product_id: str, n_months: int) -> pd.DataFrame:

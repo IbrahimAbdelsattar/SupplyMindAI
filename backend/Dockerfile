@@ -16,8 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY data/ ./data/
 COPY Modeling/ ./Modeling/
-COPY demand_model_pipeline.pkl ./demand_model_pipeline.pkl
-COPY rag-powered-inventory-management/ ./rag-powered-inventory-management/
+COPY scripts/ ./scripts/
 
 # Start the application
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

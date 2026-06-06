@@ -46,11 +46,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
-COPY --chown=app:app backend/ ./backend/
-COPY --chown=app:app data/ ./data/
-COPY --chown=app:app Modeling/ ./Modeling/
-COPY --chown=app:app demand_model_pipeline.pkl ./
-COPY --chown=app:app rag-powered-inventory-management/ ./rag-powered-inventory-management/
+    COPY --chown=app:app backend/ ./backend/
+    COPY --chown=app:app data/ ./data/
+    COPY --chown=app:app Modeling/ ./Modeling/
+    COPY --chown=app:app scripts/ ./scripts/
 
 # Switch to non-root user
 USER app

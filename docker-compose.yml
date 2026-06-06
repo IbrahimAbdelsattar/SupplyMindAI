@@ -1,73 +1,93 @@
+# SupplyMind AI - Docker Compose
+# ==============================================================================
+
 services:
+
+  # ── PostgreSQL Database ──────────────────────────────────────────────────
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
+    container_name: supplymind-postgres
+    restart: unless-stopped
+    shm_size: 256mb
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-supplymind}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-supplymind}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_USER: supplymind
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: supplymind
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/00-init-db.sql:ro
+      - ./backend/migrations/forecast_results.sql:/docker-entrypoint-initdb.d/01-forecast-results.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U supplymind"]
+      test: ["CMD-SHELL", "pg_isready -U supplymind -d supplymind"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - supplymind_net
+      start_period: 30s
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - supplymind_net
-
+  # ── Backend API ──────────────────────────────────────────────────────────
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://supplymind:password@postgres:5432/supplymind}
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)\""]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      dockerfile: backend/Dockerfile.prod
+    container_name: supplymind-backend
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - supplymind_net
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://supplymind:password@postgres:5432/supplymind
+      JWT_SECRET: ${JWT_SECRET:-lx2j0gBCb8QkFhK1qA4jbmbRtip54CiqrOaAtWfqM7P}
+      RAG_API_KEY: ${RAG_API_KEY:-}
+      LLM_REASONING_API_KEY: ${LLM_REASONING_API_KEY:-}
+      CHATBOT_API_KEY: ${CHATBOT_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-moonshotai/kimi-k2.6:free}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
+      LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
+      LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT:-supplymind-ai}
+      MODEL_PATH: /app/Modeling/demand_model_pipeline.pkl
+      FORECAST_CSV_PATH: /app/Modeling/future_forecast.csv
+      LOG_LEVEL: INFO
+    volumes:
+      - modeling_data:/app/Modeling
+      - data_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
+  # ── Frontend (nginx) ─────────────────────────────────────────────────────
   frontend:
     build:
       context: .
-      dockerfile: frontend.Dockerfile
-    ports:
-      - "8080:80"
+      dockerfile: frontend/Dockerfile
+    container_name: supplymind-frontend
+    restart: unless-stopped
     depends_on:
       - backend
-    networks:
-      - supplymind_net
+    ports:
+      - "8080:80"
+    environment:
+      VITE_API_URL: /api/v1
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
-
-networks:
-  supplymind_net:
-    driver: bridge
+    driver: local
+  modeling_data:
+    driver: local
+  data_data:
+    driver: local
