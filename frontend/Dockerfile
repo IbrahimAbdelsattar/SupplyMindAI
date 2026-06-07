@@ -1,25 +1,18 @@
-# ============================================================================
-# Frontend Dockerfile - Multi-stage Production Build
-# ============================================================================
+FROM node:20-alpine AS build
 
-# ── Stage 1: Build ────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
-
-WORKDIR /build
+WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+ARG VITE_API_URL=/api/v1
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
-# ── Stage 2: Serve via nginx ──────────────────────────────────────────────
-FROM nginx:1.27-alpine
+FROM nginx:alpine
 
-# Copy built assets
-COPY --from=builder /build/dist /usr/share/nginx/html
-
-# Copy nginx config
+COPY --from=build /app/dist /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

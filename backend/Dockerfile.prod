@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN python -m venv /opt/venv && \
     /opt/venv/bin/pip install --upgrade pip setuptools wheel && \
+    /opt/venv/bin/pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # ── Stage 2: Runtime ────────────────────────────────────────────────────
@@ -46,10 +47,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
-    COPY --chown=app:app backend/ ./backend/
-    COPY --chown=app:app data/ ./data/
-    COPY --chown=app:app Modeling/ ./Modeling/
-    COPY --chown=app:app scripts/ ./scripts/
+COPY --chown=app:app backend/ ./backend/
+COPY --chown=app:app data/ ./data/
+COPY --chown=app:app Modeling/ ./Modeling/
+COPY --chown=app:app scripts/ ./scripts/
 
 # Switch to non-root user
 USER app

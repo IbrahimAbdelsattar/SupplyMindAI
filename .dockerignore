@@ -43,7 +43,5 @@ build/
 # Logs
 *.log
 
-# Data (mounted as volumes in compose)
-data/
-Modeling/
+# Not excluding data/ and Modeling/ - they are needed in the image
 rag-powered-inventory-management/

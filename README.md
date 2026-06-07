@@ -546,7 +546,6 @@ supplymind-ai/
 ├── 🐳 Docker & Deployment
 │   ├── docker-compose.yml
 │   ├── docker-compose.prod.yml
-│   ├── frontend.Dockerfile
 │   ├── frontend.Dockerfile.prod
 │   ├── nginx.conf
 │   ├── scripts/

@@ -25,7 +25,7 @@ supplymind-ai/
 ├── raw_materials.csv               # 6 raw materials with costs and supplier links
 ├── sales_daily.csv                 # Sales transactions: 15,001 rows (2020–2024)
 ├── suppliers.csv                   # 8 suppliers with reliability scores and lead times
-├── bun.lock / bun.lockb            # Bun package manager lockfiles
+├── package-lock.json               # npm package manager lockfile
 ├── package.json                    # Vite + React + shadcn/ui + Recharts + Framer Motion
 ├── package-lock.json               # npm lockfile
 ├── components.json                 # shadcn/ui configuration

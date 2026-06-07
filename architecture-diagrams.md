@@ -9,7 +9,7 @@ This document combines:
 `Current` means already present in the repo today. `Planned` means defined in the implementation plan but not yet implemented in this codebase.
 
 ## 1. Full Project Architecture
-![alt text](Gemini_Generated_Image_f8d28mf8d28mf8d2.png)
+![alt text](docs/Gemini_Generated_Image_f8d28mf8d28mf8d2.png)
 ```mermaid
 flowchart LR
     user[Manager / Analyst User]

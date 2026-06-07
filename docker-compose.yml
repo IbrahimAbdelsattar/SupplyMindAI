@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: supplymind
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/00-init-db.sql:ro
@@ -46,6 +46,7 @@ services:
       LLM_REASONING_API_KEY: ${LLM_REASONING_API_KEY:-}
       CHATBOT_API_KEY: ${CHATBOT_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-moonshotai/kimi-k2.6:free}
+      EMBEDDING_MODEL: all-MiniLM-L6-v2
       STORAGE_PATH: /app/data/storage
       LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
       LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
@@ -68,14 +69,14 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: /api/v1
     container_name: supplymind-frontend
     restart: unless-stopped
     depends_on:
       - backend
     ports:
       - "8080:80"
-    environment:
-      VITE_API_URL: /api/v1
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
