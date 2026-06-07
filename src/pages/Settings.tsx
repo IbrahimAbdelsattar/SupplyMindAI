@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -24,6 +24,7 @@ const Settings = () => {
   const { isAuthenticated, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
   
   const [notifications, setNotifications] = useState({
     stockAlerts: true,
@@ -35,15 +36,53 @@ const Settings = () => {
   const [region, setRegion] = useState('us');
   const [currency, setCurrency] = useState('usd');
 
+  // Load saved settings from API on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const { fetchApi } = await import('@/lib/api');
+        const res = await fetchApi('/settings') as { settings: Record<string, unknown> };
+        const s = res?.settings || {};
+        if (s.notifications) setNotifications(prev => ({ ...prev, ...(s.notifications as typeof prev) }));
+        if (s.region) setRegion(s.region as string);
+        if (typeof s.currency === 'string') setCurrency(s.currency);
+      } catch {
+        // Settings not available yet — use defaults
+      }
+    };
+    if (isAuthenticated) loadSettings();
+  }, [isAuthenticated]);
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  const handleSave = () => {
-    toast({
-      title: 'Settings saved',
-      description: 'Your preferences have been updated successfully.',
-    });
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { fetchApi } = await import('@/lib/api');
+      await fetchApi('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          theme,
+          notifications,
+          region,
+          display: { currency },
+        }),
+      });
+      toast({
+        title: 'Settings saved',
+        description: 'Your preferences have been saved to your account.',
+      });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to save settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -252,9 +291,9 @@ const Settings = () => {
             transition={{ duration: 0.4, delay: 0.5 }}
             className="flex justify-end pb-4"
           >
-            <Button onClick={handleSave} size="lg" className="gap-2 w-full sm:w-auto">
+            <Button onClick={handleSave} size="lg" className="gap-2 w-full sm:w-auto" disabled={isSaving}>
               <Save className="w-4 h-4" />
-              Save Settings
+              {isSaving ? 'Saving...' : 'Save Settings'}
             </Button>
           </motion.div>
         </main>

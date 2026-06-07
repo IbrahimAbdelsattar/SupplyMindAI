@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -18,6 +18,43 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+/** Redirects unauthenticated users to /login */
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
+
+/** Redirects authenticated users away from public pages */
+const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
+const AppRoutes = () => (
+  <Routes>
+    {/* Public routes */}
+    <Route path="/" element={<PublicOnlyRoute><Index /></PublicOnlyRoute>} />
+    <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+
+    {/* Protected routes — require authentication */}
+    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/forecasting" element={<ProtectedRoute><Forecasting /></ProtectedRoute>} />
+    <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+    <Route path="/insights" element={<ProtectedRoute><AIInsights /></ProtectedRoute>} />
+    <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+    <Route path="/mlops" element={<ProtectedRoute><MLOps /></ProtectedRoute>} />
+    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -26,18 +63,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/forecasting" element={<Forecasting />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/insights" element={<AIInsights />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/mlops" element={<MLOps />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppRoutes />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

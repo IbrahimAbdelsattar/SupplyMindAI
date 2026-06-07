@@ -26,6 +26,12 @@ import joblib
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+try:
+    import shap
+    HAS_SHAP = True
+except ImportError:
+    HAS_SHAP = False
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PATHS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -40,6 +46,7 @@ MAT_COST_PATH   = os.path.join(DATA_DIR, "product_mat_cost.csv")
 
 MODEL_OUT       = os.path.join(DATA_DIR, "demand_model_pipeline.pkl")
 FUTURE_OUT      = os.path.join(DATA_DIR, "future_forecast.csv")
+SHAP_OUT        = os.path.join(DATA_DIR, "shap_summary.csv")
 
 
 # =============================================================================
@@ -350,8 +357,42 @@ def train_model(df: pd.DataFrame):
     # Store model metrics for confidence calculation
     model.mae_  = mae
     model.rmse_ = rmse
-    
+
+    # ── SHAP Explainability ──────────────────────────────────────────────────
+    _compute_and_save_shap(model, X_test, df_model)
+
     return model
+
+
+def _compute_and_save_shap(model, X_test: pd.DataFrame, df_full: pd.DataFrame) -> None:
+    """Compute SHAP values and save global feature importance summary."""
+    if not HAS_SHAP:
+        print("  [SHAP] shap package not installed — skipping SHAP analysis")
+        return
+
+    print("[SHAP] Computing SHAP feature importances …")
+    try:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X_test)
+
+        # Global feature importance: mean |SHAP| per feature
+        mean_abs_shap = np.abs(shap_values).mean(axis=0)
+        shap_df = pd.DataFrame({
+            "feature": FEATURE_COLS,
+            "importance": mean_abs_shap,
+            "direction": [
+                "positive" if shap_values[:, i].mean() > 0 else "negative"
+                for i in range(len(FEATURE_COLS))
+            ],
+        }).sort_values("importance", ascending=False).reset_index(drop=True)
+
+        shap_df.to_csv(SHAP_OUT, index=False)
+        print(f"  [SHAP] Saved -> {SHAP_OUT}")
+        print(f"  [SHAP] Top 5 features:")
+        for _, row in shap_df.head(5).iterrows():
+            print(f"    - {row['feature']}: {row['importance']:.4f} ({row['direction']})")
+    except Exception as exc:
+        print(f"  [SHAP] Failed: {exc}")
 
 
 # =============================================================================
@@ -610,6 +651,58 @@ class ForecastModel:
         """
         self._check_ready()
         return forecast_future(self._df.copy(), self._model, n_months=n_months)
+
+    # ── SHAP FEATURE IMPORTANCES ─────────────────────────────────────────────
+    def get_shap_values(self, product_id: str | None = None) -> pd.DataFrame:
+        """
+        Return SHAP feature importance values.
+
+        If shap_summary.csv exists (generated during training), returns it.
+        Otherwise, computes SHAP on-the-fly from the model.
+
+        Parameters
+        ----------
+        product_id : str, optional
+            If given, computes SHAP for that product's data only.
+
+        Returns
+        -------
+        pd.DataFrame with columns: feature, importance, direction
+        """
+        # Try loading pre-computed SHAP
+        if os.path.exists(SHAP_OUT):
+            shap_df = pd.read_csv(SHAP_OUT)
+            if not shap_df.empty:
+                return shap_df
+
+        # Compute on-the-fly if shap is available
+        if not HAS_SHAP or self._model is None:
+            return pd.DataFrame(columns=["feature", "importance", "direction"])
+
+        self._check_ready()
+        df = self._df.copy()
+        if product_id:
+            df = df[df["product_id"] == product_id]
+
+        df_valid = df.dropna(subset=FEATURE_COLS)
+        if df_valid.empty:
+            return pd.DataFrame(columns=["feature", "importance", "direction"])
+
+        X = df_valid[FEATURE_COLS]
+        try:
+            explainer = shap.TreeExplainer(self._model)
+            sv = explainer.shap_values(X)
+            mean_abs = np.abs(sv).mean(axis=0)
+            return pd.DataFrame({
+                "feature": FEATURE_COLS,
+                "importance": mean_abs,
+                "direction": [
+                    "positive" if sv[:, i].mean() > 0 else "negative"
+                    for i in range(len(FEATURE_COLS))
+                ],
+            }).sort_values("importance", ascending=False).reset_index(drop=True)
+        except Exception:
+            return pd.DataFrame(columns=["feature", "importance", "direction"])
 
     # ── INTERNAL ──────────────────────────────────────────────────────────────
     def _check_ready(self):

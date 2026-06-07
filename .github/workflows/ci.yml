@@ -25,7 +25,7 @@ jobs:
 
     - name: Test backend
       run: |
-        echo "Placeholder for pytest"
+        pytest backend/tests/ -v --tb=short
 
     - name: Set up Node.js
       uses: actions/setup-node@v3

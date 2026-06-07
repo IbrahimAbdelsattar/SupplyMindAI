@@ -30,7 +30,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile.prod
+      dockerfile: backend/Dockerfile
     container_name: supplymind-backend
     restart: unless-stopped
     depends_on:
