@@ -445,6 +445,15 @@ def read_root():
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin", "*")
+        resp = Response(status_code=200)
+        resp.headers["Access-Control-Allow-Origin"] = origin if origin != "*" else "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With"
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Max-Age"] = "600"
+        return resp
     start_time = time.time()
     response = await call_next(request)
     duration = time.time() - start_time

@@ -9,7 +9,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://supplymind:password@localhost:5433/supplymind",
+    "mysql+pymysql://supplymind:372045Enghema###@localhost:3306/supplymind",
 )
 
 engine = create_engine(
@@ -151,16 +151,10 @@ class UserSettings(Base):
 def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_user_columns()
-    _ensure_postgres_extensions()
 
 
-def _ensure_postgres_extensions() -> None:
-    try:
-        with engine.begin() as conn:
-            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
-            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
-    except Exception:
-        pass
+def _ensure_mysql_extensions() -> None:
+    pass
 
 
 def _ensure_user_columns() -> None:
