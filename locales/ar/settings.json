@@ -1,0 +1,77 @@
+{
+  "header": {
+    "title": "الإعدادات",
+    "subtitle": "خصص تجربة المنصة الخاصة بك"
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "description": "معلومات حسابك",
+    "accountSuffix": " حساب"
+  },
+  "appearance": {
+    "title": "المظهر",
+    "description": "تخصيص الشكل والمظهر",
+    "darkMode": "الوضع الليلي",
+    "darkModeDesc": "التبديل بين السمة الفاتحة والداكنة"
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "description": "تكوين تفضيلات التنبيهات",
+    "stockAlerts": "تنبيهات المخزون",
+    "stockAlertsDesc": "احصل على إشعارات حول مخاطر نفاد المخزون والتخزين الزائد",
+    "forecastUpdates": "تحديثات التوقعات",
+    "forecastUpdatesDesc": "تلقي تنبيهات عند تحديث التوقعات",
+    "weeklyReports": "التقارير الأسبوعية",
+    "weeklyReportsDesc": "احصل على تقارير ملخصة أسبوعيًا عبر البريد الإلكتروني",
+    "systemUpdates": "تحديثات النظام",
+    "systemUpdatesDesc": "إشعارات حول تحديثات المنصة"
+  },
+  "regional": {
+    "title": "الإعدادات الإقليمية",
+    "description": "تكوين المنطقة والعملة",
+    "region": "المنطقة",
+    "currency": "العملة",
+    "regions": {
+      "us": "الولايات المتحدة",
+      "eu": "أوروبا",
+      "asia": "آسيا والمحيط الهادئ",
+      "mena": "الشرق الأوسط وأفريقيا"
+    },
+    "currencies": {
+      "usd": "دولار أمريكي ($)",
+      "eur": "يورو (€)",
+      "gbp": "جنيه إسترليني (£)",
+      "egp": "جنيه مصري (E£)"
+    }
+  },
+  "roleFeatures": {
+    "title": "ميزات حسب الدور",
+    "description": "الميزات المتاحة لدورك",
+    "executiveReports": "التقارير التنفيذية",
+    "executiveReportsDesc": "الوصول إلى الملخصات عالية المستوى",
+    "budgetControls": "ضوابط الميزانية",
+    "budgetControlsDesc": "تحديد ميزانيات المخزون",
+    "teamManagement": "إدارة الفريق",
+    "teamManagementDesc": "إدارة صلاحيات الوصول للفريق",
+    "approvalWorkflows": "سير عمل الموافقات",
+    "approvalWorkflowsDesc": "اعتماد طلبات إعادة الطلب",
+    "technicalDetails": "التفاصيل الفنية",
+    "technicalDetailsDesc": "مقاييس النموذج ومعلماته",
+    "dataExploration": "استكشاف البيانات",
+    "dataExplorationDesc": "تحليل البيانات المتقدم",
+    "modelConfiguration": "تكوين النموذج",
+    "modelConfigurationDesc": "ضبط معلمات التوقعات",
+    "apiAccess": "الوصول إلى API",
+    "apiAccessDesc": "الوصول البرمجي للبيانات"
+  },
+  "actions": {
+    "saving": "جارٍ الحفظ...",
+    "save": "حفظ الإعدادات"
+  },
+  "toast": {
+    "successTitle": "تم حفظ الإعدادات",
+    "successDesc": "تم حفظ تفضيلاتك في حسابك.",
+    "errorTitle": "خطأ",
+    "errorDesc": "فشل حفظ الإعدادات. يرجى المحاولة مرة أخرى."
+  }
+}

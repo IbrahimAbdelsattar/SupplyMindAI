@@ -1,0 +1,76 @@
+{
+  "header": {
+    "title": "تحسين المخزون",
+    "subtitle": "توصيات مدعومة بالذكاء الاصطناعي لمستويات مخزون مثلى"
+  },
+  "investigation": {
+    "title": "تحري المخزون",
+    "question": "ما المنتجات التي تحتاج إلى اهتمام الآن؟ لخّص مخاطر نفاد المخزون وأولويات إعادة الطلب والحوادث المماثلة السابقة."
+  },
+  "summary": {
+    "estCostSavings": "التوفير المقدر في التكاليف",
+    "productsAnalyzed": "المنتجات التي تم تحليلها",
+    "highRiskItems": "العناصر عالية المخاطر"
+  },
+  "recommendations": {
+    "title": "توصيات الذكاء الاصطناعي",
+    "description": "معلمات المخزون المحسّنة لكل منتج",
+    "risk": " مخاطرة",
+    "savings": "التوفير",
+    "apply": "تطبيق",
+    "stock": "المخزون",
+    "reorderPt": "نقطة إعادة الطلب",
+    "reorderQty": "كمية إعادة الطلب",
+    "safety": "مخزون الأمان",
+    "leadTime": "وقت التوريد: ",
+    "days": " يوم",
+    "stockLevel": "مستوى المخزون"
+  },
+  "comparison": {
+    "title": "المخزون الحالي مقابل الأمثل",
+    "description": "مقارنة ما قبل وبعد التحسين",
+    "currentStock": "المخزون الحالي",
+    "optimalLevel": "المستوى الأمثل"
+  },
+  "table": {
+    "title": "المخزون",
+    "searchPlaceholder": "البحث بوحدة SKU أو المنتج أو الفئة...",
+    "sku": "SKU",
+    "productName": "اسم المنتج",
+    "category": "الفئة",
+    "type": "النوع",
+    "stockLevel": "مستوى المخزون",
+    "avgDailyDemand": "متوسط الطلب اليومي",
+    "coverage": "التغطية",
+    "status": "الحالة",
+    "active": "نشط",
+    "snapshotDate": "تاريخ اللقطة",
+    "noResults": "لا توجد عناصر تطابق بحثك.",
+    "units": " وحدة",
+    "days": " يوم"
+  },
+  "badges": {
+    "healthy": "سليم",
+    "low": "منخفض",
+    "critical": "حرج",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "inStock": "متوفر",
+    "lowStock": "مخزون منخفض",
+    "outOfStock": "نفد من المخزون",
+    "overstocked": "مخزون زائد"
+  },
+  "chart": {
+    "snapshotDate": "تاريخ اللقطة",
+    "totalUnits": "إجمالي الوحدات",
+    "criticalProducts": "المنتجات الحرجة",
+    "activeProducts": "المنتجات النشطة",
+    "latestStockByCategory": "آخر المخزون حسب الفئة",
+    "stock": "المخزون"
+  },
+  "toast": {
+    "successTitle": "تم بنجاح",
+    "successDesc": "تم تحديث المخزون.",
+    "errorTitle": "خطأ"
+  }
+}

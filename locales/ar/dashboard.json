@@ -1,0 +1,42 @@
+{
+  "header": {
+    "title": "لوحة القيادة",
+    "subtitle": "التوقعات الآنية للطلب ورؤى المخزون"
+  },
+  "kpis": {
+    "totalForecastedDemand": "إجمالي الطلب المتوقع",
+    "units": " وحدة",
+    "vsLastPeriod": "مقارنة بالفترة السابقة",
+    "inventoryCost": "تكلفة المخزون",
+    "stockOutRisk": "مخاطر نفاد المخزون",
+    "lowerThanLastMonth": "أقل من الشهر الماضي",
+    "overstockRisk": "مخاطر التخزين الزائد",
+    "improvement": "تحسن"
+  },
+  "aiBrief": {
+    "title": "الموجز التنفيذي الذكي",
+    "question": "لخّص مخاطر سلسلة التوريد الحالية، ومخاطر نفاد المخزون، وأهم الأولويات من البيانات التشغيلية والمعرفة المفهرسة."
+  },
+  "charts": {
+    "demandHeatmap": "خريطة الطلب الحرارية",
+    "demandHeatmapDesc": "كثافة الطلب على المنتجات حسب المتجر",
+    "low": "منخفض",
+    "high": "مرتفع",
+    "demandForecast": "توقعات الطلب",
+    "demandForecastDesc": "الطلب الفعلي مقابل المتوقع",
+    "selectProduct": "اختر منتجًا",
+    "allProducts": "جميع المنتجات",
+    "days7": "٧ أيام",
+    "days14": "١٤ يومًا",
+    "days30": "٣٠ يومًا",
+    "confidenceRange": "نطاق الثقة",
+    "actual": "فعلي",
+    "forecast": "متوقع"
+  },
+  "alerts": {
+    "title": "التنبيهات النشطة",
+    "subtitle": "{{count}} تنبيهات بحاجة إلى متابعة",
+    "viewAll": "عرض الكل",
+    "empty": "تمت معالجة جميع التنبيهات!"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "Demand Forecasting",
+    "subtitle": "Product demand forecasting powered by ML"
+  },
+  "parameters": {
+    "title": "Forecast Parameters",
+    "description": "Select a product and forecast future demand",
+    "product": "Product",
+    "forecastHorizon": "Forecast Horizon",
+    "analyze": "Analyze",
+    "clear": "Clear"
+  },
+  "horizon": {
+    "1month": "1 Month",
+    "3months": "3 Months",
+    "6months": "6 Months"
+  },
+  "summary": {
+    "forecastedDemand": "Forecast Demand",
+    "units": "Units",
+    "confidenceLevel": "Confidence Level",
+    "averageAcrossHorizon": "Average across horizon",
+    "demandTrend": "Demand Trend",
+    "latestPeriod": "Latest period",
+    "revenueForecast": "Revenue Forecast",
+    "projectedRevenue": "Projected revenue",
+    "modelPending": "N/A (model pending)"
+  },
+  "explanation": {
+    "title": "Forecast Explanation"
+  },
+  "visualization": {
+    "title": "Forecast Visualization",
+    "description": "Historical demand with predicted demand and confidence bands",
+    "upperBound": "Upper Bound",
+    "lowerBound": "Lower Bound",
+    "actual": "Actual",
+    "forecast": "Forecast"
+  },
+  "breakdown": {
+    "title": "Monthly Forecast Breakdown",
+    "description": "Predicted demand by period with confidence and trend",
+    "period": "Period",
+    "forecast": "Forecast",
+    "confidence": "Confidence",
+    "trend": "Trend",
+    "empty": "Select a product to view the forecast breakdown"
+  },
+  "export": {
+    "csv": "Export CSV",
+    "filename": "forecast_export.csv",
+    "csvHeader": "Date,Actual,Forecast,Lower,Upper"
+  }
+}

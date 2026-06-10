@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -20,13 +21,14 @@ const Login = () => {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all fields.',
+        title: t('common:error'),
+        description: t('login:fillAllFields'),
         variant: 'destructive',
       });
       return;
@@ -36,14 +38,14 @@ const Login = () => {
     try {
       await login(loginEmail, loginPassword);
       toast({
-        title: 'Welcome back!',
-        description: `Logged in as ${loginEmail}`,
+        title: t('login:welcomeBack'),
+        description: t('login:loggedInAs', { email: loginEmail }),
       });
       navigate('/dashboard');
     } catch (error) {
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to login',
+        title: t('common:error'),
+        description: error instanceof Error ? error.message : t('login:failedToLogin'),
         variant: 'destructive',
       });
     } finally {
@@ -61,14 +63,14 @@ const Login = () => {
         await register('Demo User', 'demo@supplymind.ai', 'demopassword123');
       }
       toast({
-        title: 'Demo Mode Activated',
-        description: 'Exploring as Demo User',
+        title: t('login:demoModeActivated'),
+        description: t('login:exploringAsDemoUser'),
       });
       navigate('/dashboard');
     } catch (error) {
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to start demo',
+        title: t('common:error'),
+        description: error instanceof Error ? error.message : t('login:failedToStartDemo'),
         variant: 'destructive',
       });
     } finally {
@@ -80,16 +82,16 @@ const Login = () => {
     e.preventDefault();
     if (!registerName || !registerEmail || !registerPassword) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all fields.',
+        title: t('common:error'),
+        description: t('login:fillAllFields'),
         variant: 'destructive',
       });
       return;
     }
     if (registerPassword.length < 8) {
       toast({
-        title: 'Validation Error',
-        description: 'Password must be at least 8 characters long.',
+        title: t('login:validationError'),
+        description: t('login:passwordLength'),
         variant: 'destructive',
       });
       return;
@@ -98,14 +100,14 @@ const Login = () => {
     try {
       await register(registerName, registerEmail, registerPassword);
       toast({
-        title: 'Account created',
-        description: 'You are now signed in.',
+        title: t('login:accountCreated'),
+        description: t('login:nowSignedIn'),
       });
       navigate('/dashboard');
     } catch (error) {
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to register',
+        title: t('common:error'),
+        description: error instanceof Error ? error.message : t('login:failedToRegister'),
         variant: 'destructive',
       });
     } finally {
@@ -128,7 +130,7 @@ const Login = () => {
         className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-all hover:-translate-x-1 duration-200"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to home
+        {t('common:backToHome')}
       </Link>
 
       <motion.div
@@ -144,8 +146,8 @@ const Login = () => {
               <BarChart3 className="w-7 h-7 text-primary-foreground" />
             </div>
           </Link>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2 text-foreground">Welcome to SupplyMind</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">AI-driven demand & inventory orchestration</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2 text-foreground">{t('login:welcomeToApp', { appName: t('common:app.name') })}</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">{t('login:tagline')}</p>
         </div>
 
         {/* Auth Card */}
@@ -153,28 +155,28 @@ const Login = () => {
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/60 via-accent/60 to-primary/60" />
           
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl font-bold tracking-tight">Access Platform</CardTitle>
-            <CardDescription>Sign in to your account or register a new one</CardDescription>
+            <CardTitle className="text-2xl font-bold tracking-tight">{t('login:accessPlatform')}</CardTitle>
+            <CardDescription>{t('login:cardDescription')}</CardDescription>
           </CardHeader>
           
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 border border-border/40 p-1 bg-muted/40 rounded-xl">
-                <TabsTrigger value="login" className="rounded-lg font-semibold py-2">Sign In</TabsTrigger>
-                <TabsTrigger value="register" className="rounded-lg font-semibold py-2">Sign Up</TabsTrigger>
+                <TabsTrigger value="login" className="rounded-lg font-semibold py-2">{t('login:signIn')}</TabsTrigger>
+                <TabsTrigger value="register" className="rounded-lg font-semibold py-2">{t('login:signUp')}</TabsTrigger>
               </TabsList>
 
               {/* Login Tab */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
+                    <Label htmlFor="email" className="text-sm font-semibold">{t('login:email')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="email"
                         type="email"
-                        placeholder="you@company.com"
+                        placeholder={t('login:emailPlaceholder')}
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
@@ -184,14 +186,14 @@ const Login = () => {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
+                      <Label htmlFor="password" className="text-sm font-semibold">{t('login:password')}</Label>
                     </div>
                     <div className="relative">
                       <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="password"
                         type="password"
-                        placeholder="••••••••"
+                        placeholder={t('login:passwordPlaceholder')}
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
@@ -204,10 +206,10 @@ const Login = () => {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Signing in...
+                        {t('login:signingIn')}
                       </>
                     ) : (
-                      'Sign In'
+                      t('login:signIn')
                     )}
                   </Button>
                 </form>
@@ -217,13 +219,13 @@ const Login = () => {
               <TabsContent value="register">
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-semibold">Full Name</Label>
+                    <Label htmlFor="name" className="text-sm font-semibold">{t('login:fullName')}</Label>
                     <div className="relative">
                       <UserIcon className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="name"
                         type="text"
-                        placeholder="Your full name"
+                        placeholder={t('login:fullNamePlaceholder')}
                         value={registerName}
                         onChange={(e) => setRegisterName(e.target.value)}
                         className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
@@ -232,13 +234,13 @@ const Login = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="reg_email" className="text-sm font-semibold">Email Address</Label>
+                    <Label htmlFor="reg_email" className="text-sm font-semibold">{t('login:emailAddress')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="reg_email"
                         type="email"
-                        placeholder="you@company.com"
+                        placeholder={t('login:emailPlaceholder')}
                         value={registerEmail}
                         onChange={(e) => setRegisterEmail(e.target.value)}
                         className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
@@ -247,13 +249,13 @@ const Login = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="reg_password" className="text-sm font-semibold">Password</Label>
+                    <Label htmlFor="reg_password" className="text-sm font-semibold">{t('login:password')}</Label>
                     <div className="relative">
                       <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="reg_password"
                         type="password"
-                        placeholder="At least 8 characters"
+                        placeholder={t('login:regPasswordPlaceholder')}
                         value={registerPassword}
                         onChange={(e) => setRegisterPassword(e.target.value)}
                         className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
@@ -266,10 +268,10 @@ const Login = () => {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Creating account...
+                        {t('login:creatingAccount')}
                       </>
                     ) : (
-                      'Create Account'
+                      t('login:createAccount')
                     )}
                   </Button>
                 </form>
@@ -279,7 +281,7 @@ const Login = () => {
             {/* Subtle Demo login button */}
             <div className="relative flex py-4 items-center">
               <div className="flex-grow border-t border-border/40"></div>
-              <span className="flex-shrink mx-4 text-muted-foreground text-xs uppercase tracking-wider font-semibold">OR</span>
+              <span className="flex-shrink mx-4 text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t('login:or')}</span>
               <div className="flex-grow border-t border-border/40"></div>
             </div>
 
@@ -292,7 +294,7 @@ const Login = () => {
               {isLoading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : null}
-              Explore Demo Workspace
+              {t('login:exploreDemoWorkspace')}
             </Button>
           </CardContent>
         </Card>

@@ -1,0 +1,40 @@
+{
+  "header": {
+    "title": "AI Insights",
+    "subtitle": "Explainable AI analysis of demand patterns"
+  },
+  "summary": {
+    "title": "Context-Aware Insights",
+    "analyze": "Analyze"
+  },
+  "generator": {
+    "selectProduct": "Select product",
+    "generating": "Generating...",
+    "generate": "Generate AI Insights",
+    "analysisTitle": "AI Analysis Summary",
+    "noSummary": "Select a product and click Generate AI Insights to produce an executive summary from your supply chain data."
+  },
+  "factors": {
+    "title": "Demand Factor Weights",
+    "description": "Reference weights used by the explainability layer",
+    "seasonality": "Seasonality",
+    "historicalTrends": "Historical Trends",
+    "promotions": "Promotions",
+    "externalFactors": "External Factors",
+    "other": "Other"
+  },
+  "keyInsights": {
+    "title": "Key Insights",
+    "description": "AI-discovered patterns and recommendations",
+    "empty": "No insights yet. Click Generate AI Insights above.",
+    "factor": "Factor:"
+  },
+  "assistant": {
+    "title": "Strategic Insights Assistant",
+    "description": "Discuss reasoning behind insights and deeper strategic shifts",
+    "placeholder": "Ask a question like \"Why did the seasonal demand pattern shift?\"",
+    "thinking": "Analyzing...",
+    "send": "Send",
+    "error": "Unable to reach insights service."
+  }
+}

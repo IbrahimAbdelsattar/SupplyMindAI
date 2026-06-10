@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -57,6 +58,7 @@ type MLOpsMetrics = {
 
 const MLOps = () => {
   const { isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const [metricsData, setMetricsData] = useState<MLOpsMetrics | null>(null);
 
   useEffect(() => {
@@ -77,7 +79,7 @@ const MLOps = () => {
   }
 
   if (!metricsData) {
-    return <div className="p-8">Loading MLOps metrics...</div>;
+    return <div className="p-8">{t('mlops:loading')}</div>;
   }
 
   return (
@@ -86,24 +88,24 @@ const MLOps = () => {
       
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader 
-          title="MLOps & Monitoring" 
-          subtitle="Model performance and data pipeline health" 
+          title={t('mlops:title')} 
+          subtitle={t('mlops:subtitle')} 
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
           <AISummaryCard
-            title="Drift Investigation"
+            title={t('mlops:driftInvestigation')}
             sourceType="mlops"
-            question="Summarize model drift, retraining history, and whether recent accuracy changes require action."
+            question={t('mlops:driftQuestion')}
           />
 
           {/* Status Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {[
-              { label: 'Model Status', value: 'Healthy', icon: Activity, color: 'success' },
-              { label: 'Last Retrain', value: '2 days ago', icon: RefreshCw, color: 'primary' },
-              { label: 'Data Pipeline', value: 'Active', icon: Database, color: 'accent' },
-              { label: 'Inference', value: '45ms', icon: Zap, color: 'warning' },
+              { label: t('mlops:cards.modelStatus'), value: t('mlops:healthy'), icon: Activity, color: 'success' },
+              { label: t('mlops:cards.lastRetrain'), value: t('mlops:twoDaysAgo'), icon: RefreshCw, color: 'primary' },
+              { label: t('mlops:cards.dataPipeline'), value: t('mlops:active'), icon: Database, color: 'accent' },
+              { label: t('mlops:cards.inference'), value: t('mlops:fortyFiveMs'), icon: Zap, color: 'warning' },
             ].map((item, index) => (
               <motion.div
                 key={item.label}
@@ -139,8 +141,8 @@ const MLOps = () => {
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Model Accuracy Trend</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Weekly forecast accuracy over time</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{t('mlops:chart.accuracyTitle')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{t('mlops:chart.accuracyDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-52 sm:h-80">
@@ -172,7 +174,7 @@ const MLOps = () => {
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
                         dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
-                        name="Accuracy %"
+                        name={t('mlops:chart.accuracySeriesName')}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -190,8 +192,8 @@ const MLOps = () => {
             >
               <Card>
                 <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg">Data Drift Monitoring</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Feature distribution stability</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t('mlops:drift.title')}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{t('mlops:drift.description')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
                   {metricsData.dataDrift.map((item, index) => (
@@ -216,7 +218,7 @@ const MLOps = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-sm sm:text-base truncate">{item.feature}</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">Drift: {item.drift}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">{t('mlops:drift.driftLabel', { value: item.drift })}</p>
                         </div>
                       </div>
                       <Badge
@@ -226,7 +228,7 @@ const MLOps = () => {
                           item.status === 'healthy' ? 'border-success/50 text-success' : 'border-warning/50 text-warning'
                         )}
                       >
-                        {item.status}
+                        {t(item.status === 'healthy' ? 'mlops:drift.statusHealthy' : 'mlops:drift.statusWarning')}
                       </Badge>
                     </motion.div>
                   ))}
@@ -242,8 +244,8 @@ const MLOps = () => {
             >
               <Card>
                 <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg">Retraining History</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Recent model updates and triggers</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t('mlops:retraining.title')}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{t('mlops:retraining.description')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
                   {metricsData.retrainingHistory.map((item, index) => (
@@ -261,12 +263,12 @@ const MLOps = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-sm sm:text-base truncate">{item.date}</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Trigger: {item.trigger}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{t('mlops:retraining.triggerLabel', { trigger: item.trigger })}</p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <Badge variant="outline" className="border-success/50 text-success text-xs mb-0.5">
-                          {item.status}
+                        {t(item.status === 'healthy' ? 'mlops:drift.statusHealthy' : 'mlops:drift.statusWarning')}
                         </Badge>
                         <p className="text-[10px] sm:text-xs text-success font-medium">{item.improvement}</p>
                       </div>
@@ -285,15 +287,15 @@ const MLOps = () => {
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">System Resources</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Infrastructure utilization</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{t('mlops:resources.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{t('mlops:resources.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                   {[
-                    { label: 'CPU Usage', value: metricsData.system.cpu },
-                    { label: 'Memory Usage', value: metricsData.system.memory },
-                    { label: 'GPU Utilization', value: metricsData.system.gpu },
+                    { label: t('mlops:resources.cpu'), value: metricsData.system.cpu },
+                    { label: t('mlops:resources.memory'), value: metricsData.system.memory },
+                    { label: t('mlops:resources.gpu'), value: metricsData.system.gpu },
 
                   ].map((resource) => (
                     <div key={resource.label} className="space-y-2">

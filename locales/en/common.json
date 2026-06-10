@@ -1,0 +1,50 @@
+{
+  "app": {
+    "name": "Supply Mind",
+    "tagline": "AI-Powered Supply Chain Optimization"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "forecasting": "Forecasting",
+    "inventory": "Inventory",
+    "insights": "AI Insights",
+    "reports": "Reports",
+    "mlops": "MLOps",
+    "settings": "Settings",
+    "navigation": "Navigation"
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full Name"
+  },
+  "search": {
+    "placeholder": "Search products, stores...",
+    "pagesHeading": "Pages",
+    "productsHeading": "Products",
+    "noResults": "No results found."
+  },
+  "notifications": {
+    "title": "Notifications"
+  },
+  "dateRange": {
+    "today": "Today",
+    "last7Days": "Last 7 days",
+    "last30Days": "Last 30 days",
+    "last90Days": "Last 90 days",
+    "abbreviated": "7d"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact Us",
+    "copyright": "© 2026 Supply Mind. All rights reserved. DEPI Evaluation."
+  }
+}

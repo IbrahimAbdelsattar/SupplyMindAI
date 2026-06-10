@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -46,6 +47,7 @@ const typeColors: Record<string, string> = {
 };
 
 const Reports = () => {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -129,23 +131,23 @@ const Reports = () => {
       
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader 
-          title="Reports & Exports" 
-          subtitle="AI-generated reports and data exports" 
+          title={t('reports:header_title')} 
+          subtitle={t('reports:header_subtitle')} 
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
           <AISummaryCard
-            title="Report Q&A"
+            title={t('reports:qa_title')}
             sourceType="report"
-            question="What do recent forecast and inventory reports indicate? Highlight anomalies planners should review."
+            question={t('reports:qa_question')}
           />
 
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 sm:gap-6">
             {[
-              { icon: FileText, label: 'Reports Generated', value: '24', color: 'primary' },
-              { icon: Download, label: 'Downloads This Month', value: '156', color: 'accent' },
-              { icon: Calendar, label: 'Scheduled Reports', value: '4', color: 'success' },
+              { icon: FileText, label: t('reports:stats_reports_generated'), value: '24', color: 'primary' },
+              { icon: Download, label: t('reports:stats_downloads_this_month'), value: '156', color: 'accent' },
+              { icon: Calendar, label: t('reports:stats_scheduled_reports'), value: '4', color: 'success' },
             ].map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -179,12 +181,12 @@ const Reports = () => {
             <Card>
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-6">
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Available Reports</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">AI-generated reports ready for download</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t('reports:available_reports_title')}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{t('reports:available_reports_description')}</CardDescription>
                 </div>
                 <Button className="gap-2 w-full sm:w-auto" size="sm">
                   <FileText className="w-4 h-4" />
-                  Generate New
+                  {t('reports:generate_new')}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
@@ -214,7 +216,7 @@ const Reports = () => {
                     <div className="flex items-center gap-2 ml-13 sm:ml-0 flex-shrink-0">
                       {report.status === 'generating' ? (
                         <Button variant="outline" disabled size="sm" className="text-xs">
-                          Generating...
+                          {t('reports:generating')}
                         </Button>
                       ) : (
                         <>
@@ -226,10 +228,10 @@ const Reports = () => {
                             className="gap-1 text-xs hidden sm:flex"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            {isPreviewLoading && previewTitle === report.title ? 'Loading...' : 'Preview'}
+                            {isPreviewLoading && previewTitle === report.title ? t('reports:loading') : t('reports:preview')}
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => handleDownload(report.id)} className="text-xs">
-                            Download
+                            {t('reports:download')}
                           </Button>
                         </>
                       )}
@@ -249,33 +251,30 @@ const Reports = () => {
             <Card className="border-primary/30">
               <CardHeader className="pb-3 sm:pb-6">
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-primary/10 text-primary text-xs">Executive Report</Badge>
+                  <Badge className="bg-primary/10 text-primary text-xs">{t('reports:executive_report_badge')}</Badge>
                 </div>
-                <CardTitle className="text-lg sm:text-2xl">Q4 2024 AI Platform Performance</CardTitle>
+                <CardTitle className="text-lg sm:text-2xl">{t('reports:executive_report_title')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-6">
                   <div className="text-center p-3 sm:p-4 rounded-xl bg-success/5 border border-success/20">
                     <TrendingUp className="w-5 h-5 sm:w-8 sm:h-8 text-success mx-auto mb-1 sm:mb-2" />
                     <p className="text-lg sm:text-3xl font-bold text-success">94.5%</p>
-                    <p className="text-[10px] sm:text-sm text-muted-foreground">Forecast Accuracy</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">{t('reports:forecast_accuracy')}</p>
                   </div>
                   <div className="text-center p-3 sm:p-4 rounded-xl bg-primary/5 border border-primary/20">
                     <Package className="w-5 h-5 sm:w-8 sm:h-8 text-primary mx-auto mb-1 sm:mb-2" />
                     <p className="text-lg sm:text-3xl font-bold text-primary">-25%</p>
-                    <p className="text-[10px] sm:text-sm text-muted-foreground">Inventory Costs</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">{t('reports:inventory_costs')}</p>
                   </div>
                   <div className="text-center p-3 sm:p-4 rounded-xl bg-accent/5 border border-accent/20">
                     <TrendingUp className="w-5 h-5 sm:w-8 sm:h-8 text-accent mx-auto mb-1 sm:mb-2" />
                     <p className="text-lg sm:text-3xl font-bold text-accent">+18%</p>
-                    <p className="text-[10px] sm:text-sm text-muted-foreground">Revenue Impact</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">{t('reports:revenue_impact')}</p>
                   </div>
                 </div>
                 <p className="text-xs sm:text-base text-muted-foreground leading-relaxed">
-                  The AI-powered demand forecasting platform delivered exceptional results in Q4 2024. 
-                  With 94.5% forecast accuracy, the system enabled a 25% reduction in inventory holding 
-                  costs while improving product availability. Stock-out incidents decreased by 30%, 
-                  contributing to an 18% increase in sales revenue compared to the previous quarter.
+                  {t('reports:executive_report_description')}
                 </p>
               </CardContent>
             </Card>
@@ -289,7 +288,7 @@ const Reports = () => {
         <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col bg-card border-border">
           <DialogHeader>
             <DialogTitle>{previewTitle}</DialogTitle>
-            <DialogDescription>Previewing the generated report data</DialogDescription>
+            <DialogDescription>{t('reports:preview_dialog_description')}</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-auto border rounded-md max-h-[60vh]">
             <Table>

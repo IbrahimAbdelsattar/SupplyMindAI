@@ -1,0 +1,76 @@
+{
+  "header": {
+    "title": "Inventory Optimization",
+    "subtitle": "AI-driven recommendations for optimal stock levels"
+  },
+  "investigation": {
+    "title": "Inventory Investigation",
+    "question": "Which products need attention now? Summarize stock-out risk, reorder priorities, and similar past incidents."
+  },
+  "summary": {
+    "estCostSavings": "Est. Cost Savings",
+    "productsAnalyzed": "Products Analyzed",
+    "highRiskItems": "High Risk Items"
+  },
+  "recommendations": {
+    "title": "AI Recommendations",
+    "description": "Optimized inventory parameters for each product",
+    "risk": " risk",
+    "savings": "Savings",
+    "apply": "Apply",
+    "stock": "Stock",
+    "reorderPt": "Reorder Pt",
+    "reorderQty": "Reorder Qty",
+    "safety": "Safety",
+    "leadTime": "Lead time: ",
+    "days": " days",
+    "stockLevel": "Stock Level"
+  },
+  "comparison": {
+    "title": "Current vs Optimal Stock",
+    "description": "Before and after optimization comparison",
+    "currentStock": "Current Stock",
+    "optimalLevel": "Optimal Level"
+  },
+  "table": {
+    "title": "Inventory",
+    "searchPlaceholder": "Search SKU, product, category...",
+    "sku": "SKU",
+    "productName": "Product Name",
+    "category": "Category",
+    "type": "Type",
+    "stockLevel": "Stock Level",
+    "avgDailyDemand": "Avg Daily Demand",
+    "coverage": "Coverage",
+    "status": "Status",
+    "active": "Active",
+    "snapshotDate": "Snapshot Date",
+    "noResults": "No items match your search.",
+    "units": " units",
+    "days": " days"
+  },
+  "badges": {
+    "healthy": "Healthy",
+    "low": "Low",
+    "critical": "Critical",
+    "active": "Active",
+    "inactive": "Inactive",
+    "inStock": "In Stock",
+    "lowStock": "Low Stock",
+    "outOfStock": "Out of Stock",
+    "overstocked": "Overstocked"
+  },
+  "chart": {
+    "snapshotDate": "Snapshot Date",
+    "totalUnits": "Total Units",
+    "criticalProducts": "Critical Products",
+    "activeProducts": "Active Products",
+    "latestStockByCategory": "Latest Stock by Category",
+    "stock": "Stock"
+  },
+  "toast": {
+    "successTitle": "Success",
+    "successDesc": "Inventory updated.",
+    "errorTitle": "Error"
+  }
+}

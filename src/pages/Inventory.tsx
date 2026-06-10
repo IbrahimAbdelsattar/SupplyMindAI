@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 
@@ -20,7 +21,8 @@ import { Package, AlertTriangle, DollarSign, ArrowRight } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { apiFetch } from '@/lib/api';
 import InventoryTable, { type InventoryItem } from '@/components/inventory/InventoryTable';
@@ -45,8 +47,27 @@ interface InventoryData {
 }
 
 const Inventory = () => {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { mutateAsync: applyMutation, isPending: isApplying } = useMutation({
+    mutationFn: async (payload: InventoryRecommendation) => {
+      return apiFetch<InventoryRecommendation>('/inventory/update', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-optimize'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-list'] });
+      toast({ title: t('inventory:toast.success'), description: t('inventory:toast.inventoryUpdated') });
+    },
+    onError: (error) => {
+      toast({ title: t('inventory:toast.error'), description: (error as Error).message, variant: 'destructive' });
+    },
+  });
 
   const { data: inventoryRecommendations = [] } = useQuery({
     queryKey: ['inventory-optimize', 13],
@@ -80,15 +101,15 @@ const Inventory = () => {
       
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader 
-          title="Inventory Optimization" 
-          subtitle="AI-driven recommendations for optimal stock levels" 
+          title={t('inventory:title')} 
+          subtitle={t('inventory:subtitle')} 
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
           <AISummaryCard
-            title="Inventory Investigation"
+            title={t('inventory:aiSummaryTitle')}
             sourceType="inventory"
-            question="Which products need attention now? Summarize stock-out risk, reorder priorities, and similar past incidents."
+            question={t('inventory:aiSummaryQuestion')}
           />
 
           {/* Summary Cards */}
@@ -105,7 +126,7 @@ const Inventory = () => {
                       <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Est. Cost Savings</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('inventory:kpi.estCostSavings')}</p>
                       <p className="text-xl sm:text-2xl font-bold text-success">
                         ${totalSavings.toLocaleString()}
                       </p>
@@ -127,7 +148,7 @@ const Inventory = () => {
                       <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Products Analyzed</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('inventory:kpi.productsAnalyzed')}</p>
                       <p className="text-xl sm:text-2xl font-bold">{inventoryRecommendations.length}</p>
                     </div>
                   </div>
@@ -147,7 +168,7 @@ const Inventory = () => {
                       <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">High Risk Items</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{t('inventory:kpi.highRiskItems')}</p>
                       <p className="text-xl sm:text-2xl font-bold">
                         {inventoryRecommendations.filter((i) => i.riskLevel === 'high').length}
                       </p>
@@ -158,43 +179,40 @@ const Inventory = () => {
             </motion.div>
           </div>
 
-          {/* Stock Overview + Chat Sidebar */}
-          <div className="flex flex-col xl:flex-row gap-4 sm:gap-6">
-            <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
-              {inventoryData?.summary && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.25 }}
-                >
-                  <StockChart data={items} summary={inventoryData.summary} />
-                </motion.div>
-              )}
+          {/* Stock Overview — Full Width */}
+          {inventoryData?.summary && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.25 }}
+            >
+              <StockChart data={items} summary={inventoryData.summary} />
+            </motion.div>
+          )}
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-              >
-                <InventoryTable
-                  data={items}
-                  selectedSku={selectedItem?.sku ?? null}
-                  onSelectItem={setSelectedItem}
-                />
-              </motion.div>
-            </div>
+          {/* Inventory Table — Full Width */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+            className="w-full"
+          >
+            <InventoryTable
+              data={items}
+              selectedSku={selectedItem?.sku ?? null}
+              onSelectItem={setSelectedItem}
+            />
+          </motion.div>
 
-            <div className="w-full xl:w-[320px] shrink-0">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.35 }}
-                className="h-[500px] xl:h-[calc(100vh-16rem)]"
-              >
-                <ChatBot focusedItem={selectedItem} />
-              </motion.div>
-            </div>
-          </div>
+          {/* AI Chat Assistant — Full Width below the table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.35 }}
+            className="h-[420px]"
+          >
+            <ChatBot focusedItem={selectedItem} />
+          </motion.div>
 
           {/* AI Recommendations */}
           <motion.div
@@ -204,8 +222,8 @@ const Inventory = () => {
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">AI Recommendations</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Optimized inventory parameters for each product</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{t('inventory:aiRecommendations.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{t('inventory:aiRecommendations.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 {inventoryRecommendations.map((item, index) => (
@@ -230,18 +248,18 @@ const Inventory = () => {
                             }
                             className="text-xs"
                           >
-                            {item.riskLevel} risk
+                            {t('inventory:riskLevel.' + item.riskLevel)}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="text-right hidden sm:block">
-                            <p className="text-xs text-muted-foreground">Savings</p>
+                            <p className="text-xs text-muted-foreground">{t('inventory:aiRecommendations.savings')}</p>
                             <p className="text-sm sm:text-lg font-bold text-success">
                               +${item.costSavings.toLocaleString()}
                             </p>
                           </div>
-                          <Button size="sm" className="gap-1 h-8 text-xs sm:text-sm">
-                            Apply
+                          <Button size="sm" className="gap-1 h-8 text-xs sm:text-sm" onClick={() => applyMutation(item)} disabled={isApplying}>
+                            {t('inventory:aiRecommendations.apply')}
                             <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                           </Button>
                         </div>
@@ -249,7 +267,7 @@ const Inventory = () => {
 
                       <div className="grid grid-cols-4 gap-2 sm:gap-4">
                         <div className="text-center">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Stock</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{t('inventory:aiRecommendations.stock')}</p>
                           <p className={cn(
                             "text-sm sm:text-xl font-bold",
                             item.currentStock < item.reorderPoint ? 'text-destructive' : ''
@@ -258,27 +276,27 @@ const Inventory = () => {
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Reorder Pt</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{t('inventory:aiRecommendations.reorderPt')}</p>
                           <p className="text-sm sm:text-xl font-bold text-primary">{item.reorderPoint}</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Reorder Qty</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{t('inventory:aiRecommendations.reorderQty')}</p>
                           <p className="text-sm sm:text-xl font-bold text-accent">{item.reorderQty}</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Safety</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{t('inventory:aiRecommendations.safety')}</p>
                           <p className="text-sm sm:text-xl font-bold">{item.safetyStock}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between sm:hidden text-xs text-muted-foreground">
-                        <span>Lead time: {item.leadTime} days</span>
+                        <span>{t('inventory:aiRecommendations.leadTime', { days: item.leadTime })}</span>
                         <span className="font-bold text-success">+${item.costSavings.toLocaleString()}</span>
                       </div>
 
                       <div className="pt-3 border-t border-border">
                         <div className="flex items-center justify-between text-xs sm:text-sm mb-1.5">
-                          <span className="text-muted-foreground">Stock Level</span>
+                          <span className="text-muted-foreground">{t('inventory:aiRecommendations.stockLevel')}</span>
                           <span className="font-medium">
                             {Math.round((item.currentStock / (item.reorderPoint + item.safetyStock)) * 100)}%
                           </span>
@@ -303,8 +321,8 @@ const Inventory = () => {
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Current vs Optimal Stock</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Before and after optimization comparison</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{t('inventory:comparisonChart.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{t('inventory:comparisonChart.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-60 sm:h-80">
@@ -328,8 +346,8 @@ const Inventory = () => {
                           fontSize: '12px',
                         }}
                       />
-                      <Bar dataKey="current" name="Current Stock" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="optimal" name="Optimal Level" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="current" name={t('inventory:comparisonChart.currentStock')} fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="optimal" name={t('inventory:comparisonChart.optimalLevel')} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

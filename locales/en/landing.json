@@ -1,0 +1,58 @@
+{
+  "navbar": {
+    "features": "Features",
+    "useCases": "Use Cases",
+    "pricing": "Pricing",
+    "signIn": "Sign In",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "badge": "AI-Powered Intelligence Platform",
+    "headline1": "Predict Demand.",
+    "headline2": "Optimize Inventory.",
+    "subheadline": "Make smarter, automated business decisions with deep AI-driven demand forecasting and inventory optimization that continually learns from your data.",
+    "ctaPrimary": "View Live Dashboard",
+    "ctaSecondary": "Try AI Forecast",
+    "chartLabel": "Demand Forecast \u2014 Interactive Live Preview"
+  },
+  "features": {
+    "title": "How It Works",
+    "description": "Our AI platform transforms raw operational metrics into clean, actionable intelligence in four dynamic steps.",
+    "dataCollection": "Data Collection",
+    "dataCollectionDesc": "Real-time ingestion of sales, inventory, and market data from multiple sources.",
+    "aiForecasting": "AI Forecasting",
+    "aiForecastingDesc": "Deep learning models analyze patterns and predict future demand with 95%+ accuracy.",
+    "optimizationEngine": "Optimization Engine",
+    "optimizationEngineDesc": "Mathematical optimization algorithms determine optimal inventory levels.",
+    "businessDecisions": "Business Decisions",
+    "businessDecisionsDesc": "Actionable insights and automated recommendations for smarter decisions."
+  },
+  "useCases": {
+    "title": "Industry Solutions",
+    "description": "Tailored AI solutions for every industry vertical",
+    "retail": "Retail",
+    "retailDesc": "Optimize store inventory, reduce overstock, and never miss a sale with precise demand predictions.",
+    "retailTags": ["Multi-store optimization", "Seasonal forecasting", "Promotion planning"],
+    "ecommerce": "E-Commerce",
+    "ecommerceDesc": "Scale your online operations with AI-driven inventory management across warehouses.",
+    "ecommerceTags": ["Real-time demand tracking", "Fulfillment optimization", "Return prediction"],
+    "manufacturing": "Manufacturing",
+    "manufacturingDesc": "Align production schedules with demand forecasts to minimize waste and maximize efficiency.",
+    "manufacturingTags": ["Production planning", "Raw material optimization", "Supply chain sync"],
+    "pharmacies": "Pharmacies",
+    "pharmaciesDesc": "Ensure critical medications are always available while minimizing expired stock.",
+    "pharmaciesTags": ["Expiry management", "Compliance tracking", "Emergency stock alerts"]
+  },
+  "metrics": {
+    "title": "Business Impact",
+    "description": "Real results from companies using our AI-powered platform",
+    "inventoryCost": "Inventory Cost Reduction",
+    "inventoryCostDesc": "Average reduction in holding costs",
+    "stockOut": "Stock-Out Reduction",
+    "stockOutDesc": "Fewer missed sales opportunities",
+    "revenue": "Revenue Increase",
+    "revenueDesc": "Through optimized availability",
+    "annualSavings": "Annual Savings",
+    "annualSavingsDesc": "Average enterprise savings"
+  }
+}

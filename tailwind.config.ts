@@ -16,6 +16,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        arabic: ['Cairo', 'Tajawal', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

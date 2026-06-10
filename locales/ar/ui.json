@@ -1,0 +1,29 @@
+{
+  "sidebar": {
+    "toggle": "تبديل الشريط الجانبي"
+  },
+  "pagination": {
+    "ariaLabel": "ترقيم الصفحات",
+    "previousAria": "الانتقال إلى الصفحة السابقة",
+    "previous": "السابق",
+    "nextAria": "الانتقال إلى الصفحة التالية",
+    "next": "التالي",
+    "morePages": "المزيد من الصفحات"
+  },
+  "dialog": {
+    "close": "إغلاق"
+  },
+  "sheet": {
+    "close": "إغلاق"
+  },
+  "breadcrumb": {
+    "ariaLabel": "مسار التنقل",
+    "more": "المزيد"
+  },
+  "carousel": {
+    "ariaRole": "عرض شرائح",
+    "slideRole": "شريحة",
+    "previous": "الشريحة السابقة",
+    "next": "الشريحة التالية"
+  }
+}

@@ -96,7 +96,7 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
   };
 
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort(field)}>
+    <TableHead className="cursor-pointer select-none bg-card" onClick={() => toggleSort(field)}>
       <span className="inline-flex items-center gap-1">
         {children}
         <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
@@ -121,18 +121,18 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
       </div>
 
       <div className="max-h-[calc(100vh-10rem)] overflow-auto rounded-lg border bg-card">
-        <Table className="w-full min-w-[1100px]">
-          <TableHeader>
-            <TableRow className="whitespace-nowrap">
+        <Table className="w-full">
+          <TableHeader className="sticky top-0 bg-card z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
+            <TableRow className="whitespace-nowrap bg-card">
               <SortHeader field="sku">SKU</SortHeader>
               <SortHeader field="name">Product Name</SortHeader>
               <SortHeader field="category">Category</SortHeader>
               <SortHeader field="productType">Type</SortHeader>
               <SortHeader field="stock">Stock Level</SortHeader>
               <SortHeader field="averageDailyDemand">Avg Daily Demand</SortHeader>
-              <TableHead>Coverage</TableHead>
+              <TableHead className="bg-card">Coverage</TableHead>
               <SortHeader field="stockStatus">Status</SortHeader>
-              <TableHead>Active</TableHead>
+              <TableHead className="bg-card">Active</TableHead>
               <SortHeader field="lastUpdated">Snapshot Date</SortHeader>
             </TableRow>
           </TableHeader>

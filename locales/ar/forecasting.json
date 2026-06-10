@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "توقعات الطلب",
+    "subtitle": "توقعات طلب المنتجات بتقنية التعلم الآلي"
+  },
+  "parameters": {
+    "title": "معايير التوقعات",
+    "description": "اختر منتجًا وتوقع الطلب المستقبلي",
+    "product": "المنتج",
+    "forecastHorizon": "أفق التوقع",
+    "analyze": "تحليل",
+    "clear": "مسح"
+  },
+  "horizon": {
+    "1month": "شهر واحد",
+    "3months": "٣ أشهر",
+    "6months": "٦ أشهر"
+  },
+  "summary": {
+    "forecastedDemand": "الطلب المتوقع",
+    "units": "وحدة",
+    "confidenceLevel": "مستوى الثقة",
+    "averageAcrossHorizon": "المتوسط عبر أفق التوقع",
+    "demandTrend": "اتجاه الطلب",
+    "latestPeriod": "آخر فترة",
+    "revenueForecast": "توقعات الإيرادات",
+    "projectedRevenue": "الإيرادات المتوقعة",
+    "modelPending": "غير متاح (النموذج قيد الإعداد)"
+  },
+  "explanation": {
+    "title": "شرح التوقع"
+  },
+  "visualization": {
+    "title": "تصور التوقعات",
+    "description": "الطلب التاريخي مع الطلب المتوقع ونطاقات الثقة",
+    "upperBound": "الحد الأعلى",
+    "lowerBound": "الحد الأدنى",
+    "actual": "فعلي",
+    "forecast": "متوقع"
+  },
+  "breakdown": {
+    "title": "تفصيل التوقعات الشهرية",
+    "description": "الطلب المتوقع حسب الفترة مع الثقة والاتجاه",
+    "period": "الفترة",
+    "forecast": "التوقع",
+    "confidence": "الثقة",
+    "trend": "الاتجاه",
+    "empty": "اختر منتجًا لعرض تفصيل التوقعات"
+  },
+  "export": {
+    "csv": "تصدير CSV",
+    "filename": "forecast_export.csv",
+    "csvHeader": "التاريخ,الفعلي,المتوقع,الحد الأدنى,الحد الأعلى"
+  }
+}

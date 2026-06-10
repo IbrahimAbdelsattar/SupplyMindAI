@@ -1,0 +1,25 @@
+{
+  "header": {
+    "title": "SupplyMind Copilot",
+    "subtitle": "AI Assistant",
+    "stockMind": "Ask Stock Mind"
+  },
+  "welcome": "Hello! I'm your SupplyMind AI assistant. How can I help you today?",
+  "stockMindWelcome": "Ask Stock Mind is ready. Ask about stock, demand, coverage, active products, or the latest snapshot.",
+  "quickQuestions": "Quick questions:",
+  "placeholder": "Ask about forecasts, inventory...",
+  "stockMindPlaceholder": "Ask about products, dates, or coverage...",
+  "stockMindPlaceholderSelected": "Ask about {{product}}...",
+  "error": "I'm sorry, I couldn't process your request. Please try again later.",
+  "stockMindError": "I could not complete that request. {{message}}",
+  "stockMindFallbackError": "Unable to reach the assistant.",
+  "thinking": "Ask Stock Mind is thinking...",
+  "quickQuestionsList": [
+    "How accurate are the demand forecasts?",
+    "What factors affect inventory levels?",
+    "Explain the MLOps monitoring system",
+    "How do I interpret the dashboard KPIs?"
+  ],
+  "noProductSelected": "Select a row to add product context.",
+  "selectedProduct": "Selected: {{name}} ({{sku}})"
+}

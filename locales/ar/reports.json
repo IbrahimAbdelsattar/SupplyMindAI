@@ -1,0 +1,49 @@
+{
+  "header": {
+    "title": "التقارير والتصدير",
+    "subtitle": "تقارير وتصديرات بيانات بتقنية الذكاء الاصطناعي"
+  },
+  "qa": {
+    "title": "أسئلة وأجوبة التقارير",
+    "question": "ماذا تشير تقارير التوقعات والمخزون الأخيرة؟ سلّط الضوء على الحالات الشاذة التي يجب على المخططين مراجعتها."
+  },
+  "stats": {
+    "reportsGenerated": "التقارير المُنشأة",
+    "downloadsThisMonth": "التنزيلات هذا الشهر",
+    "scheduledReports": "التقارير المجدولة"
+  },
+  "reports": {
+    "title": "التقارير المتاحة",
+    "description": "تقارير بتقنية الذكاء الاصطناعي جاهزة للتحميل",
+    "generateNew": "إنشاء تقرير جديد",
+    "generating": "جارٍ الإنشاء...",
+    "preview": "معاينة",
+    "download": "تحميل",
+    "previewDialog": "معاينة بيانات التقرير المُنشأ",
+    "loading": "جارٍ التحميل..."
+  },
+  "badges": {
+    "forecast": "توقعات",
+    "inventory": "مخزون",
+    "executive": "تنفيذي",
+    "technical": "تقني",
+    "risk": "مخاطر"
+  },
+  "featured": {
+    "title": "الربع الرابع ٢٠٢٤ - أداء منصة الذكاء الاصطناعي",
+    "forecastAccuracy": "دقة التوقعات",
+    "inventoryCosts": "تكاليف المخزون",
+    "revenueImpact": "الأثر على الإيرادات",
+    "description": "حققت منصة توقعات الطلب المدعومة بالذكاء الاصطناعي نتائج استثنائية في الربع الرابع ٢٠٢٤. بدقة توقعات بلغت ٩٤.٥٪، مكّن النظام من خفض تكاليف الاحتفاظ بالمخزون بنسبة ٢٥٪ مع تحسين توافر المنتجات. انخفضت حالات نفاد المخزون بنسبة ٣٠٪، مما ساهم في زيادة إيرادات المبيعات بنسبة ١٨٪ مقارنة بالربع السابق."
+  },
+  "filenames": {
+    "default": "report.csv",
+    "daily": "daily_operations_report.csv",
+    "weekly": "weekly_performance_report.csv",
+    "monthly": "monthly_performance_report.csv",
+    "quarterly": "quarterly_business_review.csv",
+    "yearly": "yearly_strategic_report.csv",
+    "forecast": "forecast_export.csv",
+    "inventory": "inventory_recommendations.csv"
+  }
+}

@@ -407,6 +407,32 @@ def _simple_forecast_series(product_id: str, horizon_days: int) -> list[Forecast
 # -----------------------------------------------------------------------------
 app = FastAPI(title="SupplyMindAI API", version="0.1.0")
 
+# Startup seeding for demo user
+@app.on_event("startup")
+async def ensure_demo_user():
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == "demo-user").first()
+        if not user:
+            now = _utc_now()
+            demo_user = User(
+                id="demo-user",
+                name="Demo User",
+                email="demo@supplymind.ai",
+                password_hash="",
+                role="admin",
+                is_active=True,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(demo_user)
+            db.commit()
+            logger.info("Demo user created at startup")
+        else:
+            logger.info("Demo user already exists at startup")
+    finally:
+        db.close()
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -813,6 +839,15 @@ def inventory_optimize(limit: int = 10, user: User = Depends(_get_current_user))
         raise HTTPException(status_code=500, detail=f"Internal inventory optimize error: {exc}")
 
 
+
+@app.post("/api/v1/inventory/update", response_model=InventoryRecommendation)
+async def inventory_update(request: InventoryRecommendation, user: User = Depends(_get_current_user)) -> InventoryRecommendation:
+    """Update inventory parameters for a product.
+    Currently logs the update and returns the received data.
+    """
+    logger.info(f"Inventory update for product {request.product_id}: ROP={request.reorderPoint}, Qty={request.reorderQty}, Safety={request.safetyStock}")
+    # TODO: Persist changes to CSV or database.
+    return request
 
 # -----------------------------------------------------------------------------
 # Reports
@@ -1523,33 +1558,37 @@ def get_settings(user: User = Depends(_get_current_user)):
 def save_settings(payload: UserSettingsPayload, user: User = Depends(_get_current_user)):
     from backend.db import SessionLocal, UserSettings
 
+    # Serialize payload — works with both Pydantic v1 and v2
+    try:
+        new_settings = payload.model_dump(exclude_none=True)
+    except AttributeError:
+        new_settings = payload.dict(exclude_none=True)
+
     db = SessionLocal()
     try:
         row = db.query(UserSettings).filter(UserSettings.user_id == str(user.id)).first()
-        new_settings = payload.model_dump(exclude_none=True)
 
         if row:
             merged = {**(row.settings_json or {}), **new_settings}
             row.settings_json = merged
             row.updated_at = _utc_now()
         else:
+            merged = new_settings
             row = UserSettings(
                 id=str(uuid.uuid4()),
                 user_id=str(user.id),
-                settings_json=new_settings,
+                settings_json=merged,
                 created_at=_utc_now(),
                 updated_at=_utc_now(),
             )
             db.add(row)
 
         db.commit()
-        db.refresh(row)
-        return {"settings": row.settings_json, "message": "Settings saved"}
+        # Do NOT call db.refresh — return the merged dict we already have
+        return {"settings": merged, "message": "Settings saved"}
     except Exception as exc:
         db.rollback()
+        logger.error("save_settings error for user %s: %s", user.id, exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to save settings: {exc}") from exc
     finally:
         db.close()
-
-
-

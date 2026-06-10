@@ -1,0 +1,77 @@
+{
+  "header": {
+    "title": "Settings",
+    "subtitle": "Customize your platform experience"
+  },
+  "profile": {
+    "title": "Profile",
+    "description": "Your account information",
+    "accountSuffix": " Account"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "description": "Customize the look and feel",
+    "darkMode": "Dark Mode",
+    "darkModeDesc": "Toggle between light and dark themes"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Configure alert preferences",
+    "stockAlerts": "Stock Alerts",
+    "stockAlertsDesc": "Get notified about stock-out and overstock risks",
+    "forecastUpdates": "Forecast Updates",
+    "forecastUpdatesDesc": "Receive alerts when forecasts are updated",
+    "weeklyReports": "Weekly Reports",
+    "weeklyReportsDesc": "Get weekly summary reports via email",
+    "systemUpdates": "System Updates",
+    "systemUpdatesDesc": "Notifications about platform updates"
+  },
+  "regional": {
+    "title": "Regional Settings",
+    "description": "Configure region and currency",
+    "region": "Region",
+    "currency": "Currency",
+    "regions": {
+      "us": "United States",
+      "eu": "Europe",
+      "asia": "Asia Pacific",
+      "mena": "Middle East & Africa"
+    },
+    "currencies": {
+      "usd": "USD ($)",
+      "eur": "EUR (€)",
+      "gbp": "GBP (£)",
+      "egp": "EGP (E£)"
+    }
+  },
+  "roleFeatures": {
+    "title": "Role-Based Features",
+    "description": "Features available for your role",
+    "executiveReports": "Executive Reports",
+    "executiveReportsDesc": "Access to high-level summaries",
+    "budgetControls": "Budget Controls",
+    "budgetControlsDesc": "Set inventory budgets",
+    "teamManagement": "Team Management",
+    "teamManagementDesc": "Manage team access",
+    "approvalWorkflows": "Approval Workflows",
+    "approvalWorkflowsDesc": "Approve reorder requests",
+    "technicalDetails": "Technical Details",
+    "technicalDetailsDesc": "Model metrics and parameters",
+    "dataExploration": "Data Exploration",
+    "dataExplorationDesc": "Advanced data analysis",
+    "modelConfiguration": "Model Configuration",
+    "modelConfigurationDesc": "Adjust forecast parameters",
+    "apiAccess": "API Access",
+    "apiAccessDesc": "Programmatic data access"
+  },
+  "actions": {
+    "saving": "Saving...",
+    "save": "Save Settings"
+  },
+  "toast": {
+    "successTitle": "Settings saved",
+    "successDesc": "Your preferences have been saved to your account.",
+    "errorTitle": "Error",
+    "errorDesc": "Failed to save settings. Please try again."
+  }
+}

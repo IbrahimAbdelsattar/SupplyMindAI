@@ -47,6 +47,22 @@ export const FormattedMessage: React.FC<FormattedMessageProps> = ({ content, cla
   let listType: 'ul' | 'ol' | null = null;
   let keyCounter = 0;
 
+  let inTable = false;
+  let tableHeaders: string[] = [];
+  let tableRows: string[][] = [];
+
+  const parseTableRow = (rowText: string): string[] => {
+    const trimmed = rowText.trim();
+    let cells = trimmed.split('|');
+    if (trimmed.startsWith('|')) {
+      cells.shift();
+    }
+    if (trimmed.endsWith('|') && cells.length > 0) {
+      cells.pop();
+    }
+    return cells.map(c => c.trim());
+  };
+
   const pushCurrentList = () => {
     if (currentList.length > 0 && listType) {
       const ListTag = listType;
@@ -61,9 +77,65 @@ export const FormattedMessage: React.FC<FormattedMessageProps> = ({ content, cla
     }
   };
 
+  const pushCurrentTable = () => {
+    if (inTable && tableHeaders.length > 0) {
+      elements.push(
+        <div key={`table-wrapper-${keyCounter++}`} className="my-4 w-full overflow-x-auto rounded-lg border border-border bg-card">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b border-border text-left">
+              <tr>
+                {tableHeaders.map((header, idx) => (
+                  <th key={`th-${idx}`} className="h-10 px-4 align-middle font-semibold text-muted-foreground whitespace-nowrap bg-muted/30">
+                    {parseInlineElements(header)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {tableRows.map((row, rowIdx) => (
+                <tr key={`tr-${rowIdx}`} className="hover:bg-muted/30 transition-colors odd:bg-muted/10">
+                  {row.map((cell, cellIdx) => (
+                    <td key={`td-${cellIdx}`} className="p-3 align-middle text-foreground">
+                      {parseInlineElements(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      tableHeaders = [];
+      tableRows = [];
+      inTable = false;
+    }
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
+
+    // Table parsing
+    const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+    const isNextLineSeparator = nextLine.includes('|') && nextLine.includes('-') && /^[|\s:-]+$/.test(nextLine);
+
+    if (!inTable && trimmedLine.startsWith('|') && isNextLineSeparator) {
+      pushCurrentList();
+      inTable = true;
+      tableHeaders = parseTableRow(line);
+      i++; // Skip the separator line
+      continue;
+    }
+
+    if (inTable) {
+      if (trimmedLine.startsWith('|')) {
+        tableRows.push(parseTableRow(line));
+        continue;
+      } else {
+        pushCurrentTable();
+        // Fall through to let standard parsing check this line
+      }
+    }
 
     // 1. Headers (### Title)
     const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
@@ -131,8 +203,9 @@ export const FormattedMessage: React.FC<FormattedMessageProps> = ({ content, cla
     );
   }
 
-  // Flush any remaining active list
+  // Flush any remaining active list or table
   pushCurrentList();
+  pushCurrentTable();
 
   return <div className={className}>{elements}</div>;
 };

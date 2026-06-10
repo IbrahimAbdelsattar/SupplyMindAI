@@ -1,0 +1,29 @@
+{
+  "sidebar": {
+    "toggle": "Toggle Sidebar"
+  },
+  "pagination": {
+    "ariaLabel": "pagination",
+    "previousAria": "Go to previous page",
+    "previous": "Previous",
+    "nextAria": "Go to next page",
+    "next": "Next",
+    "morePages": "More pages"
+  },
+  "dialog": {
+    "close": "Close"
+  },
+  "sheet": {
+    "close": "Close"
+  },
+  "breadcrumb": {
+    "ariaLabel": "breadcrumb",
+    "more": "More"
+  },
+  "carousel": {
+    "ariaRole": "carousel",
+    "slideRole": "slide",
+    "previous": "Previous slide",
+    "next": "Next slide"
+  }
+}

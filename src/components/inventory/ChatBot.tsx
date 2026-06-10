@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { LoaderCircle, MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +17,11 @@ interface ChatBotProps {
 }
 
 export default function ChatBot({ focusedItem }: ChatBotProps) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "bot",
-      text: "Ask Stock Mind is ready. Ask about stock, demand, coverage, active products, or the latest snapshot.",
+      text: t("chatbot:initialGreeting"),
     },
   ]);
   const [input, setInput] = useState("");
@@ -49,12 +51,12 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
         { role: "bot", text: result.answer },
       ]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to reach the assistant.";
+      const message = error instanceof Error ? error.message : t("chatbot:unreachableError");
       setMessages((current) => [
         ...current,
         {
           role: "bot",
-          text: `I could not complete that request. ${message}`,
+          text: `${t("chatbot:requestFailed")} ${message}`,
         },
       ]);
     } finally {
@@ -67,9 +69,9 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <MessageSquare className="h-5 w-5 text-primary" />
         <div className="min-w-0">
-          <span className="block text-sm font-semibold text-foreground">Ask Stock Mind</span>
+          <span className="block text-sm font-semibold text-foreground">{t("chatbot:title")}</span>
           <span className="block text-xs text-muted-foreground">
-            {focusedItem ? `Selected: ${focusedItem.name} (${focusedItem.sku})` : "Select a row to add product context."}
+            {focusedItem ? `${t("chatbot:selected")} ${focusedItem.name} (${focusedItem.sku})` : t("chatbot:noSelection")}
           </span>
         </div>
       </div>
@@ -96,7 +98,7 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
             <div className="flex justify-start">
               <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-muted px-4 py-3 text-sm">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
-                Ask Stock Mind is thinking...
+                {t("chatbot:thinking")}
               </div>
             </div>
           )}
@@ -107,7 +109,7 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
 
       <div className="flex gap-2 border-t px-4 py-3">
         <Input
-          placeholder={focusedItem ? `Ask about ${focusedItem.name}...` : "Ask about products, dates, or coverage..."}
+          placeholder={focusedItem ? `${t("chatbot:askAbout")} ${focusedItem.name}...` : t("chatbot:inputPlaceholder")}
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && !typing && send()}

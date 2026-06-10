@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -45,13 +46,14 @@ type MonthlyPrediction = { period: string; predicted_demand: number; confidence_
 type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[]; monthly_summary?: MonthlyPrediction[] | null };
 
 const HORIZON_OPTIONS = [
-  { label: '1 Month', value: 30 },
-  { label: '3 Months', value: 90 },
-  { label: '6 Months', value: 180 },
+  { labelKey: 'forecasting:horizon.1month', value: 30 },
+  { labelKey: 'forecasting:horizon.3months', value: 90 },
+  { labelKey: 'forecasting:horizon.6months', value: 180 },
 ];
 
 const Forecasting = () => {
   const { isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: () => apiFetch<Product[]>('/data/products'),
@@ -114,8 +116,8 @@ const Forecasting = () => {
       
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader 
-          title="Demand Forecasting" 
-          subtitle="Product demand forecasting powered by ML" 
+          title={t('forecasting:title')} 
+          subtitle={t('forecasting:subtitle')} 
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
@@ -127,15 +129,15 @@ const Forecasting = () => {
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Forecast Parameters</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Select a product and forecast future demand</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{t('forecasting:parameters.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{t('forecasting:parameters.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-lg">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-xs sm:text-sm">
                       <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      Product
+                      {t('forecasting:product')}
                     </Label>
                     <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                       <SelectTrigger className="bg-background h-9 sm:h-10">
@@ -154,7 +156,7 @@ const Forecasting = () => {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-xs sm:text-sm">
                       <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      Forecast Horizon
+                      {t('forecasting:horizon')}
                     </Label>
                     <Select value={horizon} onValueChange={setHorizon}>
                       <SelectTrigger className="bg-background h-9 sm:h-10">
@@ -163,7 +165,7 @@ const Forecasting = () => {
                       <SelectContent className="bg-popover">
                         {HORIZON_OPTIONS.map((opt) => (
                           <SelectItem key={opt.value} value={String(opt.value)}>
-                            {opt.label}
+                            {t(opt.labelKey)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -184,41 +186,41 @@ const Forecasting = () => {
             >
               <Card>
                 <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Forecast Demand</CardDescription>
+                  <CardDescription className="text-xs">{t('forecasting:kpi.forecastDemand')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl">
                     {summary.totalDemand.toLocaleString()}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">Units</p>
+                  <p className="text-xs text-muted-foreground">{t('forecasting:kpi.units')}</p>
                 </CardHeader>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Confidence Level</CardDescription>
+                  <CardDescription className="text-xs">{t('forecasting:kpi.confidenceLevel')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl">
                     {Math.round(summary.avgConfidence)}%
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">Average across horizon</p>
+                  <p className="text-xs text-muted-foreground">{t('forecasting:kpi.confidenceLevelDesc')}</p>
                 </CardHeader>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Demand Trend</CardDescription>
+                  <CardDescription className="text-xs">{t('forecasting:kpi.demandTrend')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl capitalize">
                     {summary.latestTrend}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">Latest period</p>
+                  <p className="text-xs text-muted-foreground">{t('forecasting:kpi.demandTrendDesc')}</p>
                 </CardHeader>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">Revenue Forecast</CardDescription>
+                  <CardDescription className="text-xs">{t('forecasting:kpi.revenueForecast')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl">
                     {summary.totalRevenue > 0
                       ? `$${summary.totalRevenue.toLocaleString()}`
                       : '—'}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    {summary.totalRevenue > 0 ? 'Projected revenue' : 'N/A (model pending)'}
+                    {summary.totalRevenue > 0 ? t('forecasting:kpi.revenueForecastDesc') : t('forecasting:kpi.revenueForecastNa')}
                   </p>
                 </CardHeader>
               </Card>
@@ -227,7 +229,7 @@ const Forecasting = () => {
 
           {selectedProduct && (
             <AISummaryCard
-              title="Forecast Explanation"
+              title={t('forecasting:aiExplanation.title')}
               productId={selectedProduct}
               sourceType="forecast"
               question={`Explain forecast changes and drivers for product ${selectedProduct}. What should planners watch next?`}
@@ -243,12 +245,12 @@ const Forecasting = () => {
             <Card>
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-6">
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Forecast Visualization</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Historical demand with predicted demand and confidence bands</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t('forecasting:chart.title')}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{t('forecasting:chart.description')}</CardDescription>
                 </div>
                 <Button onClick={handleExport} variant="outline" className="gap-2 w-full sm:w-auto" size="sm">
                   <Download className="w-4 h-4" />
-                  Export CSV
+                  {t('forecasting:exportCsv')}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -283,14 +285,14 @@ const Forecasting = () => {
                         dataKey="upper"
                         stroke="none"
                         fill="url(#confidenceGradient)"
-                        name="Upper Bound"
+                        name={t('forecasting:chart.upperBound')}
                       />
                       <Area
                         type="monotone"
                         dataKey="lower"
                         stroke="none"
                         fill="hsl(var(--background))"
-                        name="Lower Bound"
+                        name={t('forecasting:chart.lowerBound')}
                       />
                       <Line
                         type="monotone"
@@ -298,7 +300,7 @@ const Forecasting = () => {
                         stroke="hsl(var(--accent))"
                         strokeWidth={2}
                         dot={{ fill: 'hsl(var(--accent))', strokeWidth: 0, r: 3 }}
-                        name="Actual"
+                        name={t('forecasting:chart.actual')}
                         connectNulls={false}
                       />
                       <Line
@@ -308,7 +310,7 @@ const Forecasting = () => {
                         strokeWidth={2}
                         strokeDasharray="5 5"
                         dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
-                        name="Forecast"
+                        name={t('forecasting:chart.forecast')}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -325,18 +327,18 @@ const Forecasting = () => {
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Monthly Forecast Breakdown</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Predicted demand by period with confidence and trend</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{t('forecasting:table.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{t('forecasting:table.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="max-h-80 overflow-auto -mx-3 sm:mx-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs sm:text-sm">Period</TableHead>
-                        <TableHead className="text-right text-xs sm:text-sm">Forecast</TableHead>
-                        <TableHead className="text-right text-xs sm:text-sm">Confidence</TableHead>
-                        <TableHead className="text-right text-xs sm:text-sm">Trend</TableHead>
+                        <TableHead className="text-xs sm:text-sm">{t('forecasting:table.period')}</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">{t('forecasting:table.forecast')}</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">{t('forecasting:table.confidence')}</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">{t('forecasting:table.trend')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -362,7 +364,7 @@ const Forecasting = () => {
                       {!monthlyData.length && (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center text-muted-foreground text-xs sm:text-sm py-8">
-                            Select a product to view the forecast breakdown
+                            {t('forecasting:table.empty')}
                           </TableCell>
                         </TableRow>
                       )}

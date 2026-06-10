@@ -1,0 +1,50 @@
+{
+  "app": {
+    "name": "سَبلاي مايند",
+    "tagline": "تحسين سلسلة التوريد بالذكاء الاصطناعي"
+  },
+  "nav": {
+    "dashboard": "لوحة القيادة",
+    "forecasting": "التوقعات",
+    "inventory": "المخزون",
+    "insights": "الرؤى الذكية",
+    "reports": "التقارير",
+    "mlops": "مراقبة النماذج",
+    "settings": "الإعدادات",
+    "navigation": "التنقل"
+  },
+  "theme": {
+    "light": "الوضع النهاري",
+    "dark": "الوضع الليلي"
+  },
+  "auth": {
+    "signIn": "تسجيل الدخول",
+    "signUp": "إنشاء حساب",
+    "signOut": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "fullName": "الاسم الكامل"
+  },
+  "search": {
+    "placeholder": "البحث عن منتجات، متاجر...",
+    "pagesHeading": "الصفحات",
+    "productsHeading": "المنتجات",
+    "noResults": "لم يتم العثور على نتائج."
+  },
+  "notifications": {
+    "title": "الإشعارات"
+  },
+  "dateRange": {
+    "today": "اليوم",
+    "last7Days": "آخر ٧ أيام",
+    "last30Days": "آخر ٣٠ يومًا",
+    "last90Days": "آخر ٩٠ يومًا",
+    "abbreviated": "٧أ"
+  },
+  "footer": {
+    "privacy": "سياسة الخصوصية",
+    "terms": "شروط الخدمة",
+    "contact": "اتصل بنا",
+    "copyright": "© ٢٠٢٦ سَبلاي مايند. جميع الحقوق محفوظة. تقييم DEPI."
+  }
+}

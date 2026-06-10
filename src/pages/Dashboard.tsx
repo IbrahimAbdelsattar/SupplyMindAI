@@ -11,6 +11,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 type KPIResponse = {
   totalDemand: number;
@@ -22,6 +23,7 @@ type KPIResponse = {
 };
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
 
   const { data: kpiData } = useQuery({
@@ -40,49 +42,49 @@ const Dashboard = () => {
       
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader 
-          title="Dashboard" 
-          subtitle="Real-time demand forecasting and inventory insights" 
+          title={t('dashboard:title')} 
+          subtitle={t('dashboard:subtitle')} 
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <KPICard
-              title="Total Forecasted Demand"
+              title={t('dashboard:kpi.totalDemand')}
               value={kpiData?.totalDemand ?? 0}
-              suffix=" units"
+              suffix={t('dashboard:kpi.unitsSuffix')}
               change={12}
-              changeLabel="vs last period"
+              changeLabel={t('dashboard:kpi.vsLastPeriod')}
               icon={TrendingUp}
               color="primary"
               delay={0}
             />
             <KPICard
-              title="Inventory Cost"
+              title={t('dashboard:kpi.inventoryCost')}
               value={kpiData?.inventoryCost ?? 0}
-              prefix="$"
+              prefix={t('dashboard:kpi.dollarPrefix')}
               change={-8}
-              changeLabel="vs last period"
+              changeLabel={t('dashboard:kpi.vsLastPeriod')}
               icon={DollarSign}
               color="success"
               delay={0.1}
             />
             <KPICard
-              title="Stock-out Risk"
+              title={t('dashboard:kpi.stockoutRisk')}
               value={kpiData?.stockoutRisk ?? 0}
-              suffix="%"
+              suffix={t('dashboard:kpi.percentSuffix')}
               change={-15}
-              changeLabel="lower than last month"
+              changeLabel={t('dashboard:kpi.lowerThanLastMonth')}
               icon={AlertTriangle}
               color="warning"
               delay={0.2}
             />
             <KPICard
-              title="Overstock Risk"
+              title={t('dashboard:kpi.overstockRisk')}
               value={kpiData?.overstockRisk ?? 0}
-              suffix="%"
+              suffix={t('dashboard:kpi.percentSuffix')}
               change={-5}
-              changeLabel="improvement"
+              changeLabel={t('dashboard:kpi.improvement')}
               icon={Package}
               color="accent"
               delay={0.3}
@@ -90,8 +92,8 @@ const Dashboard = () => {
           </div>
 
           <AISummaryCard
-            title="Executive AI Brief"
-            question="Summarize current supply chain risks, stock-out exposure, and top priorities from operational data and indexed knowledge."
+            title={t('dashboard:aiSummary')}
+            question={t('dashboard:aiSummaryQuestion')}
           />
 
           {/* Charts Row */}

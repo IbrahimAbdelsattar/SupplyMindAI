@@ -1,9 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { LanguageSwitcher } from '@/components/language/LanguageSwitcher';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -22,16 +24,16 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: TrendingUp, label: 'Forecasting', path: '/forecasting' },
-  { icon: Package, label: 'Inventory', path: '/inventory' },
-  { icon: Brain, label: 'AI Insights', path: '/insights' },
-  { icon: FileText, label: 'Reports', path: '/reports' },
-  { icon: Activity, label: 'MLOps', path: '/mlops' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: string; path: string }[] = [
+  { icon: LayoutDashboard, labelKey: 'common:nav.dashboard', path: '/dashboard' },
+  { icon: TrendingUp, labelKey: 'common:nav.forecasting', path: '/forecasting' },
+  { icon: Package, labelKey: 'common:nav.inventory', path: '/inventory' },
+  { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
+  { icon: FileText, labelKey: 'common:nav.reports', path: '/reports' },
+  { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops' },
+  { icon: Settings, labelKey: 'common:nav.settings', path: '/settings' },
 ];
 
 const SidebarContent = ({
@@ -43,6 +45,7 @@ const SidebarContent = ({
   setIsCollapsed: (v: boolean) => void;
   onNavigate?: () => void;
 }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -55,7 +58,7 @@ const SidebarContent = ({
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
             <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
           </div>
-          {!isCollapsed && <span className="text-lg font-bold">Supply Mind</span>}
+          {!isCollapsed && <span className="text-lg font-bold">{t('common:app.name')}</span>}
         </Link>
         {!isCollapsed && (
           <Button
@@ -96,7 +99,7 @@ const SidebarContent = ({
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span>{item.label}</span>}
+              {!isCollapsed && <span>{t(item.labelKey)}</span>}
             </Link>
           );
         })}
@@ -117,8 +120,10 @@ const SidebarContent = ({
           ) : (
             <Moon className="w-5 h-5 flex-shrink-0" />
           )}
-          {!isCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
+          {!isCollapsed && <span>{theme === 'dark' ? t('common:theme.light') : t('common:theme.dark')}</span>}
         </Button>
+
+        <LanguageSwitcher collapsed={isCollapsed} />
 
         {!isCollapsed && user && (
           <div className="flex items-center gap-3 px-3 py-2">
@@ -143,7 +148,7 @@ const SidebarContent = ({
           )}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span>Sign Out</span>}
+          {!isCollapsed && <span>{t('common:auth.signOut')}</span>}
         </Button>
       </div>
     </div>
@@ -168,7 +173,7 @@ export const DashboardSidebar = () => {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">
-          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SheetTitle className="sr-only">{t('common:nav.navigation')}</SheetTitle>
           <SidebarContent
             isCollapsed={false}
             setIsCollapsed={() => {}}
