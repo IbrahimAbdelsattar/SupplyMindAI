@@ -26,14 +26,11 @@ Rules:
 """
 
 
+from backend.llm.client import get_llm
+
 def _llm() -> ChatOpenAI:
-    key = os.getenv("RAG_API_KEY") or os.getenv("OPENROUTER_API_KEY", "").strip()
-    return ChatOpenAI(
-        model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
-        api_key=key or "not-set",
-        base_url="https://openrouter.ai/api/v1" if key else None,
-        temperature=0.1,
-    )
+    return get_llm(temperature=0.1)
+
 
 
 def build_context_block(

@@ -44,7 +44,7 @@ You MUST respond ONLY with a valid JSON object matching the following structure:
 
 class ForecastReasoningService:
     def __init__(self) -> None:
-        model = os.getenv("FORECAST_MODEL", "glm5.1")
+        model = os.getenv("FORECAST_MODEL", "openai/gpt-oss-120b:free")
         self.llm = get_agentrouter_llm(model_name=model)
 
     def analyze(self, forecasts: list[dict[str, Any]], question: Optional[str] = None) -> dict[str, Any]:

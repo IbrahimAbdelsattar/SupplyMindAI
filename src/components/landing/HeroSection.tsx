@@ -233,13 +233,13 @@ export const HeroSection = () => {
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 px-4 sm:px-0"
           >
             <Button asChild size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl glow transition-transform duration-350 hover:scale-[1.03]">
-              <Link to="/login">
+              <Link to="/dashboard">
                 View Live Dashboard
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl transition-all duration-350 hover:bg-muted/80 hover:scale-[1.03]">
-              <Link to="/login">
+              <Link to="/dashboard">
                 <Play className="mr-2 h-5 w-5 fill-current" />
                 Try AI Forecast
               </Link>

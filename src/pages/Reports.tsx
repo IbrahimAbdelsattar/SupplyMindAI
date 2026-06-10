@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -11,6 +12,21 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, getApiBaseUrl, getToken } from '@/lib/api';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 type ReportItem = {
   id: string;
@@ -32,6 +48,12 @@ const typeColors: Record<string, string> = {
 const Reports = () => {
   const { isAuthenticated } = useAuth();
 
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
+  const [previewRows, setPreviewRows] = useState<string[][]>([]);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
   const { data: reports = [] } = useQuery({
     queryKey: ['reports'],
     queryFn: () => apiFetch<ReportItem[]>('/reports/list'),
@@ -42,13 +64,43 @@ const Reports = () => {
     return <Navigate to="/login" replace />;
   }
 
+  const handlePreview = async (reportId: string, reportTitle: string) => {
+    setIsPreviewLoading(true);
+    setPreviewTitle(reportTitle);
+    
+    try {
+      const baseUrl = getApiBaseUrl();
+      const token = getToken();
+      const url = new URL(`${baseUrl}/reports/download`);
+      url.searchParams.set('report_id', reportId);
+      
+      const res = await fetch(url.toString(), {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      const text = await res.text();
+      
+      // Basic CSV parsing
+      const rows = text.split('\n').map(row => {
+        return row.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
+      }).filter(row => row.length > 0 && row.some(cell => cell !== ''));
+      
+      if (rows.length > 0) {
+        setPreviewHeaders(rows[0]);
+        setPreviewRows(rows.slice(1));
+        setIsPreviewOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to preview report:', err);
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
   const handleDownload = async (reportId: string) => {
     const baseUrl = getApiBaseUrl();
     const token = getToken();
     const url = new URL(`${baseUrl}/reports/download`);
     url.searchParams.set('report_id', reportId);
-    // forecast report needs product_id; keep it simple and omit unless user wants
-    if (reportId === 'r_forecast') return;
 
     const res = await fetch(url.toString(), {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -56,7 +108,18 @@ const Reports = () => {
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = reportId === 'r_inventory' ? 'inventory_recommendations.csv' : 'report.csv';
+    
+    // Determine dynamic filename based on reportId
+    let filename = 'report.csv';
+    if (reportId === 'r_daily') filename = 'daily_operations_report.csv';
+    else if (reportId === 'r_weekly') filename = 'weekly_performance_report.csv';
+    else if (reportId === 'r_monthly') filename = 'monthly_performance_report.csv';
+    else if (reportId === 'r_quarterly') filename = 'quarterly_business_review.csv';
+    else if (reportId === 'r_yearly') filename = 'yearly_strategic_report.csv';
+    else if (reportId === 'r_forecast') filename = 'forecast_export.csv';
+    else if (reportId === 'r_inventory') filename = 'inventory_recommendations.csv';
+    
+    a.download = filename;
     a.click();
   };
 
@@ -155,9 +218,15 @@ const Reports = () => {
                         </Button>
                       ) : (
                         <>
-                          <Button variant="outline" size="sm" className="gap-1 text-xs hidden sm:flex">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handlePreview(report.id, report.title)}
+                            disabled={isPreviewLoading}
+                            className="gap-1 text-xs hidden sm:flex"
+                          >
                             <Eye className="w-3.5 h-3.5" />
-                            Preview
+                            {isPreviewLoading && previewTitle === report.title ? 'Loading...' : 'Preview'}
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => handleDownload(report.id)} className="text-xs">
                             Download
@@ -215,6 +284,35 @@ const Reports = () => {
       </div>
 
       <AIChatbot />
+
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>{previewTitle}</DialogTitle>
+            <DialogDescription>Previewing the generated report data</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto border rounded-md max-h-[60vh]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {previewHeaders.map((header, i) => (
+                    <TableHead key={i} className="font-semibold whitespace-nowrap">{header}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {previewRows.map((row, rowIdx) => (
+                  <TableRow key={rowIdx}>
+                    {row.map((cell, cellIdx) => (
+                      <TableCell key={cellIdx} className="whitespace-nowrap">{cell}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

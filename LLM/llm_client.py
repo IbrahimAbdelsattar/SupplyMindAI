@@ -20,7 +20,7 @@ load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("LLM_REASONING_API_KEY") or os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-FREE_MODEL = "deepseek/deepseek-v4-flash:free"
+FREE_MODEL = "openai/gpt-oss-120b:free"
 
 # =====================================================
 # MAIN CALL FUNCTION

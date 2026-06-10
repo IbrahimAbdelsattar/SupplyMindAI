@@ -35,13 +35,10 @@ _copilot_tools = [
 ]
 _copilot_tool_node = ToolNode(_copilot_tools)
 
-_key = os.getenv("CHATBOT_API_KEY") or os.getenv("OPENROUTER_API_KEY", "").strip()
-_copilot_llm = ChatOpenAI(
-    model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
-    api_key=_key or "not-set",
-    base_url="https://openrouter.ai/api/v1" if _key else None,
-    temperature=0.15,
-).bind_tools(_copilot_tools)
+from backend.llm.client import get_llm
+
+_copilot_llm = get_llm(temperature=0.15).bind_tools(_copilot_tools)
+
 
 _COPILOT_SYSTEM = """You are SupplyMind Copilot — a supply chain intelligence assistant.
 Use tools to retrieve historical forecasts, inventory incidents, insights, and MLOps events.

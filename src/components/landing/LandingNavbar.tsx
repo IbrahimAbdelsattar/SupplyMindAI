@@ -58,10 +58,10 @@ export const LandingNavbar = () => {
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
           <Button asChild variant="ghost" className="rounded-xl">
-            <Link to="/login">Sign In</Link>
+            <Link to="/dashboard">Sign In</Link>
           </Button>
           <Button asChild className="rounded-xl">
-            <Link to="/login">Get Started</Link>
+            <Link to="/dashboard">Get Started</Link>
           </Button>
         </div>
 
@@ -97,10 +97,10 @@ export const LandingNavbar = () => {
               </a>
               <div className="flex gap-3 pt-2 border-t border-border/50">
                 <Button asChild variant="outline" className="flex-1 rounded-xl">
-                  <Link to="/login">Sign In</Link>
+                  <Link to="/dashboard">Sign In</Link>
                 </Button>
                 <Button asChild className="flex-1 rounded-xl">
-                  <Link to="/login">Get Started</Link>
+                  <Link to="/dashboard">Get Started</Link>
                 </Button>
               </div>
             </div>

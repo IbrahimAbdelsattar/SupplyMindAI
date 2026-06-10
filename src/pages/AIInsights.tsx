@@ -4,6 +4,7 @@ import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
+import { FormattedMessage } from '@/components/ai/FormattedMessage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -315,7 +316,11 @@ const AIInsights = () => {
                         <div
                           className={`max-w-[80%] rounded-lg p-3 text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
                         >
-                          {msg.content}
+                          {msg.role === 'user' ? (
+                            msg.content
+                          ) : (
+                            <FormattedMessage content={msg.content} />
+                          )}
                         </div>
                       </div>
                     ))}

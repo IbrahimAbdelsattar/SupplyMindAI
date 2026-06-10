@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ragQuery } from '@/lib/knowledgeApi';
+import { FormattedMessage } from './FormattedMessage';
 
 type Props = {
   title?: string;
@@ -67,7 +68,7 @@ export function AISummaryCard({
             Generating summary…
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground whitespace-pre-line">{summary}</p>
+          <FormattedMessage content={summary ?? ''} className="text-sm text-muted-foreground" />
         )}
       </CardContent>
     </Card>

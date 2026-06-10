@@ -159,7 +159,7 @@ const Inventory = () => {
           </div>
 
           {/* Stock Overview + Chat Sidebar */}
-          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+          <div className="flex flex-col xl:flex-row gap-4 sm:gap-6">
             <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
               {inventoryData?.summary && (
                 <motion.div
@@ -184,12 +184,12 @@ const Inventory = () => {
               </motion.div>
             </div>
 
-            <div className="w-full lg:w-[380px] shrink-0">
+            <div className="w-full xl:w-[320px] shrink-0">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.35 }}
-                className="h-[500px] lg:h-[calc(100vh-16rem)]"
+                className="h-[500px] xl:h-[calc(100vh-16rem)]"
               >
                 <ChatBot focusedItem={selectedItem} />
               </motion.div>

@@ -39,7 +39,7 @@ const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => (
   <Routes>
     {/* Public routes */}
-    <Route path="/" element={<PublicOnlyRoute><Index /></PublicOnlyRoute>} />
+    <Route path="/" element={<Index />} />
     <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
 
     {/* Protected routes — require authentication */}

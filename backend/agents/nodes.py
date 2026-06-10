@@ -13,13 +13,10 @@ from backend.tools.knowledge_tools import (
     search_mlops_knowledge,
 )
 
-_openrouter_key = os.getenv("LLM_REASONING_API_KEY") or os.getenv("OPENROUTER_API_KEY", "").strip()
-llm = ChatOpenAI(
-    model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
-    api_key=_openrouter_key or "not-set",
-    base_url="https://openrouter.ai/api/v1" if _openrouter_key else None,
-    temperature=0.2,
-)
+from backend.llm.client import get_llm
+
+llm = get_llm(temperature=0.2)
+
 
 forecasting_llm = llm.bind_tools([generate_forecast, search_forecast_knowledge])
 inventory_llm = llm.bind_tools([analyze_inventory, search_inventory_knowledge])

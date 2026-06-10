@@ -27,7 +27,7 @@ Focus on inventory, suppliers, production, stock levels, demand patterns, and op
 
 class RagService:
     def __init__(self) -> None:
-        model = os.getenv("RAG_MODEL", "glm5.1")
+        model = os.getenv("RAG_MODEL", "openai/gpt-oss-120b:free")
         self.llm = get_agentrouter_llm(model_name=model)
 
     def query(

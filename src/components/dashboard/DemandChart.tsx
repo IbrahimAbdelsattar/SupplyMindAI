@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   LineChart,
@@ -61,8 +61,10 @@ export const DemandChart = () => {
   }, [forecastMutation.data]);
 
   // Auto-run when filters change
-  useMemo(() => {
-    void forecastMutation.mutateAsync();
+  useEffect(() => {
+    if (products?.length) {
+      void forecastMutation.mutateAsync();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRange, selectedProduct, products?.length]);
 

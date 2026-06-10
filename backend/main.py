@@ -274,11 +274,19 @@ def _latest_inventory_level(product_id: str) -> int:
     # inventory.csv column sometimes named stock_level or stock
     for col in ["stock_level", "stock", "stockLevel"]:
         if col in latest:
-            return int(latest[col])
+            val = latest[col]
+            try:
+                return int(val) if not pd.isna(val) else 0
+            except (ValueError, TypeError):
+                return 0
     # fallback: first numeric column besides date/product_id
     numeric_cols = [c for c in sub.columns if c not in {"date", "product_id"}]
     if numeric_cols:
-        return int(latest[numeric_cols[0]])
+        val = latest[numeric_cols[0]]
+        try:
+            return int(val) if not pd.isna(val) else 0
+        except (ValueError, TypeError):
+            return 0
     return 0
 
 
@@ -327,7 +335,12 @@ def _lead_time_days(product_id: str) -> int:
 
 
 def _safety_stock(demand_std: float, lead_time: int, z: float = 1.65) -> int:
-    return int(round(z * demand_std * (lead_time**0.5)))
+    if pd.isna(demand_std) or pd.isna(lead_time):
+        return 0
+    try:
+        return int(round(z * demand_std * (lead_time**0.5)))
+    except Exception:
+        return 0
 
 
 def _risk_level(days_of_supply: float) -> str:
@@ -398,6 +411,7 @@ app = FastAPI(title="SupplyMindAI API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -445,15 +459,6 @@ def read_root():
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    if request.method == "OPTIONS":
-        origin = request.headers.get("origin", "*")
-        resp = Response(status_code=200)
-        resp.headers["Access-Control-Allow-Origin"] = origin if origin != "*" else "*"
-        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-        resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With"
-        resp.headers["Access-Control-Allow-Credentials"] = "true"
-        resp.headers["Access-Control-Max-Age"] = "600"
-        return resp
     start_time = time.time()
     response = await call_next(request)
     duration = time.time() - start_time
@@ -465,6 +470,7 @@ async def log_requests(request: Request, call_next):
         duration
     )
     return response
+
 
 
 @app.get("/api/v1/health")
@@ -492,9 +498,15 @@ def health() -> dict[str, Any]:
             "openrouter_key": bool(os.getenv("CHATBOT_API_KEY") or os.getenv("LLM_REASONING_API_KEY") or os.getenv("RAG_API_KEY")),
             "knowledge_configured": bool(k_settings and k_settings.is_configured),
             "knowledge_connected": knowledge_ok,
-            "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes"},
+            "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes", "on"},
         },
     }
+
+
+@app.get("/api/v1/debug/model")
+def debug_model() -> dict[str, Any]:
+    from backend.llm.client import get_llm_info
+    return get_llm_info()
 
 
 @app.on_event("startup")
@@ -715,73 +727,219 @@ def forecast_predict(req: ForecastPredictRequest, user: User = Depends(_get_curr
 # -----------------------------------------------------------------------------
 @app.get("/api/v1/inventory/optimize", response_model=list[InventoryRecommendation])
 def inventory_optimize(limit: int = 10, user: User = Depends(_get_current_user)) -> list[InventoryRecommendation]:
-    prods = STORE.products().copy()
-    recs: list[InventoryRecommendation] = []
-
-    for _, r in prods.iterrows():
-        pid = str(r["product_id"])
-        pname = str(r.get("product_name", pid))
-
-        mean_d, std_d = _daily_demand_stats(pid)
-        lt = _lead_time_days(pid)
-        safety = _safety_stock(std_d, lt)
-        rop = int(round(mean_d * lt + safety))
-        current = _latest_inventory_level(pid)
-
-        days_supply = (current / mean_d) if mean_d > 0 else 0.0
-        risk = _risk_level(days_supply)
-
-        # EOQ proxy: assume annual demand, ordering cost S, holding cost H
-        annual_d = mean_d * 365.0
-        S = 50.0
-        H = max(1.0, 0.2 * float(r.get("max_price", 1) or 1))
-        eoq = int(round(((2 * annual_d * S) / H) ** 0.5)) if annual_d > 0 else 0
-        reorder_qty = max(eoq, max(0, rop - current))
-
-        cost_savings = float(max(0.0, (0.05 * float(r.get("max_price", 0) or 0) * reorder_qty)))
-
-        recs.append(
-            InventoryRecommendation(
-                product_id=pid,
-                product_name=pname,
-                currentStock=int(current),
-                reorderPoint=int(rop),
-                reorderQty=int(reorder_qty),
-                safetyStock=int(safety),
-                leadTime=int(lt),
-                costSavings=round(cost_savings, 2),
-                riskLevel=risk,
-            )
-        )
-
-    # prioritize high risk first
-    risk_rank = {"high": 0, "medium": 1, "low": 2}
-    recs.sort(key=lambda x: (risk_rank.get(x.riskLevel, 9), -x.costSavings))
-    out = recs[: max(1, min(100, limit))]
-
     try:
-        from backend.knowledge.hooks import on_inventory_recommendations
+        prods = STORE.products().copy()
+        recs: list[InventoryRecommendation] = []
 
-        lines = [f"Inventory optimization batch ({len(out)} SKUs):"]
-        for r in out[:10]:
-            lines.append(
-                f"- {r.product_id} {r.product_name}: stock={r.currentStock}, "
-                f"ROP={r.reorderPoint}, reorder={r.reorderQty}, risk={r.riskLevel}"
+        for _, r in prods.iterrows():
+            pid = str(r["product_id"])
+            pname = str(r.get("product_name", pid))
+
+            mean_d, std_d = _daily_demand_stats(pid)
+            mean_d = mean_d if (mean_d is not None and not pd.isna(mean_d)) else 0.0
+            std_d = std_d if (std_d is not None and not pd.isna(std_d)) else 0.0
+
+            lt = _lead_time_days(pid)
+            lt = lt if (lt is not None and not pd.isna(lt)) else 7
+
+            safety = _safety_stock(std_d, lt)
+            safety = safety if (safety is not None and not pd.isna(safety)) else 0
+
+            rop_val = mean_d * lt + safety
+            rop = int(round(rop_val)) if not pd.isna(rop_val) else 0
+            current = _latest_inventory_level(pid)
+            current = current if (current is not None and not pd.isna(current)) else 0
+
+            days_supply = (current / mean_d) if mean_d > 0 else 0.0
+            days_supply = days_supply if not pd.isna(days_supply) else 0.0
+            risk = _risk_level(days_supply)
+
+            # EOQ proxy: assume annual demand, ordering cost S, holding cost H
+            annual_d = mean_d * 365.0
+            S = 50.0
+
+            price_val = r.get("max_price", 1.0)
+            if price_val is None or pd.isna(price_val):
+                price_val = 1.0
+            else:
+                try:
+                    price_val = float(price_val)
+                except (ValueError, TypeError):
+                    price_val = 1.0
+
+            H = max(1.0, 0.2 * price_val)
+            eoq_val = ((2 * annual_d * S) / H) ** 0.5 if annual_d > 0 else 0
+            eoq = int(round(eoq_val)) if not pd.isna(eoq_val) else 0
+            reorder_qty = max(eoq, max(0, rop - current))
+
+            cost_savings = float(max(0.0, (0.05 * price_val * reorder_qty)))
+            cost_savings = cost_savings if not pd.isna(cost_savings) else 0.0
+
+            recs.append(
+                InventoryRecommendation(
+                    product_id=pid,
+                    product_name=pname,
+                    currentStock=int(current),
+                    reorderPoint=int(rop),
+                    reorderQty=int(reorder_qty),
+                    safetyStock=int(safety),
+                    leadTime=int(lt),
+                    costSavings=round(cost_savings, 2),
+                    riskLevel=risk,
+                )
             )
-        on_inventory_recommendations(recommendations_text="\n".join(lines), user_id=str(user.id))
+
+        # prioritize high risk first
+        risk_rank = {"high": 0, "medium": 1, "low": 2}
+        recs.sort(key=lambda x: (risk_rank.get(x.riskLevel, 9), -x.costSavings))
+        out = recs[: max(1, min(100, limit))]
+
+        try:
+            from backend.knowledge.hooks import on_inventory_recommendations
+
+            lines = [f"Inventory optimization batch ({len(out)} SKUs):"]
+            for r in out[:10]:
+                lines.append(
+                    f"- {r.product_id} {r.product_name}: stock={r.currentStock}, "
+                    f"ROP={r.reorderPoint}, reorder={r.reorderQty}, risk={r.riskLevel}"
+                )
+            on_inventory_recommendations(recommendations_text="\n".join(lines), user_id=str(user.id))
+        except Exception:
+            pass
+
+        return out
+    except Exception as exc:
+        logger.exception("inventory_optimize failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Internal inventory optimize error: {exc}")
+
+
+
+# -----------------------------------------------------------------------------
+# Reports
+# -----------------------------------------------------------------------------
+def generate_summary_report(period: str) -> str:
+    import pandas as pd
+    from datetime import date
+    
+    # 1. Get raw DataFrames
+    sales_df = STORE.sales_daily().copy()
+    inv_df = STORE.inventory().copy()
+    
+    # Ensure date columns are datetime
+    sales_df['date'] = pd.to_datetime(sales_df['date'])
+    inv_df['date'] = pd.to_datetime(inv_df['date'])
+    
+    # Find the latest date in sales_daily.csv to base the time windows on
+    latest_sales_date = sales_df['date'].max()
+    latest_inv_date = inv_df['date'].max()
+    latest_date = min(latest_sales_date, latest_inv_date) if not pd.isna(latest_sales_date) and not pd.isna(latest_inv_date) else (latest_sales_date or latest_inv_date)
+    
+    if pd.isna(latest_date):
+        latest_date = pd.Timestamp.now()
+        
+    # Define start date based on period
+    if period == "daily":
+        start_date = latest_date
+    elif period == "weekly":
+        start_date = latest_date - pd.Timedelta(days=6)
+    elif period == "monthly":
+        start_date = latest_date - pd.Timedelta(days=29)
+    elif period == "quarterly":
+        start_date = latest_date - pd.Timedelta(days=89)
+    elif period == "yearly":
+        start_date = latest_date - pd.Timedelta(days=364)
+    else:
+        start_date = latest_date
+        
+    # Filter by date range
+    period_sales = sales_df[(sales_df['date'] >= start_date) & (sales_df['date'] <= latest_date)]
+    period_inv = inv_df[(inv_df['date'] >= start_date) & (inv_df['date'] <= latest_date)]
+    
+    # Group sales by product_id
+    sales_grp = period_sales.groupby('product_id').agg(
+        total_sales_qty=('qty', 'sum'),
+        total_revenue=('revenue', 'sum'),
+        avg_price=('price', 'mean')
+    ).reset_index()
+    
+    # Group inventory by product_id
+    inv_col = 'stock' if 'stock' in inv_df.columns else ('stock_level' if 'stock_level' in inv_df.columns else 'stockLevel')
+    inv_grp = period_inv.groupby('product_id').agg(
+        avg_stock_level=(inv_col, 'mean'),
+        min_stock_level=(inv_col, 'min'),
+        max_stock_level=(inv_col, 'max')
+    ).reset_index()
+    
+    # Merge them
+    merged = pd.merge(sales_grp, inv_grp, on='product_id', how='outer')
+    
+    # Add products.csv names and categories
+    try:
+        prods = STORE.products().copy()
+        merged = pd.merge(prods[['product_id', 'product_name', 'category']], merged, on='product_id', how='right')
     except Exception:
         pass
+        
+    # Fill NAs
+    merged['total_sales_qty'] = merged['total_sales_qty'].fillna(0).astype(int)
+    merged['total_revenue'] = merged['total_revenue'].fillna(0.0).round(2)
+    merged['avg_price'] = merged['avg_price'].fillna(0.0).round(2)
+    merged['avg_stock_level'] = merged['avg_stock_level'].fillna(0.0).round(1)
+    merged['min_stock_level'] = merged['min_stock_level'].fillna(0.0).round(1)
+    merged['max_stock_level'] = merged['max_stock_level'].fillna(0.0).round(1)
+    
+    # Add meta columns
+    merged['report_period'] = period
+    merged['start_date'] = start_date.strftime('%Y-%m-%d')
+    merged['end_date'] = latest_date.strftime('%Y-%m-%d')
+    
+    return merged.to_csv(index=False)
 
-    return out
 
-
-# -----------------------------------------------------------------------------
-# Reports (simple)
-# -----------------------------------------------------------------------------
 @app.get("/api/v1/reports/list", response_model=list[ReportItem])
 def reports_list(user: User = Depends(_get_current_user)) -> list[ReportItem]:
     today = date.today().isoformat()
     return [
+        ReportItem(
+            id="r_daily",
+            title="Daily Operations Report (CSV)",
+            description="Daily summary of sales, revenue, and product inventory status",
+            type="Executive",
+            date=today,
+            status="ready",
+        ),
+        ReportItem(
+            id="r_weekly",
+            title="Weekly Performance Report (CSV)",
+            description="Weekly performance aggregate tracking demand trends and stock levels",
+            type="Executive",
+            date=today,
+            status="ready",
+        ),
+        ReportItem(
+            id="r_monthly",
+            title="Monthly Inventory & Sales Report (CSV)",
+            description="Detailed monthly report summarizing sales growth and stock stability",
+            type="Executive",
+            date=today,
+            status="ready",
+        ),
+        ReportItem(
+            id="r_quarterly",
+            title="Quarterly Business Review Report (CSV)",
+            description="Quarterly strategic overview of total sales, average margins, and supply efficiency",
+            type="Executive",
+            date=today,
+            status="ready",
+        ),
+        ReportItem(
+            id="r_yearly",
+            title="Yearly Strategic Report (CSV)",
+            description="Annual business review summarizing long-term supply chain and sales metrics",
+            type="Executive",
+            date=today,
+            status="ready",
+        ),
         ReportItem(
             id="r_forecast",
             title="Forecast Export (CSV)",
@@ -808,6 +966,35 @@ def reports_download(
     horizon_days: int = 14,
     user: User = Depends(_get_current_user),
 ) -> Response:
+    if report_id in {"r_daily", "r_weekly", "r_monthly", "r_quarterly", "r_yearly"}:
+        period_map = {
+            "r_daily": "daily",
+            "r_weekly": "weekly",
+            "r_monthly": "monthly",
+            "r_quarterly": "quarterly",
+            "r_yearly": "yearly"
+        }
+        period = period_map[report_id]
+        csv = generate_summary_report(period)
+        filename = f"{period}_performance_report.csv"
+        
+        try:
+            from backend.knowledge.hooks import on_report_generated
+            on_report_generated(
+                report_id=report_id,
+                title=f"{period.capitalize()} Performance Report (CSV)",
+                content=csv[:8000],
+                user_id=str(user.id),
+            )
+        except Exception:
+            pass
+            
+        return Response(
+            content=csv, 
+            media_type="text/csv", 
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
     if report_id == "r_inventory":
         recs = inventory_optimize(limit=100, user=user)
         df = pd.DataFrame([r.model_dump() for r in recs])
@@ -1184,84 +1371,100 @@ class InventorySummaryOut(BaseModel):
 
 @app.get("/api/v1/inventory")
 def inventory_list(user: User = Depends(_get_current_user)) -> dict:
-    prods = STORE.products()
-    inv = STORE.inventory()
-    sales = STORE.sales_daily()
-    max_date = inv["date"].max().isoformat() if not inv.empty else date.today().isoformat()
+    try:
+        prods = STORE.products()
+        inv = STORE.inventory()
+        sales = STORE.sales_daily()
+        max_date = inv["date"].max().isoformat() if not inv.empty else date.today().isoformat()
 
-    items = []
-    total_units = 0
-    critical = low = healthy = 0
-    active_count = inactive_count = 0
+        items = []
+        total_units = 0
+        critical = low = healthy = 0
+        active_count = inactive_count = 0
 
-    for _, r in prods.iterrows():
-        pid = str(r["product_id"])
-        pname = str(r.get("product_name", pid))
-        cat = str(r.get("category", ""))
-        ptype = str(r.get("type", ""))
+        for _, r in prods.iterrows():
+            pid = str(r["product_id"])
+            pname = str(r.get("product_name", pid))
+            cat = str(r.get("category", ""))
+            ptype = str(r.get("type", ""))
 
-        latest = inv[inv["product_id"] == pid]
-        stock = int(latest.sort_values("date").iloc[-1]["stock"]) if not latest.empty else 0
+            latest = inv[inv["product_id"] == pid]
+            if not latest.empty:
+                raw_stock = latest.sort_values("date").iloc[-1]["stock"]
+                try:
+                    stock = int(raw_stock) if not pd.isna(raw_stock) else 0
+                except (ValueError, TypeError):
+                    stock = 0
+            else:
+                stock = 0
 
-        sales_sub = sales[sales["product_id"] == pid]
-        qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
-        demand = float(sales_sub[qty_col].tail(60).mean()) if not sales_sub.empty else 0.0
+            sales_sub = sales[sales["product_id"] == pid]
+            qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
+            demand = float(sales_sub[qty_col].tail(60).mean()) if not sales_sub.empty else 0.0
+            demand = demand if not pd.isna(demand) else 0.0
 
-        coverage = stock / demand if demand > 0 else None
-        if coverage is None:
-            label = "No demand data"
-            status = "Healthy"
-        elif coverage >= 14:
-            label = f"Covers {coverage:.1f} days ({round(coverage / 30, 1)} months)"
-            status = "Healthy"
-        elif coverage >= 5:
-            label = f"Covers {coverage:.1f} days"
-            status = "Low"
-        else:
-            label = f"Only {coverage:.1f} days left"
-            status = "Critical"
+            coverage = stock / demand if (demand > 0 and not pd.isna(stock)) else None
+            if coverage is not None and pd.isna(coverage):
+                coverage = None
 
-        total_units += stock
-        active_count += 1
-        if status == "Critical":
-            critical += 1
-        elif status == "Low":
-            low += 1
-        else:
-            healthy += 1
+            if coverage is None:
+                label = "No demand data"
+                status = "Healthy"
+            elif coverage >= 14:
+                label = f"Covers {coverage:.1f} days ({round(coverage / 30, 1)} months)"
+                status = "Healthy"
+            elif coverage >= 5:
+                label = f"Covers {coverage:.1f} days"
+                status = "Low"
+            else:
+                label = f"Only {coverage:.1f} days left"
+                status = "Critical"
 
-        items.append(InventoryItemOut(
-            sku=pid,
-            name=pname,
-            category=cat,
-            productType=ptype,
-            active=True,
-            stock=stock,
-            averageDailyDemand=round(demand, 2),
-            coverageDays=round(coverage, 2) if coverage is not None else None,
-            coverageLabel=label,
-            stockStatus=status,
-            lastUpdated=max_date,
-            sourceText=f"{pname} ({pid}) | Category: {cat} | Stock: {stock} | Demand: {demand:.2f}/day | Status: {status}",
-        ))
+            total_units += stock
+            active_count += 1
+            if status == "Critical":
+                critical += 1
+            elif status == "Low":
+                low += 1
+            else:
+                healthy += 1
 
-    summary = InventorySummaryOut(
-        asOf=max_date,
-        totalProducts=len(prods),
-        activeProducts=active_count,
-        inactiveProducts=inactive_count,
-        totalUnits=total_units,
-        criticalProducts=critical,
-        lowProducts=low,
-        healthyProducts=healthy,
-    )
+            items.append(InventoryItemOut(
+                sku=pid,
+                name=pname,
+                category=cat,
+                productType=ptype,
+                active=True,
+                stock=stock,
+                averageDailyDemand=round(demand, 2) if not pd.isna(demand) else 0.0,
+                coverageDays=round(coverage, 2) if coverage is not None else None,
+                coverageLabel=label,
+                stockStatus=status,
+                lastUpdated=max_date,
+                sourceText=f"{pname} ({pid}) | Category: {cat} | Stock: {stock} | Demand: {demand:.2f}/day | Status: {status}",
+            ))
 
-    lang = "en"
-    return {
-        "summary": summary.model_dump(),
-        "items": [i.model_dump() for i in items],
-        "lang": lang,
-    }
+        summary = InventorySummaryOut(
+            asOf=max_date,
+            totalProducts=len(prods),
+            activeProducts=active_count,
+            inactiveProducts=inactive_count,
+            totalUnits=total_units,
+            criticalProducts=critical,
+            lowProducts=low,
+            healthyProducts=healthy,
+        )
+
+        lang = "en"
+        return {
+            "summary": summary.model_dump(),
+            "items": [i.model_dump() for i in items],
+            "lang": lang,
+        }
+    except Exception as exc:
+        logger.exception("inventory_list failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Internal inventory list error: {exc}")
+
 
 
 class ChatRequest(BaseModel):
@@ -1347,3 +1550,6 @@ def save_settings(payload: UserSettingsPayload, user: User = Depends(_get_curren
         raise HTTPException(status_code=500, detail=f"Failed to save settings: {exc}") from exc
     finally:
         db.close()
+
+
+

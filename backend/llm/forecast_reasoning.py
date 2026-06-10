@@ -18,14 +18,10 @@ from backend.llm.executive_prompts import (
 
 LOGGER = logging.getLogger(__name__)
 
-_openrouter_key = (os.getenv("LLM_REASONING_API_KEY") or os.getenv("OPENROUTER_API_KEY", "")).strip()
+from backend.llm.client import get_llm
 
-_reasoning_llm = ChatOpenAI(
-    model=os.getenv("LLM_MODEL", "openai/gpt-4o-mini"),
-    api_key=_openrouter_key or "not-set",
-    base_url="https://openrouter.ai/api/v1" if _openrouter_key else None,
-    temperature=0.1,
-)
+_reasoning_llm = get_llm(temperature=0.1)
+
 
 
 def _safe_parse_json(text: str) -> dict[str, Any]:

@@ -34,51 +34,22 @@ type LoginResponse = {
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await apiFetch<LoginResponse>('/auth/signin', {
-      method: 'POST',
-      auth: false,
-      body: JSON.stringify({ email: email?.trim(), password: password?.trim() }),
-    });
-
-    setToken(res.access_token);
-    localStorage.setItem('supplymind_user', JSON.stringify(res.user));
-    setUser(res.user);
-  }, []);
-
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    await apiFetch<User>('/auth/signup', {
-      method: 'POST',
-      auth: false,
-      body: JSON.stringify({ name: name?.trim(), email: email?.trim(), password }),
-    });
-    // Sign in immediately after account creation.
-    await login(email, password);
-  }, [login]);
-
-  const logout = useCallback(() => {
-    setToken(null);
-    localStorage.removeItem('supplymind_user');
-    setUser(null);
-  }, []);
-
-  useEffect(() => {
-    const token = getToken();
-    const rawUser = localStorage.getItem('supplymind_user');
-    if (token && rawUser) {
-      try {
-        setUser(JSON.parse(rawUser) as User);
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
+  const mockUser: User = {
+    id: "demo-user",
+    name: "Demo User",
+    email: "demo@supplymind.ai",
+    role: "admin",
+  };
 
   const value = useMemo(
-    () => ({ user, isAuthenticated: !!user, login, register, logout }),
-    [user, login, register, logout]
+    () => ({ 
+      user: mockUser, 
+      isAuthenticated: true, 
+      login: async () => {}, 
+      register: async () => {}, 
+      logout: () => {} 
+    }),
+    []
   );
 
   return (

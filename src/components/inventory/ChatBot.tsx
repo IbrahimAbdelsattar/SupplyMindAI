@@ -3,7 +3,7 @@ import { LoaderCircle, MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { apiFetch } from "@/lib/api";
+import { copilotChat } from "@/lib/knowledgeApi";
 import type { InventoryItem } from "./InventoryTable";
 
 interface Message {
@@ -39,12 +39,10 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
     setTyping(true);
 
     try {
-      const result = await apiFetch<{ answer: string }>("/chat", {
-        method: "POST",
-        body: JSON.stringify({
-          question: msg,
-          selected_sku: focusedItem?.sku ?? null,
-        }),
+      const result = await copilotChat({
+        message: msg,
+        product_id: focusedItem?.sku ?? undefined,
+        mode: "business",
       });
       setMessages((current) => [
         ...current,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -86,7 +86,7 @@ const Forecasting = () => {
     return { totalDemand, avgConfidence, latestTrend, totalRevenue };
   }, [monthlyData]);
 
-  useMemo(() => {
+  useEffect(() => {
     void forecastMutation.mutateAsync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct, horizon]);

@@ -121,9 +121,9 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
       </div>
 
       <div className="max-h-[calc(100vh-10rem)] overflow-auto rounded-lg border bg-card">
-        <Table>
+        <Table className="w-full min-w-[1100px]">
           <TableHeader>
-            <TableRow>
+            <TableRow className="whitespace-nowrap">
               <SortHeader field="sku">SKU</SortHeader>
               <SortHeader field="name">Product Name</SortHeader>
               <SortHeader field="category">Category</SortHeader>
@@ -140,7 +140,7 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
             {filtered.map((item) => (
               <TableRow
                 key={item.sku}
-                className={`cursor-pointer transition-colors ${
+                className={`cursor-pointer transition-colors whitespace-nowrap ${
                   selectedSku === item.sku ? "bg-accent/20" : "hover:bg-muted/50"
                 }`}
                 onClick={() => onSelectItem(item)}

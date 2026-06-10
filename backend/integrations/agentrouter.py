@@ -11,6 +11,9 @@ def get_agentrouter_llm(model_name: str, temperature: float = 0.15) -> ChatOpenA
     Factory function to configure and return a ChatOpenAI client using the unified
     AgentRouter API key and base URL.
     """
+    if not model_name or model_name == "glm5.1":
+        model_name = "openai/gpt-oss-120b:free"
+
     api_key = os.getenv("AGENTROUTER_API_KEY") or os.getenv("CHATBOT_API_KEY")
     if api_key:
         api_key = api_key.strip()

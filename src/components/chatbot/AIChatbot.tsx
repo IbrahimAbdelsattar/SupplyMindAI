@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { copilotChat } from '@/lib/knowledgeApi';
+import { FormattedMessage } from '../ai/FormattedMessage';
 
 interface Message {
   id: number;
@@ -157,7 +158,11 @@ export const AIChatbot = () => {
                         : 'bg-muted rounded-tl-sm'
                     )}
                   >
-                    <p className="whitespace-pre-line">{message.content}</p>
+                    {message.role === 'user' ? (
+                      <p className="whitespace-pre-line">{message.content}</p>
+                    ) : (
+                      <FormattedMessage content={message.content} />
+                    )}
                   </div>
                 </motion.div>
               ))}
