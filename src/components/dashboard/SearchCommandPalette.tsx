@@ -62,7 +62,7 @@ export const SearchCommandPalette = ({ open, onOpenChange }: { open: boolean; on
               key={p.path}
               onSelect={() => runCommand(() => navigate(p.path))}
             >
-              <p.icon className="w-4 h-4 mr-2" />
+              <p.icon className="w-4 h-4 mr-2 rtl:ml-2 rtl:mr-0" />
               {p.label}
             </CommandItem>
           ))}
@@ -75,7 +75,7 @@ export const SearchCommandPalette = ({ open, onOpenChange }: { open: boolean; on
                 key={prod.product_id}
                 onSelect={() => runCommand(() => navigate(`/inventory?product=${prod.product_id}`))}
               >
-                <Package className="w-4 h-4 mr-2" />
+                <Package className="w-4 h-4 mr-2 rtl:ml-2 rtl:mr-0" />
                 {prod.product_name}
                 <span className="ml-auto text-xs text-muted-foreground">{prod.product_id}</span>
               </CommandItem>

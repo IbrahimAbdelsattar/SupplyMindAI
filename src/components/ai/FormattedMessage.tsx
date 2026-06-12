@@ -66,7 +66,7 @@ export const FormattedMessage: React.FC<FormattedMessageProps> = ({ content, cla
   const pushCurrentList = () => {
     if (currentList.length > 0 && listType) {
       const ListTag = listType;
-      const listClassName = listType === 'ul' ? 'list-disc pl-5 my-2 space-y-1 text-sm' : 'list-decimal pl-5 my-2 space-y-1 text-sm';
+      const listClassName = `${listType === 'ul' ? 'list-disc' : 'list-decimal'} pl-5 rtl:pr-5 rtl:pl-0 my-2 space-y-1 text-sm`;
       elements.push(
         <ListTag key={`list-${keyCounter++}`} className={listClassName}>
           {currentList}

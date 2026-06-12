@@ -14,6 +14,7 @@ import enLogin from "../../locales/en/login.json";
 import enLanding from "../../locales/en/landing.json";
 import enChatbot from "../../locales/en/chatbot.json";
 import enUi from "../../locales/en/ui.json";
+import enAi from "../../locales/en/ai.json";
 
 import arCommon from "../../locales/ar/common.json";
 import arDashboard from "../../locales/ar/dashboard.json";
@@ -27,6 +28,7 @@ import arLogin from "../../locales/ar/login.json";
 import arLanding from "../../locales/ar/landing.json";
 import arChatbot from "../../locales/ar/chatbot.json";
 import arUi from "../../locales/ar/ui.json";
+import arAi from "../../locales/ar/ai.json";
 
 i18n
   .use(LanguageDetector)
@@ -55,6 +57,7 @@ i18n
         landing: enLanding,
         chatbot: enChatbot,
         ui: enUi,
+        ai: enAi,
       },
       ar: {
         common: arCommon,
@@ -69,6 +72,7 @@ i18n
         landing: arLanding,
         chatbot: arChatbot,
         ui: arUi,
+        ai: arAi,
       },
     },
   });

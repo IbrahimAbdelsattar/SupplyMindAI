@@ -90,7 +90,7 @@ export const HeatmapChart = () => {
               className="grid gap-2 mb-2"
               style={{ gridTemplateColumns: `minmax(140px, 1fr) repeat(${apiStores.length}, minmax(90px, 1fr))` }}
             >
-              <div className="text-xs text-muted-foreground font-medium flex items-center truncate pr-2">
+              <div className="text-xs text-muted-foreground font-medium flex items-center truncate pr-2 rtl:pl-2 rtl:pr-0">
                 {product.product_name}
               </div>
               {apiStores.map((store) => {

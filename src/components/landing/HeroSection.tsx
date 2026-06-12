@@ -235,12 +235,12 @@ export const HeroSection = () => {
             <Button asChild size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl glow transition-transform duration-350 hover:scale-[1.03]">
               <Link to="/dashboard">
                 View Live Dashboard
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 rtl:ml-0 rtl:mr-2 h-5 w-5" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl transition-all duration-350 hover:bg-muted/80 hover:scale-[1.03]">
               <Link to="/dashboard">
-                <Play className="mr-2 h-5 w-5 fill-current" />
+                <Play className="mr-2 rtl:mr-0 rtl:ml-2 h-5 w-5 fill-current" />
                 Try AI Forecast
               </Link>
             </Button>

@@ -1,0 +1,6 @@
+{
+  "generate": "Generate AI Summary",
+  "regenerate": "Regenerate Summary",
+  "notGenerated": "No AI summary has been generated yet for this section. Click below to analyze the data.",
+  "lastGenerated": "Last generated"
+}

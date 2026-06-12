@@ -1,22 +1,19 @@
 {
-  "header": {
-    "title": "Dashboard",
-    "subtitle": "Real-time demand forecasting and inventory insights"
-  },
-  "kpis": {
-    "totalForecastedDemand": "Total Forecasted Demand",
-    "units": " units",
+  "title": "Dashboard",
+  "subtitle": "Real-time demand forecasting and inventory insights",
+  "kpi": {
+    "totalDemand": "Total Forecasted Demand",
+    "unitsSuffix": " units",
     "vsLastPeriod": "vs last period",
     "inventoryCost": "Inventory Cost",
-    "stockOutRisk": "Stock-out Risk",
+    "stockoutRisk": "Stock-out Risk",
     "lowerThanLastMonth": "lower than last month",
     "overstockRisk": "Overstock Risk",
-    "improvement": "improvement"
+    "improvement": "improvement",
+    "percentSuffix": "%"
   },
-  "aiBrief": {
-    "title": "Executive AI Brief",
-    "question": "Summarize current supply chain risks, stock-out exposure, and top priorities from operational data and indexed knowledge."
-  },
+  "aiSummary": "Executive AI Brief",
+  "aiSummaryQuestion": "Summarize current supply chain risks, stock-out exposure, and top priorities from operational data and indexed knowledge.",
   "charts": {
     "demandHeatmap": "Demand Heatmap",
     "demandHeatmapDesc": "Product demand intensity by store",

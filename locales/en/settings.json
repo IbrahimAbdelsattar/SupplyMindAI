@@ -1,22 +1,20 @@
 {
-  "header": {
-    "title": "Settings",
-    "subtitle": "Customize your platform experience"
+  "title": "Settings",
+  "subtitle": "Customize your platform experience",
+  "section": {
+    "profile": "Profile",
+    "appearance": "Appearance",
+    "notifications": "Notifications",
+    "regionalSettings": "Regional Settings",
+    "roleFeatures": "Role-Based Features"
   },
-  "profile": {
-    "title": "Profile",
-    "description": "Your account information",
-    "accountSuffix": " Account"
-  },
-  "appearance": {
-    "title": "Appearance",
-    "description": "Customize the look and feel",
-    "darkMode": "Dark Mode",
-    "darkModeDesc": "Toggle between light and dark themes"
-  },
+  "profileDescription": "Your account information",
+  "roleAccount": "{{role}} Account",
+  "appearanceDescription": "Customize the look and feel",
+  "darkMode": "Dark Mode",
+  "darkModeDescription": "Toggle between light and dark themes",
+  "notificationsDescription": "Configure alert preferences",
   "notifications": {
-    "title": "Notifications",
-    "description": "Configure alert preferences",
     "stockAlerts": "Stock Alerts",
     "stockAlertsDesc": "Get notified about stock-out and overstock risks",
     "forecastUpdates": "Forecast Updates",
@@ -26,52 +24,46 @@
     "systemUpdates": "System Updates",
     "systemUpdatesDesc": "Notifications about platform updates"
   },
-  "regional": {
-    "title": "Regional Settings",
-    "description": "Configure region and currency",
-    "region": "Region",
-    "currency": "Currency",
-    "regions": {
-      "us": "United States",
-      "eu": "Europe",
-      "asia": "Asia Pacific",
-      "mena": "Middle East & Africa"
-    },
-    "currencies": {
-      "usd": "USD ($)",
-      "eur": "EUR (€)",
-      "gbp": "GBP (£)",
-      "egp": "EGP (E£)"
-    }
+  "regionalSettingsDescription": "Configure your region and currency",
+  "region": "Region",
+  "currency": "Currency",
+  "regions": {
+    "us": "United States",
+    "eu": "Europe",
+    "asia": "Asia Pacific",
+    "mena": "Middle East & Africa"
   },
+  "currencies": {
+    "usd": "USD ($) – US Dollar",
+    "eur": "EUR (€) – Euro",
+    "gbp": "GBP (£) – British Pound",
+    "egp": "EGP (E£) – Egyptian Pound"
+  },
+  "roleFeaturesDescription": "Features available for your role",
   "roleFeatures": {
-    "title": "Role-Based Features",
-    "description": "Features available for your role",
     "executiveReports": "Executive Reports",
-    "executiveReportsDesc": "Access to high-level summaries",
+    "executiveReportsDesc": "Access high-level performance summaries",
     "budgetControls": "Budget Controls",
-    "budgetControlsDesc": "Set inventory budgets",
+    "budgetControlsDesc": "Set and manage inventory budgets",
     "teamManagement": "Team Management",
-    "teamManagementDesc": "Manage team access",
+    "teamManagementDesc": "Manage team access and permissions",
     "approvalWorkflows": "Approval Workflows",
-    "approvalWorkflowsDesc": "Approve reorder requests",
+    "approvalWorkflowsDesc": "Review and approve reorder requests",
     "technicalDetails": "Technical Details",
-    "technicalDetailsDesc": "Model metrics and parameters",
+    "technicalDetailsDesc": "View model metrics and parameters",
     "dataExploration": "Data Exploration",
-    "dataExplorationDesc": "Advanced data analysis",
+    "dataExplorationDesc": "Access advanced data analysis tools",
     "modelConfiguration": "Model Configuration",
-    "modelConfigurationDesc": "Adjust forecast parameters",
+    "modelConfigurationDesc": "Adjust forecast model parameters",
     "apiAccess": "API Access",
-    "apiAccessDesc": "Programmatic data access"
+    "apiAccessDesc": "Programmatic data access via REST API"
   },
-  "actions": {
-    "saving": "Saving...",
-    "save": "Save Settings"
-  },
+  "saving": "Saving...",
+  "saveSettings": "Save Settings",
   "toast": {
-    "successTitle": "Settings saved",
-    "successDesc": "Your preferences have been saved to your account.",
-    "errorTitle": "Error",
+    "saved": "Settings saved",
+    "savedDesc": "Your preferences have been saved to your account.",
+    "error": "Error",
     "errorDesc": "Failed to save settings. Please try again."
   }
 }

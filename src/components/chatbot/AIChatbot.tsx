@@ -93,13 +93,13 @@ export const AIChatbot = () => {
         transition={{ delay: 0.5, type: 'spring' }}
         onClick={() => setIsOpen(true)}
         className={cn(
-          'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-50',
+          'fixed bottom-4 right-4 rtl:right-auto rtl:left-4 sm:bottom-6 sm:right-6 rtl:sm:right-auto rtl:sm:left-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-50',
           'hover:scale-110 transition-transform duration-200',
           isOpen && 'hidden'
         )}
       >
         <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
-        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 rtl:right-auto rtl:-left-1 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
           <Sparkles className="w-3 h-3" />
         </span>
       </motion.button>
@@ -111,7 +111,7 @@ export const AIChatbot = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-96 sm:h-[600px] bg-card border-0 sm:border sm:border-border sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50"
+            className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 rtl:sm:right-auto rtl:sm:left-6 sm:w-96 sm:h-[600px] bg-card border-0 sm:border sm:border-border sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50"
           >
             <div className="flex items-center justify-between p-4 border-b border-border bg-card">
               <div className="flex items-center gap-3">
@@ -154,8 +154,8 @@ export const AIChatbot = () => {
                     className={cn(
                       'max-w-[80%] p-3 rounded-2xl text-sm',
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                        : 'bg-muted rounded-tl-sm'
+                        ? 'bg-primary text-primary-foreground rounded-tr-sm rtl:rounded-tl-sm rtl:rounded-tr-none'
+                        : 'bg-muted rounded-tl-sm rtl:rounded-tr-sm rtl:rounded-tl-none'
                     )}
                   >
                     {message.role === 'user' ? (
@@ -172,7 +172,7 @@ export const AIChatbot = () => {
                   <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
                     <Bot className="w-4 h-4 text-accent" />
                   </div>
-                  <div className="bg-muted p-3 rounded-2xl rounded-tl-sm">
+                  <div className="bg-muted p-3 rounded-2xl rounded-tl-sm rtl:rounded-tr-sm rtl:rounded-tl-none">
                     <div className="flex gap-1">
                       <span
                         className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"

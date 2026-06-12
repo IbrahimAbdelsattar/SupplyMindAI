@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 type KPIResponse = {
   totalDemand: number;
@@ -25,6 +26,7 @@ type KPIResponse = {
 const Dashboard = () => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { convertCurrency, currencySymbol } = useCurrency();
 
   const { data: kpiData } = useQuery({
     queryKey: ['kpis', 30],
@@ -61,8 +63,8 @@ const Dashboard = () => {
             />
             <KPICard
               title={t('dashboard:kpi.inventoryCost')}
-              value={kpiData?.inventoryCost ?? 0}
-              prefix={t('dashboard:kpi.dollarPrefix')}
+              value={convertCurrency(kpiData?.inventoryCost ?? 0)}
+              prefix={currencySymbol}
               change={-8}
               changeLabel={t('dashboard:kpi.vsLastPeriod')}
               icon={DollarSign}

@@ -36,9 +36,9 @@
   },
   "dateRange": {
     "today": "Today",
-    "last7Days": "Last 7 days",
-    "last30Days": "Last 30 days",
-    "last90Days": "Last 90 days",
+    "last7days": "Last 7 days",
+    "last30days": "Last 30 days",
+    "last90days": "Last 90 days",
     "abbreviated": "7d"
   },
   "footer": {
@@ -46,5 +46,11 @@
     "terms": "Terms of Service",
     "contact": "Contact Us",
     "copyright": "© 2026 Supply Mind. All rights reserved. DEPI Evaluation."
+  },
+  "ai": {
+    "generate": "Generate AI Summary",
+    "regenerate": "Regenerate Summary",
+    "notGenerated": "No AI summary has been generated yet for this section. Click below to analyze the data.",
+    "lastGenerated": "Last generated"
   }
 }

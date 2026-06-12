@@ -213,7 +213,7 @@ const Reports = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-13 sm:ml-0 flex-shrink-0">
+                    <div className="flex items-center gap-2 ml-13 sm:ml-0 rtl:mr-13 rtl:sm:mr-0 rtl:ml-0 flex-shrink-0">
                       {report.status === 'generating' ? (
                         <Button variant="outline" disabled size="sm" className="text-xs">
                           {t('reports:generating')}

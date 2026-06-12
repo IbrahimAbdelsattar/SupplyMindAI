@@ -127,7 +127,7 @@ const Login = () => {
       {/* Back button */}
       <Link 
         to="/" 
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-all hover:-translate-x-1 duration-200"
+        className="absolute top-6 left-6 rtl:left-auto rtl:right-6 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-all hover:-translate-x-1 rtl:hover:translate-x-1 duration-200"
       >
         <ArrowLeft className="w-4 h-4" />
         {t('common:backToHome')}
@@ -152,7 +152,7 @@ const Login = () => {
 
         {/* Auth Card */}
         <Card className="border border-border/60 bg-card/40 backdrop-blur-md shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/60 via-accent/60 to-primary/60" />
+          <div className="absolute top-0 left-0 right-0 rtl:left-0 rtl:right-0 h-[2px] bg-gradient-to-r from-primary/60 via-accent/60 to-primary/60" />
           
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl font-bold tracking-tight">{t('login:accessPlatform')}</CardTitle>
@@ -172,14 +172,14 @@ const Login = () => {
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-semibold">{t('login:email')}</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-3.5 rtl:left-auto rtl:right-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="email"
                         type="email"
                         placeholder={t('login:emailPlaceholder')}
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
+                        className="h-11 pl-10 rtl:pl-3 rtl:pr-10 bg-background/50 border-border/50 focus:border-primary"
                         required
                       />
                     </div>
@@ -189,14 +189,14 @@ const Login = () => {
                       <Label htmlFor="password" className="text-sm font-semibold">{t('login:password')}</Label>
                     </div>
                     <div className="relative">
-                      <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                      <KeyRound className="absolute left-3.5 rtl:left-auto rtl:right-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="password"
                         type="password"
                         placeholder={t('login:passwordPlaceholder')}
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
+                        className="h-11 pl-10 rtl:pl-3 rtl:pr-10 bg-background/50 border-border/50 focus:border-primary"
                         required
                       />
                     </div>
@@ -205,7 +205,7 @@ const Login = () => {
                   <Button type="submit" className="w-full h-11 text-base font-semibold mt-6 transition-transform hover:scale-[1.01]" disabled={isLoading}>
                     {isLoading ? (
                       <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        <Loader2 className="w-5 h-5 mr-2 rtl:mr-0 rtl:ml-2 animate-spin" />
                         {t('login:signingIn')}
                       </>
                     ) : (
@@ -221,14 +221,14 @@ const Login = () => {
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-sm font-semibold">{t('login:fullName')}</Label>
                     <div className="relative">
-                      <UserIcon className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                      <UserIcon className="absolute left-3.5 rtl:left-auto rtl:right-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="name"
                         type="text"
                         placeholder={t('login:fullNamePlaceholder')}
                         value={registerName}
                         onChange={(e) => setRegisterName(e.target.value)}
-                        className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
+                        className="h-11 pl-10 rtl:pl-3 rtl:pr-10 bg-background/50 border-border/50 focus:border-primary"
                         required
                       />
                     </div>
@@ -236,14 +236,14 @@ const Login = () => {
                   <div className="space-y-2">
                     <Label htmlFor="reg_email" className="text-sm font-semibold">{t('login:emailAddress')}</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-3.5 rtl:left-auto rtl:right-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="reg_email"
                         type="email"
                         placeholder={t('login:emailPlaceholder')}
                         value={registerEmail}
                         onChange={(e) => setRegisterEmail(e.target.value)}
-                        className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
+                        className="h-11 pl-10 rtl:pl-3 rtl:pr-10 bg-background/50 border-border/50 focus:border-primary"
                         required
                       />
                     </div>
@@ -251,14 +251,14 @@ const Login = () => {
                   <div className="space-y-2">
                     <Label htmlFor="reg_password" className="text-sm font-semibold">{t('login:password')}</Label>
                     <div className="relative">
-                      <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                      <KeyRound className="absolute left-3.5 rtl:left-auto rtl:right-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="reg_password"
                         type="password"
                         placeholder={t('login:regPasswordPlaceholder')}
                         value={registerPassword}
                         onChange={(e) => setRegisterPassword(e.target.value)}
-                        className="h-11 pl-10 bg-background/50 border-border/50 focus:border-primary"
+                        className="h-11 pl-10 rtl:pl-3 rtl:pr-10 bg-background/50 border-border/50 focus:border-primary"
                         required
                       />
                     </div>
@@ -267,7 +267,7 @@ const Login = () => {
                   <Button type="submit" className="w-full h-11 text-base font-semibold mt-6 transition-transform hover:scale-[1.01]" disabled={isLoading}>
                     {isLoading ? (
                       <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        <Loader2 className="w-5 h-5 mr-2 rtl:mr-0 rtl:ml-2 animate-spin" />
                         {t('login:creatingAccount')}
                       </>
                     ) : (

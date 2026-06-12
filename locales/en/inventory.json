@@ -1,36 +1,40 @@
 {
-  "header": {
-    "title": "Inventory Optimization",
-    "subtitle": "AI-driven recommendations for optimal stock levels"
-  },
-  "investigation": {
-    "title": "Inventory Investigation",
-    "question": "Which products need attention now? Summarize stock-out risk, reorder priorities, and similar past incidents."
-  },
-  "summary": {
+  "title": "Inventory Optimization",
+  "subtitle": "AI-driven recommendations for optimal stock levels",
+  "aiSummaryTitle": "Inventory AI Brief",
+  "aiSummaryQuestion": "Which products need attention now? Summarize stock-out risk, reorder priorities, and similar past incidents.",
+  "kpi": {
     "estCostSavings": "Est. Cost Savings",
     "productsAnalyzed": "Products Analyzed",
     "highRiskItems": "High Risk Items"
   },
-  "recommendations": {
+  "riskLevel": {
+    "low": "Low Risk",
+    "medium": "Medium Risk",
+    "high": "High Risk"
+  },
+  "aiRecommendations": {
     "title": "AI Recommendations",
     "description": "Optimized inventory parameters for each product",
-    "risk": " risk",
     "savings": "Savings",
     "apply": "Apply",
     "stock": "Stock",
-    "reorderPt": "Reorder Pt",
-    "reorderQty": "Reorder Qty",
-    "safety": "Safety",
-    "leadTime": "Lead time: ",
-    "days": " days",
+    "reorderPt": "Reorder Pt.",
+    "reorderQty": "Reorder Qty.",
+    "safety": "Safety Stock",
+    "leadTime": "Lead Time: {{days}} days",
     "stockLevel": "Stock Level"
   },
-  "comparison": {
+  "comparisonChart": {
     "title": "Current vs Optimal Stock",
     "description": "Before and after optimization comparison",
     "currentStock": "Current Stock",
     "optimalLevel": "Optimal Level"
+  },
+  "toast": {
+    "success": "Success",
+    "inventoryUpdated": "Inventory updated successfully.",
+    "error": "Error"
   },
   "table": {
     "title": "Inventory",
@@ -40,14 +44,14 @@
     "category": "Category",
     "type": "Type",
     "stockLevel": "Stock Level",
-    "avgDailyDemand": "Avg Daily Demand",
+    "avgDailyDemand": "Avg. Daily Demand",
     "coverage": "Coverage",
     "status": "Status",
     "active": "Active",
     "snapshotDate": "Snapshot Date",
     "noResults": "No items match your search.",
-    "units": " units",
-    "days": " days"
+    "units": "units",
+    "days": "days"
   },
   "badges": {
     "healthy": "Healthy",
@@ -59,18 +63,5 @@
     "lowStock": "Low Stock",
     "outOfStock": "Out of Stock",
     "overstocked": "Overstocked"
-  },
-  "chart": {
-    "snapshotDate": "Snapshot Date",
-    "totalUnits": "Total Units",
-    "criticalProducts": "Critical Products",
-    "activeProducts": "Active Products",
-    "latestStockByCategory": "Latest Stock by Category",
-    "stock": "Stock"
-  },
-  "toast": {
-    "successTitle": "Success",
-    "successDesc": "Inventory updated.",
-    "errorTitle": "Error"
   }
 }

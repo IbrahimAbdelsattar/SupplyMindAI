@@ -3,38 +3,38 @@
     "title": "AI Insights",
     "subtitle": "Explainable AI analysis of demand patterns"
   },
-  "summary": {
+  "summaryCard": {
     "title": "Context-Aware Insights",
-    "analyze": "Analyze"
+    "question": "Analyze demand drivers, key risk factors, and supply chain patterns for product {{productId}}."
   },
-  "generator": {
-    "selectProduct": "Select product",
+  "product": {
+    "select": "Select a product"
+  },
+  "actions": {
     "generating": "Generating...",
-    "generate": "Generate AI Insights",
-    "analysisTitle": "AI Analysis Summary",
-    "noSummary": "Select a product and click Generate AI Insights to produce an executive summary from your supply chain data."
+    "generate": "Generate AI Insights"
+  },
+  "summary": {
+    "title": "AI Analysis Summary",
+    "placeholder": "Select a product and click Generate AI Insights to produce an executive summary from your supply chain data."
   },
   "factors": {
     "title": "Demand Factor Weights",
-    "description": "Reference weights used by the explainability layer",
-    "seasonality": "Seasonality",
-    "historicalTrends": "Historical Trends",
-    "promotions": "Promotions",
-    "externalFactors": "External Factors",
-    "other": "Other"
+    "description": "Reference weights used by the explainability layer"
   },
-  "keyInsights": {
+  "insights": {
     "title": "Key Insights",
     "description": "AI-discovered patterns and recommendations",
     "empty": "No insights yet. Click Generate AI Insights above.",
-    "factor": "Factor:"
+    "factorLabel": "Factor:"
   },
-  "assistant": {
+  "chat": {
     "title": "Strategic Insights Assistant",
-    "description": "Discuss reasoning behind insights and deeper strategic shifts",
+    "description": "Discuss reasoning behind insights and explore deeper strategic shifts",
     "placeholder": "Ask a question like \"Why did the seasonal demand pattern shift?\"",
-    "thinking": "Analyzing...",
+    "analyzing": "Analyzing...",
+    "inputPlaceholder": "Type your question...",
     "send": "Send",
-    "error": "Unable to reach insights service."
+    "error": "Unable to reach the insights service."
   }
 }

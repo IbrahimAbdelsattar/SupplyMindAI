@@ -1,36 +1,33 @@
 {
-  "header": {
-    "title": "Demand Forecasting",
-    "subtitle": "Product demand forecasting powered by ML"
-  },
+  "title": "Demand Forecasting",
+  "subtitle": "Product demand forecasting powered by machine learning",
+  "product": "Product",
+  "horizonLabel": "Forecast Horizon",
+  "exportCsv": "Export CSV",
   "parameters": {
     "title": "Forecast Parameters",
-    "description": "Select a product and forecast future demand",
-    "product": "Product",
-    "forecastHorizon": "Forecast Horizon",
-    "analyze": "Analyze",
-    "clear": "Clear"
+    "description": "Select a product and forecast future demand"
   },
   "horizon": {
     "1month": "1 Month",
     "3months": "3 Months",
     "6months": "6 Months"
   },
-  "summary": {
-    "forecastedDemand": "Forecast Demand",
+  "kpi": {
+    "forecastDemand": "Forecasted Demand",
     "units": "Units",
     "confidenceLevel": "Confidence Level",
-    "averageAcrossHorizon": "Average across horizon",
+    "confidenceLevelDesc": "Average across horizon",
     "demandTrend": "Demand Trend",
-    "latestPeriod": "Latest period",
+    "demandTrendDesc": "Latest period",
     "revenueForecast": "Revenue Forecast",
-    "projectedRevenue": "Projected revenue",
-    "modelPending": "N/A (model pending)"
+    "revenueForecastDesc": "Projected revenue",
+    "revenueForecastNa": "N/A — model pending"
   },
-  "explanation": {
+  "aiExplanation": {
     "title": "Forecast Explanation"
   },
-  "visualization": {
+  "chart": {
     "title": "Forecast Visualization",
     "description": "Historical demand with predicted demand and confidence bands",
     "upperBound": "Upper Bound",
@@ -38,7 +35,7 @@
     "actual": "Actual",
     "forecast": "Forecast"
   },
-  "breakdown": {
+  "table": {
     "title": "Monthly Forecast Breakdown",
     "description": "Predicted demand by period with confidence and trend",
     "period": "Period",

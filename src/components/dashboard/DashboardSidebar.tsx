@@ -45,7 +45,7 @@ const SidebarContent = ({
   setIsCollapsed: (v: boolean) => void;
   onNavigate?: () => void;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -167,12 +167,12 @@ export const DashboardSidebar = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="fixed top-3 left-3 z-50 h-10 w-10 rounded-xl bg-card border border-border shadow-md"
+            className="fixed top-3 left-3 rtl:left-auto rtl:right-3 z-50 h-10 w-10 rounded-xl bg-card border border-border shadow-md"
           >
             <Menu className="w-5 h-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0">
+        <SheetContent side={i18n.dir() === "rtl" ? "right" : "left"} className="w-72 p-0">
           <SheetTitle className="sr-only">{t('common:nav.navigation')}</SheetTitle>
           <SidebarContent
             isCollapsed={false}

@@ -1,44 +1,48 @@
 import { motion } from 'framer-motion';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { TrendingDown, TrendingUp, DollarSign, Package } from 'lucide-react';
 
-const metrics = [
-  {
-    icon: TrendingDown,
-    value: 25,
-    suffix: '%',
-    label: 'Inventory Cost Reduction',
-    description: 'Average reduction in holding costs',
-    color: 'success',
-  },
-  {
-    icon: Package,
-    value: 30,
-    suffix: '%',
-    label: 'Stock-Out Reduction',
-    description: 'Fewer missed sales opportunities',
-    color: 'primary',
-  },
-  {
-    icon: TrendingUp,
-    value: 18,
-    suffix: '%',
-    label: 'Revenue Increase',
-    description: 'Through optimized availability',
-    color: 'accent',
-  },
-  {
-    icon: DollarSign,
-    value: 2.5,
-    suffix: 'M+',
-    label: 'Annual Savings',
-    description: 'Average enterprise savings',
-    decimals: 1,
-    color: 'warning',
-  },
-];
-
 export const MetricsSection = () => {
+  const { currencySymbol, convertCurrency } = useCurrency();
+
+  const metrics = [
+    {
+      icon: TrendingDown,
+      value: 25,
+      suffix: '%',
+      label: 'Inventory Cost Reduction',
+      description: 'Average reduction in holding costs',
+      color: 'success',
+    },
+    {
+      icon: Package,
+      value: 30,
+      suffix: '%',
+      label: 'Stock-Out Reduction',
+      description: 'Fewer missed sales opportunities',
+      color: 'primary',
+    },
+    {
+      icon: TrendingUp,
+      value: 18,
+      suffix: '%',
+      label: 'Revenue Increase',
+      description: 'Through optimized availability',
+      color: 'accent',
+    },
+    {
+      icon: DollarSign,
+      value: convertCurrency(2.5),
+      prefix: currencySymbol,
+      suffix: 'M+',
+      label: 'Annual Savings',
+      description: 'Average enterprise savings',
+      decimals: 1,
+      color: 'warning',
+    },
+  ];
+
   return (
     <section className="py-16 sm:py-24 bg-card/50 border-y border-border">
       <div className="container mx-auto px-4 sm:px-6">
@@ -73,6 +77,7 @@ export const MetricsSection = () => {
                 <div className="text-3xl sm:text-5xl font-bold mb-2">
                   <AnimatedCounter
                     value={metric.value}
+                    prefix={metric.prefix || ''}
                     suffix={metric.suffix}
                     decimals={metric.decimals || 0}
                     className="gradient-text"

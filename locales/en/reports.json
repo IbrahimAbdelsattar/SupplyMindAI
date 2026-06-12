@@ -1,41 +1,25 @@
 {
-  "header": {
-    "title": "Reports & Exports",
-    "subtitle": "AI-generated reports and data exports"
-  },
-  "qa": {
-    "title": "Report Q&A",
-    "question": "What do recent forecast and inventory reports indicate? Highlight anomalies planners should review."
-  },
-  "stats": {
-    "reportsGenerated": "Reports Generated",
-    "downloadsThisMonth": "Downloads This Month",
-    "scheduledReports": "Scheduled Reports"
-  },
-  "reports": {
-    "title": "Available Reports",
-    "description": "AI-generated reports ready for download",
-    "generateNew": "Generate New",
-    "generating": "Generating...",
-    "preview": "Preview",
-    "download": "Download",
-    "previewDialog": "Previewing the generated report data",
-    "loading": "Loading..."
-  },
-  "badges": {
-    "forecast": "Forecast",
-    "inventory": "Inventory",
-    "executive": "Executive",
-    "technical": "Technical",
-    "risk": "Risk"
-  },
-  "featured": {
-    "title": "Q4 2024 AI Platform Performance",
-    "forecastAccuracy": "Forecast Accuracy",
-    "inventoryCosts": "Inventory Costs",
-    "revenueImpact": "Revenue Impact",
-    "description": "The AI-powered demand forecasting platform delivered exceptional results in Q4 2024. With 94.5% forecast accuracy, the system enabled a 25% reduction in inventory holding costs while improving product availability. Stock-out incidents decreased by 30%, contributing to an 18% increase in sales revenue compared to the previous quarter."
-  },
+  "header_title": "Reports & Exports",
+  "header_subtitle": "AI-generated reports and data exports",
+  "qa_title": "Report Q&A",
+  "qa_question": "What do recent forecast and inventory reports indicate? Highlight anomalies planners should review.",
+  "stats_reports_generated": "Reports Generated",
+  "stats_downloads_this_month": "Downloads This Month",
+  "stats_scheduled_reports": "Scheduled Reports",
+  "available_reports_title": "Available Reports",
+  "available_reports_description": "AI-generated reports ready for download",
+  "generate_new": "Generate New",
+  "generating": "Generating...",
+  "preview": "Preview",
+  "download": "Download",
+  "loading": "Loading...",
+  "executive_report_badge": "Executive",
+  "executive_report_title": "Q4 2024 AI Platform Performance",
+  "executive_report_description": "The AI-powered demand forecasting platform delivered exceptional results in Q4 2024. With 94.5% forecast accuracy, the system enabled a 25% reduction in inventory holding costs while improving product availability. Stock-out incidents decreased by 30%, contributing to an 18% increase in sales revenue compared to the previous quarter.",
+  "forecast_accuracy": "Forecast Accuracy",
+  "inventory_costs": "Inventory Costs",
+  "revenue_impact": "Revenue Impact",
+  "preview_dialog_description": "Previewing the generated report data",
   "filenames": {
     "default": "report.csv",
     "daily": "daily_operations_report.csv",

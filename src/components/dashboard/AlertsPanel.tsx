@@ -77,7 +77,7 @@ export const AlertsPanel = () => {
         </Button>
       </div>
 
-      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 rtl:pl-2 rtl:pr-0">
         {visibleAlerts.map((alert, index) => {
           const Icon = alertIcons[alert.type];
           return (

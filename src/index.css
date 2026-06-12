@@ -1,5 +1,55 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* RTL overrides for shadcn/ui primitives */
+[dir="rtl"] .context-menu-item-check,
+[dir="rtl"] .dropdown-menu-item-check,
+[dir="rtl"] .menubar-item-check,
+[dir="rtl"] .select-item-indicator {
+  left: auto !important;
+  right: 0.5rem !important;
+}
+
+[dir="rtl"] .context-menu-item-inset,
+[dir="rtl"] .dropdown-menu-item-inset,
+[dir="rtl"] .menubar-item-inset {
+  padding-left: 0.5rem !important;
+  padding-right: 2rem !important;
+}
+
+[dir="rtl"] .nav-menu-viewport {
+  left: auto !important;
+  right: 0 !important;
+}
+
+[dir="rtl"] .carousel-item-spacing {
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+[dir="rtl"] .calendar-nav-prev {
+  left: auto !important;
+  right: 0.25rem !important;
+}
+
+[dir="rtl"] .calendar-nav-next {
+  right: auto !important;
+  left: 0.25rem !important;
+}
+
+/* RTL overrides for ml-auto on shadcn/ui submenu indicators (ChevronRight) and shortcuts */
+[dir="rtl"] [data-radix-popper-content-wrapper] .ml-auto,
+[dir="rtl"] [cmdk-group] .ml-auto,
+[dir="rtl"] [role="menuitem"] .ml-auto {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+/* RTL overrides for command search icon mr-2 */
+[dir="rtl"] [cmdk-input-wrapper] svg:first-child {
+  margin-right: 0 !important;
+  margin-left: 0.5rem !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

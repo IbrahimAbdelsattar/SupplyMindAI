@@ -280,7 +280,7 @@ const AIInsights = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 pt-3 border-t border-border ml-11 sm:ml-14">
+                    <div className="flex items-center gap-2 pt-3 border-t border-border ml-11 sm:ml-14 rtl:mr-11 rtl:sm:mr-14 rtl:ml-0">
                       <span className="text-[10px] sm:text-xs text-muted-foreground">{t('insights:insights.factorLabel')}</span>
                       <span className="px-2 py-0.5 text-[10px] sm:text-xs rounded-full bg-secondary text-secondary-foreground">
                         {insight.factor}

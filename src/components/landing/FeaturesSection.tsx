@@ -101,7 +101,7 @@ export const FeaturesSection = () => {
               >
                 {/* Step Number */}
                 <div 
-                  className="absolute -top-3.5 -left-3.5 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-extrabold shadow-md shadow-primary/20 tracking-wide"
+                  className="absolute -top-3.5 -left-3.5 rtl:left-auto rtl:-right-3.5 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-extrabold shadow-md shadow-primary/20 tracking-wide"
                 >
                   {index + 1}
                 </div>

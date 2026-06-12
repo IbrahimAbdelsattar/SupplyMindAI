@@ -1,98 +1,41 @@
 {
-  "header": {
-    "title": "MLOps & Monitoring",
-    "subtitle": "Model performance and data pipeline health"
-  },
-  "investigation": {
-    "title": "Drift Investigation",
-    "question": "Summarize model drift, retraining history, and whether recent accuracy changes require action."
-  },
-  "statusCards": {
+  "title": "MLOps & Monitoring",
+  "subtitle": "Model performance and data pipeline health",
+  "loading": "Loading MLOps metrics...",
+  "driftInvestigation": "Drift Investigation",
+  "driftQuestion": "Summarize model drift, retraining history, and whether recent accuracy changes require action.",
+  "healthy": "Healthy",
+  "active": "Active",
+  "twoDaysAgo": "2 days ago",
+  "fortyFiveMs": "45 ms",
+  "cards": {
     "modelStatus": "Model Status",
-    "healthy": "Healthy",
-    "degraded": "Degraded",
-    "critical": "Critical",
     "lastRetrain": "Last Retrain",
     "dataPipeline": "Data Pipeline",
-    "active": "Active",
-    "inference": "Inference",
-    "high": "High",
-    "moderate": "Moderate",
-    "fast": "Fast",
-    "na": "N/A",
-    "today": "Today",
-    "daysAgo": "{{diff}} days ago",
-    "oneDayAgo": "1 day ago",
-    "unknown": "Unknown"
+    "inference": "Inference"
   },
-  "accuracy": {
-    "title": "Model Accuracy Trend",
-    "description": "Weekly forecast accuracy over time",
-    "target": "Target 90%",
-    "accuracy": "Accuracy"
+  "chart": {
+    "accuracyTitle": "Model Accuracy Trend",
+    "accuracyDescription": "Weekly forecast accuracy over time",
+    "accuracySeriesName": "Accuracy"
   },
   "drift": {
     "title": "Data Drift Monitoring",
-    "description": "Feature distribution stability (KS-test, threshold p < 0.05)",
-    "noData": "No drift data available.",
-    "healthy": "healthy",
-    "warning": "warning",
-    "drift": "Drift: ",
-    "highlySignificant": "Highly significant",
-    "verySignificant": "Very significant",
-    "significant": "Significant",
-    "notSignificant": "Not significant"
+    "description": "Feature distribution stability (KS-test, p < 0.05)",
+    "driftLabel": "Drift: {{value}}",
+    "statusHealthy": "Healthy",
+    "statusWarning": "Warning"
   },
   "retraining": {
     "title": "Retraining History",
     "description": "Recent model updates and triggers",
-    "empty": "No retraining history available.",
-    "trigger": "Trigger: ",
-    "success": "Success"
+    "triggerLabel": "Trigger: {{trigger}}"
   },
-  "registry": {
-    "title": "Model Registry",
-    "description": "Active model versions and health",
-    "retraining": "Retraining...",
-    "triggerRetraining": "Trigger Retraining",
-    "model": "Model",
-    "version": "Version",
-    "accuracy": "Accuracy",
-    "status": "Status",
-    "lastTrained": "Last Trained",
-    "demandForecastPipeline": "Demand Forecast Pipeline",
-    "production": "Production",
-    "dash": "\u2014"
-  },
-  "tracing": {
-    "title": "AI Agent Tracing",
-    "noData": "LangSmith observability \u2014 no data available",
-    "project": "LangSmith observability \u2014 project: {{project}}",
-    "totalCalls": "Total calls (24h): {{count}}",
-    "errors": "Errors: {{count}}",
-    "active": "Tracing Active",
-    "off": "Tracing Off",
-    "agent": "Agent",
-    "model": "Model",
-    "status": "Status",
-    "calls": "Calls / 24h",
-    "errorsHeader": "Errors",
-    "avgLatency": "Avg Latency",
-    "lastActive": "Last Active",
-    "empty": "No trace data available yet.",
-    "healthy": "healthy",
-    "degraded": "degraded",
-    "idle": "idle",
-    "justNow": "Just now",
-    "minutesAgo": "{{diff}}m ago",
-    "hoursAgo": "{{diff}}h ago"
-  },
-  "systemResources": {
+  "resources": {
     "title": "System Resources",
     "description": "Infrastructure utilization",
     "cpu": "CPU Usage",
     "memory": "Memory Usage",
     "gpu": "GPU Utilization"
-  },
-  "loading": "Loading MLOps metrics..."
+  }
 }

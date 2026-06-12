@@ -17,6 +17,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { Currency } from '@/lib/currency';
 import { Navigate } from 'react-router-dom';
 import { Palette, Bell, Globe, Shield, User, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +27,7 @@ const Settings = () => {
   const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { currency, setCurrency } = useCurrency();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
@@ -36,7 +39,6 @@ const Settings = () => {
   });
   
   const [region, setRegion] = useState('us');
-  const [currency, setCurrency] = useState('usd');
 
   // Load saved settings from API on mount
   useEffect(() => {
@@ -49,16 +51,17 @@ const Settings = () => {
         if (s.region) setRegion(s.region as string);
         // Currency may be stored directly or within display object
         if (s.display && typeof (s.display as any).currency === 'string') {
-          setCurrency((s.display as any).currency);
+          setCurrency((s.display as any).currency as Currency);
         } else if (typeof s.currency === 'string') {
-          setCurrency(s.currency);
+          setCurrency(s.currency as Currency);
         }
       } catch {
         // Settings not available yet — use defaults
       }
     };
     if (isAuthenticated) loadSettings();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setCurrency]);
+
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

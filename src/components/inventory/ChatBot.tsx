@@ -84,8 +84,8 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
                 <div
                   className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                     message.role === "user"
-                      ? "rounded-br-md bg-primary text-primary-foreground"
-                      : "rounded-bl-md bg-muted"
+                      ? "rounded-br-md rtl:rounded-bl-md rtl:rounded-br-none bg-primary text-primary-foreground"
+                      : "rounded-bl-md rtl:rounded-br-md rtl:rounded-bl-none bg-muted"
                   }`}
                 >
                   {renderMarkdown(message.text)}
@@ -96,7 +96,7 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
 
           {typing && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-muted px-4 py-3 text-sm">
+              <div className="flex items-center gap-2 rounded-2xl rounded-bl-md rtl:rounded-br-md rtl:rounded-bl-none bg-muted px-4 py-3 text-sm">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 {t("chatbot:thinking")}
               </div>

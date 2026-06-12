@@ -28,6 +28,7 @@ import { apiFetch } from '@/lib/api';
 import InventoryTable, { type InventoryItem } from '@/components/inventory/InventoryTable';
 import StockChart, { type InventorySummary } from '@/components/inventory/StockChart';
 import ChatBot from '@/components/inventory/ChatBot';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 type InventoryRecommendation = {
   product_id: string;
@@ -49,6 +50,7 @@ interface InventoryData {
 const Inventory = () => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { formatCurrency } = useCurrency();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -128,7 +130,7 @@ const Inventory = () => {
                     <div>
                       <p className="text-xs sm:text-sm text-muted-foreground">{t('inventory:kpi.estCostSavings')}</p>
                       <p className="text-xl sm:text-2xl font-bold text-success">
-                        ${totalSavings.toLocaleString()}
+                        {formatCurrency(totalSavings)}
                       </p>
                     </div>
                   </div>
@@ -255,7 +257,7 @@ const Inventory = () => {
                           <div className="text-right hidden sm:block">
                             <p className="text-xs text-muted-foreground">{t('inventory:aiRecommendations.savings')}</p>
                             <p className="text-sm sm:text-lg font-bold text-success">
-                              +${item.costSavings.toLocaleString()}
+                              +{formatCurrency(item.costSavings)}
                             </p>
                           </div>
                           <Button size="sm" className="gap-1 h-8 text-xs sm:text-sm" onClick={() => applyMutation(item)} disabled={isApplying}>
@@ -291,7 +293,7 @@ const Inventory = () => {
 
                       <div className="flex items-center justify-between sm:hidden text-xs text-muted-foreground">
                         <span>{t('inventory:aiRecommendations.leadTime', { days: item.leadTime })}</span>
-                        <span className="font-bold text-success">+${item.costSavings.toLocaleString()}</span>
+                        <span className="font-bold text-success">+{formatCurrency(item.costSavings)}</span>
                       </div>
 
                       <div className="pt-3 border-t border-border">

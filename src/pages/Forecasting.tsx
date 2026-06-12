@@ -39,6 +39,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Product = { product_id: string; product_name: string; category?: string };
 type ForecastPoint = { date: string; actual?: number | null; forecast: number; lower: number; upper: number };
@@ -54,6 +55,7 @@ const HORIZON_OPTIONS = [
 const Forecasting = () => {
   const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
+  const { formatCurrency } = useCurrency();
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: () => apiFetch<Product[]>('/data/products'),
@@ -156,7 +158,7 @@ const Forecasting = () => {
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-xs sm:text-sm">
                       <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      {t('forecasting:horizon')}
+                      {t('forecasting:horizonLabel')}
                     </Label>
                     <Select value={horizon} onValueChange={setHorizon}>
                       <SelectTrigger className="bg-background h-9 sm:h-10">
@@ -216,7 +218,7 @@ const Forecasting = () => {
                   <CardDescription className="text-xs">{t('forecasting:kpi.revenueForecast')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl">
                     {summary.totalRevenue > 0
-                      ? `$${summary.totalRevenue.toLocaleString()}`
+                      ? formatCurrency(summary.totalRevenue)
                       : '—'}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">

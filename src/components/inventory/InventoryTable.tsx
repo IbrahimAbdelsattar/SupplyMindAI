@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowUpDown, Package, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function InventoryTable({ data, selectedSku, onSelectItem }: InventoryTableProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("sku");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -108,14 +110,14 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <Package className="h-6 w-6 text-primary" />
-        <h1 className="text-xl font-bold text-foreground">Inventory</h1>
-        <div className="relative ml-auto w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <h1 className="text-xl font-bold text-foreground">{t('inventory:table.title')}</h1>
+        <div className="relative ml-auto rtl:mr-auto rtl:ml-0 w-64">
+          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search SKU, product, category..."
+            placeholder={t('inventory:table.searchPlaceholder')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="pl-9"
+            className="pl-9 rtl:pl-3 rtl:pr-9"
           />
         </div>
       </div>
@@ -124,16 +126,16 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
         <Table className="w-full">
           <TableHeader className="sticky top-0 bg-card z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
             <TableRow className="whitespace-nowrap bg-card">
-              <SortHeader field="sku">SKU</SortHeader>
-              <SortHeader field="name">Product Name</SortHeader>
-              <SortHeader field="category">Category</SortHeader>
-              <SortHeader field="productType">Type</SortHeader>
-              <SortHeader field="stock">Stock Level</SortHeader>
-              <SortHeader field="averageDailyDemand">Avg Daily Demand</SortHeader>
-              <TableHead className="bg-card">Coverage</TableHead>
-              <SortHeader field="stockStatus">Status</SortHeader>
-              <TableHead className="bg-card">Active</TableHead>
-              <SortHeader field="lastUpdated">Snapshot Date</SortHeader>
+              <SortHeader field="sku">{t('inventory:table.sku')}</SortHeader>
+              <SortHeader field="name">{t('inventory:table.productName')}</SortHeader>
+              <SortHeader field="category">{t('inventory:table.category')}</SortHeader>
+              <SortHeader field="productType">{t('inventory:table.type')}</SortHeader>
+              <SortHeader field="stock">{t('inventory:table.stockLevel')}</SortHeader>
+              <SortHeader field="averageDailyDemand">{t('inventory:table.avgDailyDemand')}</SortHeader>
+              <TableHead className="bg-card">{t('inventory:table.coverage')}</TableHead>
+              <SortHeader field="stockStatus">{t('inventory:table.status')}</SortHeader>
+              <TableHead className="bg-card">{t('inventory:table.active')}</TableHead>
+              <SortHeader field="lastUpdated">{t('inventory:table.snapshotDate')}</SortHeader>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -149,19 +151,19 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell>{item.category}</TableCell>
                 <TableCell>{item.productType}</TableCell>
-                <TableCell>{item.stock.toLocaleString()} units</TableCell>
-                <TableCell>{item.averageDailyDemand.toFixed(2)} units</TableCell>
+                <TableCell>{item.stock.toLocaleString()}{t('inventory:table.units')}</TableCell>
+                <TableCell>{item.averageDailyDemand.toFixed(2)}{t('inventory:table.units')}</TableCell>
                 <TableCell className="max-w-[220px] text-sm text-muted-foreground">
-                  {item.coverageDays !== null ? `${item.coverageDays.toFixed(2)} days` : item.coverageLabel}
+                  {item.coverageDays !== null ? `${item.coverageDays.toFixed(2)}${t('inventory:table.days')}` : item.coverageLabel}
                 </TableCell>
                 <TableCell>
                   <Badge className={statusStyles[item.stockStatus] ?? "bg-secondary text-secondary-foreground"}>
-                    {item.stockStatus}
+                    {t(`inventory:badges.${item.stockStatus.toLowerCase()}`)}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant={item.active ? "default" : "outline"}>
-                    {item.active ? "Active" : "Inactive"}
+                    {item.active ? t('inventory:badges.active') : t('inventory:badges.inactive')}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{item.lastUpdated}</TableCell>
@@ -170,7 +172,7 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
-                  No items match your search.
+                  {t('inventory:table.noResults')}
                 </TableCell>
               </TableRow>
             )}
