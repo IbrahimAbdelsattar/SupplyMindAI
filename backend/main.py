@@ -1302,6 +1302,25 @@ def mlops_metrics(user: User = Depends(_get_current_user)):
     return payload
 
 
+@app.get("/api/v1/mlops/langsmith")
+def mlops_langsmith(user: User = Depends(_get_current_user)):
+    """Return LangSmith tracing data for the AI agent dashboard."""
+    try:
+        from backend.services.langsmith_tracing_service import fetch_tracing_data
+        return fetch_tracing_data(hours=24)
+    except Exception as exc:
+        logger.warning("LangSmith tracing data fetch failed: %s", exc)
+        return {
+            "enabled": False,
+            "project": os.getenv("LANGCHAIN_PROJECT", "supplymind-ai"),
+            "api_key_configured": bool(os.getenv("LANGCHAIN_API_KEY")),
+            "agents": [],
+            "total_calls": 0,
+            "errors_last_24h": 0,
+            "error": str(exc),
+        }
+
+
 class InsightsGeneratePayload(BaseModel):
     product_id: str
     period: Optional[str] = None

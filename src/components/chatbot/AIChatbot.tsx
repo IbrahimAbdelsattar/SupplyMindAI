@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,13 +23,13 @@ const quickQuestions = [
 ];
 
 export const AIChatbot = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
       role: 'assistant',
-      content:
-        "Hello! I'm your SupplyMind AI assistant. How can I help you today?",
+      content: '', // Will be dynamically translated on render via t('chatbot:welcome')
       timestamp: new Date(),
     },
   ]);
@@ -72,7 +73,7 @@ export const AIChatbot = () => {
       const assistantMessage: Message = {
         id: messages.length + 1,
         role: 'assistant',
-        content: "I'm sorry, I couldn't process your request. Please try again later.",
+        content: t('chatbot:error'),
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
@@ -119,8 +120,8 @@ export const AIChatbot = () => {
                   <Bot className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">SupplyMind Copilot</h3>
-                  <p className="text-xs text-muted-foreground">AI Assistant</p>
+                  <h3 className="font-semibold">{t('chatbot:header.title')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('chatbot:header.subtitle')}</p>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
@@ -161,7 +162,7 @@ export const AIChatbot = () => {
                     {message.role === 'user' ? (
                       <p className="whitespace-pre-line">{message.content}</p>
                     ) : (
-                      <FormattedMessage content={message.content} />
+                      <FormattedMessage content={message.id === 0 ? t('chatbot:welcome') : message.content} />
                     )}
                   </div>
                 </motion.div>
@@ -173,6 +174,7 @@ export const AIChatbot = () => {
                     <Bot className="w-4 h-4 text-accent" />
                   </div>
                   <div className="bg-muted p-3 rounded-2xl rounded-tl-sm rtl:rounded-tr-sm rtl:rounded-tl-none">
+                    <span className="text-xs text-muted-foreground block mb-1">{t('chatbot:thinking')}</span>
                     <div className="flex gap-1">
                       <span
                         className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
@@ -196,9 +198,12 @@ export const AIChatbot = () => {
 
             {messages.length <= 2 && (
               <div className="px-4 pb-2">
-                <p className="text-xs text-muted-foreground mb-2">Quick questions:</p>
+                <p className="text-xs text-muted-foreground mb-2">{t('chatbot:quickQuestions')}</p>
                 <div className="flex flex-wrap gap-2">
-                  {quickQuestions.map((question) => (
+                  {(Array.isArray(t('chatbot:quickQuestionsList', { returnObjects: true })) 
+                    ? t('chatbot:quickQuestionsList', { returnObjects: true }) as string[] 
+                    : quickQuestions
+                  ).map((question) => (
                     <button
                       key={question}
                       onClick={() => handleQuickQuestion(question)}
@@ -222,7 +227,7 @@ export const AIChatbot = () => {
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about forecasts, inventory..."
+                  placeholder={t('chatbot:placeholder')}
                   className="flex-1"
                   disabled={isTyping}
                 />

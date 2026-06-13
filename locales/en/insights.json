@@ -1,4 +1,6 @@
 {
+  "title": "AI Insights",
+  "subtitle": "Explainable AI analysis of demand patterns",
   "header": {
     "title": "AI Insights",
     "subtitle": "Explainable AI analysis of demand patterns"
@@ -20,13 +22,19 @@
   },
   "factors": {
     "title": "Demand Factor Weights",
-    "description": "Reference weights used by the explainability layer"
+    "description": "Reference weights used by the explainability layer",
+    "seasonality": "Seasonality",
+    "historicalTrends": "Historical Trends",
+    "promotions": "Promotions",
+    "externalFactors": "External Factors",
+    "other": "Other"
   },
   "insights": {
     "title": "Key Insights",
     "description": "AI-discovered patterns and recommendations",
     "empty": "No insights yet. Click Generate AI Insights above.",
-    "factorLabel": "Factor:"
+    "factorLabel": "Factor:",
+    "confidence": "Confidence"
   },
   "chat": {
     "title": "Strategic Insights Assistant",

@@ -1,36 +1,33 @@
 {
-  "header": {
-    "title": "توقعات الطلب",
-    "subtitle": "توقعات طلب المنتجات بتقنية التعلم الآلي"
-  },
+  "title": "توقعات الطلب",
+  "subtitle": "توقعات طلب المنتجات بتقنية التعلم الآلي",
+  "product": "المنتج",
+  "horizonLabel": "أفق التوقع",
+  "exportCsv": "تصدير CSV",
   "parameters": {
     "title": "معايير التوقعات",
-    "description": "اختر منتجًا وتوقع الطلب المستقبلي",
-    "product": "المنتج",
-    "forecastHorizon": "أفق التوقع",
-    "analyze": "تحليل",
-    "clear": "مسح"
+    "description": "اختر منتجًا وتوقع الطلب المستقبلي"
   },
   "horizon": {
     "1month": "شهر واحد",
     "3months": "٣ أشهر",
     "6months": "٦ أشهر"
   },
-  "summary": {
-    "forecastedDemand": "الطلب المتوقع",
-    "units": "وحدة",
+  "kpi": {
+    "forecastDemand": "الطلب المتوقع",
+    "units": "وحدات",
     "confidenceLevel": "مستوى الثقة",
-    "averageAcrossHorizon": "المتوسط عبر أفق التوقع",
+    "confidenceLevelDesc": "المتوسط عبر أفق التوقع",
     "demandTrend": "اتجاه الطلب",
-    "latestPeriod": "آخر فترة",
+    "demandTrendDesc": "آخر فترة",
     "revenueForecast": "توقعات الإيرادات",
-    "projectedRevenue": "الإيرادات المتوقعة",
-    "modelPending": "غير متاح (النموذج قيد الإعداد)"
+    "revenueForecastDesc": "الإيرادات المتوقعة",
+    "revenueForecastNa": "غير متاح (النموذج قيد الإعداد)"
   },
-  "explanation": {
+  "aiExplanation": {
     "title": "شرح التوقع"
   },
-  "visualization": {
+  "chart": {
     "title": "تصور التوقعات",
     "description": "الطلب التاريخي مع الطلب المتوقع ونطاقات الثقة",
     "upperBound": "الحد الأعلى",
@@ -38,7 +35,7 @@
     "actual": "فعلي",
     "forecast": "متوقع"
   },
-  "breakdown": {
+  "table": {
     "title": "تفصيل التوقعات الشهرية",
     "description": "الطلب المتوقع حسب الفترة مع الثقة والاتجاه",
     "period": "الفترة",

@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { Currency } from '@/lib/currency';
+
 import { Navigate } from 'react-router-dom';
 import { Palette, Bell, Globe, Shield, User, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -49,18 +49,13 @@ const Settings = () => {
         const s = res?.settings || {};
         if (s.notifications) setNotifications(prev => ({ ...prev, ...(s.notifications as typeof prev) }));
         if (s.region) setRegion(s.region as string);
-        // Currency may be stored directly or within display object
-        if (s.display && typeof (s.display as any).currency === 'string') {
-          setCurrency((s.display as any).currency as Currency);
-        } else if (typeof s.currency === 'string') {
-          setCurrency(s.currency as Currency);
-        }
+        // Currency is loaded by CurrencyContext — no need to set it here
       } catch {
         // Settings not available yet — use defaults
       }
     };
     if (isAuthenticated) loadSettings();
-  }, [isAuthenticated, setCurrency]);
+  }, [isAuthenticated]);
 
 
   if (!isAuthenticated) {

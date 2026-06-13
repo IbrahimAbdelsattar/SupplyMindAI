@@ -1,22 +1,20 @@
 {
-  "header": {
-    "title": "الإعدادات",
-    "subtitle": "خصص تجربة المنصة الخاصة بك"
+  "title": "الإعدادات",
+  "subtitle": "خصص تجربة المنصة الخاصة بك",
+  "section": {
+    "profile": "الملف الشخصي",
+    "appearance": "المظهر",
+    "notifications": "الإشعارات",
+    "regionalSettings": "الإعدادات الإقليمية",
+    "roleFeatures": "ميزات حسب الدور"
   },
-  "profile": {
-    "title": "الملف الشخصي",
-    "description": "معلومات حسابك",
-    "accountSuffix": " حساب"
-  },
-  "appearance": {
-    "title": "المظهر",
-    "description": "تخصيص الشكل والمظهر",
-    "darkMode": "الوضع الليلي",
-    "darkModeDesc": "التبديل بين السمة الفاتحة والداكنة"
-  },
+  "profileDescription": "معلومات حسابك",
+  "roleAccount": "حساب {{role}}",
+  "appearanceDescription": "تخصيص الشكل والمظهر",
+  "darkMode": "الوضع الليلي",
+  "darkModeDescription": "التبديل بين السمة الفاتحة والداكنة",
+  "notificationsDescription": "تكوين تفضيلات التنبيهات",
   "notifications": {
-    "title": "الإشعارات",
-    "description": "تكوين تفضيلات التنبيهات",
     "stockAlerts": "تنبيهات المخزون",
     "stockAlertsDesc": "احصل على إشعارات حول مخاطر نفاد المخزون والتخزين الزائد",
     "forecastUpdates": "تحديثات التوقعات",
@@ -26,27 +24,23 @@
     "systemUpdates": "تحديثات النظام",
     "systemUpdatesDesc": "إشعارات حول تحديثات المنصة"
   },
-  "regional": {
-    "title": "الإعدادات الإقليمية",
-    "description": "تكوين المنطقة والعملة",
-    "region": "المنطقة",
-    "currency": "العملة",
-    "regions": {
-      "us": "الولايات المتحدة",
-      "eu": "أوروبا",
-      "asia": "آسيا والمحيط الهادئ",
-      "mena": "الشرق الأوسط وأفريقيا"
-    },
-    "currencies": {
-      "usd": "دولار أمريكي ($)",
-      "eur": "يورو (€)",
-      "gbp": "جنيه إسترليني (£)",
-      "egp": "جنيه مصري (E£)"
-    }
+  "regionalSettingsDescription": "تكوين المنطقة والعملة",
+  "region": "المنطقة",
+  "currency": "العملة",
+  "regions": {
+    "us": "الولايات المتحدة",
+    "eu": "أوروبا",
+    "asia": "آسيا والمحيط الهادئ",
+    "mena": "الشرق الأوسط وأفريقيا"
   },
+  "currencies": {
+    "usd": "دولار أمريكي ($)",
+    "eur": "يورو (€)",
+    "gbp": "جنيه إسترليني (£)",
+    "egp": "جنيه مصري (E£)"
+  },
+  "roleFeaturesDescription": "الميزات المتاحة لدورك",
   "roleFeatures": {
-    "title": "ميزات حسب الدور",
-    "description": "الميزات المتاحة لدورك",
     "executiveReports": "التقارير التنفيذية",
     "executiveReportsDesc": "الوصول إلى الملخصات عالية المستوى",
     "budgetControls": "ضوابط الميزانية",
@@ -64,14 +58,12 @@
     "apiAccess": "الوصول إلى API",
     "apiAccessDesc": "الوصول البرمجي للبيانات"
   },
-  "actions": {
-    "saving": "جارٍ الحفظ...",
-    "save": "حفظ الإعدادات"
-  },
+  "saving": "جارٍ الحفظ...",
+  "saveSettings": "حفظ الإعدادات",
   "toast": {
-    "successTitle": "تم حفظ الإعدادات",
-    "successDesc": "تم حفظ تفضيلاتك في حسابك.",
-    "errorTitle": "خطأ",
+    "saved": "تم حفظ الإعدادات",
+    "savedDesc": "تم حفظ تفضيلاتك في حسابك.",
+    "error": "خطأ",
     "errorDesc": "فشل حفظ الإعدادات. يرجى المحاولة مرة أخرى."
   }
 }

@@ -21,5 +21,13 @@
     "How do I interpret the dashboard KPIs?"
   ],
   "noProductSelected": "Select a row to add product context.",
-  "selectedProduct": "Selected: {{name}} ({{sku}})"
+  "selectedProduct": "Selected: {{name}} ({{sku}})",
+  "initialGreeting": "Hello! I'm your inventory assistant. Ask me anything about this product's inventory levels, safety stock, or reorder parameters.",
+  "unreachableError": "Unable to reach the assistant service.",
+  "requestFailed": "Request failed:",
+  "title": "Ask Stock Mind",
+  "selected": "Focused:",
+  "noSelection": "No product selected",
+  "askAbout": "Ask about",
+  "inputPlaceholder": "Type a message..."
 }

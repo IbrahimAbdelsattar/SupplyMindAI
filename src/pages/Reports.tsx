@@ -8,9 +8,10 @@ import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Calendar, TrendingUp, Package, Eye } from 'lucide-react';
+import { FileText, Download, Calendar, TrendingUp, Package, Eye, DollarSign, AlertTriangle } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, getApiBaseUrl, getToken } from '@/lib/api';
 import {
@@ -38,6 +39,27 @@ type ReportItem = {
   status: string;
 };
 
+type InvRec = {
+  product_id: string;
+  product_name: string;
+  currentStock: number;
+  reorderPoint: number;
+  reorderQty: number;
+  safetyStock: number;
+  leadTime: number;
+  costSavings: number;
+  riskLevel: string;
+};
+
+type InvSummary = {
+  totalProducts: number;
+  criticalProducts: number;
+  lowProducts: number;
+  healthyProducts: number;
+  totalUnits: number;
+  activeProducts: number;
+};
+
 const typeColors: Record<string, string> = {
   Forecast: 'bg-primary/10 text-primary',
   Inventory: 'bg-accent/10 text-accent',
@@ -49,6 +71,7 @@ const typeColors: Record<string, string> = {
 const Reports = () => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { formatCurrency } = useCurrency();
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
@@ -62,6 +85,40 @@ const Reports = () => {
     enabled: isAuthenticated,
   });
 
+  const { data: invData } = useQuery({
+    queryKey: ['inventory-list'],
+    queryFn: () => apiFetch<{ summary: InvSummary; items: any[] }>('/inventory'),
+    enabled: isAuthenticated,
+  });
+
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ['inventory-optimize', 100],
+    queryFn: () => apiFetch<InvRec[]>('/inventory/optimize?limit=100'),
+    enabled: isAuthenticated,
+  });
+
+  const totalSavings = recommendations.reduce((sum, r) => sum + r.costSavings, 0);
+  const summary = invData?.summary;
+  const totalProducts = summary?.totalProducts ?? 0;
+  const healthyPct = totalProducts > 0 ? Math.round((summary?.healthyProducts ?? 0) / totalProducts * 100) : 0;
+  const issuesCount = recommendations.filter(r => r.riskLevel === 'high' || r.riskLevel === 'medium').length;
+
+  const buildInventoryCsv = (recs: InvRec[]): string => {
+    const header = ['product_id', 'product_name', 'currentStock', 'reorderPoint', 'reorderQty', 'safetyStock', 'leadTimeDays', 'costSavings', 'riskLevel'];
+    const rows = recs.map(r => [
+      r.product_id,
+      `"${r.product_name}"`,
+      r.currentStock,
+      r.reorderPoint,
+      r.reorderQty,
+      r.safetyStock,
+      r.leadTime,
+      r.costSavings.toFixed(2),
+      r.riskLevel,
+    ].join(','));
+    return [header.join(','), ...rows].join('\n');
+  };
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -69,23 +126,33 @@ const Reports = () => {
   const handlePreview = async (reportId: string, reportTitle: string) => {
     setIsPreviewLoading(true);
     setPreviewTitle(reportTitle);
-    
+
     try {
-      const baseUrl = getApiBaseUrl();
-      const token = getToken();
-      const url = new URL(`${baseUrl}/reports/download`);
-      url.searchParams.set('report_id', reportId);
-      
-      const res = await fetch(url.toString(), {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      const text = await res.text();
-      
-      // Basic CSV parsing
+      let text: string;
+
+      if (reportId === 'r_inventory') {
+        const baseUrl = getApiBaseUrl();
+        const token = getToken();
+        const res = await fetch(`${baseUrl}/inventory/optimize?limit=100`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const data: InvRec[] = await res.json();
+        text = buildInventoryCsv(data);
+      } else {
+        const baseUrl = getApiBaseUrl();
+        const token = getToken();
+        const url = new URL(`${baseUrl}/reports/download`);
+        url.searchParams.set('report_id', reportId);
+        const res = await fetch(url.toString(), {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        text = await res.text();
+      }
+
       const rows = text.split('\n').map(row => {
         return row.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
       }).filter(row => row.length > 0 && row.some(cell => cell !== ''));
-      
+
       if (rows.length > 0) {
         setPreviewHeaders(rows[0]);
         setPreviewRows(rows.slice(1));
@@ -131,8 +198,8 @@ const Reports = () => {
       
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader 
-          title={t('reports:header_title')} 
-          subtitle={t('reports:header_subtitle')} 
+          title={t('reports:title')} 
+          subtitle={t('reports:subtitle')} 
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">

@@ -7,6 +7,7 @@ import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import {
   LineChart,
   Line,
@@ -20,7 +21,27 @@ import {
 import { apiFetch } from '@/lib/api';
 import { useState, useEffect } from 'react';
 
-import { Activity, CheckCircle2, AlertTriangle, RefreshCw, Database, Cpu, Zap } from 'lucide-react';
+import {
+  Activity,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  Database,
+  Cpu,
+  Zap,
+  Bot,
+  BrainCircuit,
+  Eye,
+  ExternalLink,
+  Loader2,
+  Clock,
+  Hash,
+  AlertCircle,
+  Gauge,
+  Sparkles,
+  Shield,
+  CircleDot,
+} from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -56,13 +77,78 @@ type MLOpsMetrics = {
   system: SystemMetrics;
 };
 
+type LangSmithAgent = {
+  name: string;
+  label: string;
+  model: string;
+  status: 'healthy' | 'degraded' | 'idle';
+  calls_last_24h: number;
+  errors_last_24h: number;
+  avg_latency_seconds: number | null;
+  first_seen: string | null;
+  last_seen: string | null;
+};
+
+type LangSmithData = {
+  enabled: boolean;
+  project: string;
+  api_key_configured: boolean;
+  agents: LangSmithAgent[];
+  total_calls: number;
+  errors_last_24h: number;
+  error?: string;
+};
+
+/* ── Agent icon mapping ── */
+const AGENT_ICONS: Record<string, typeof Bot> = {
+  supervisor_agent: BrainCircuit,
+  forecasting_agent: Activity,
+  inventory_agent: Database,
+  rag_agent: Eye,
+  mlops_agent: Cpu,
+  insights_agent: Sparkles,
+  copilot_chat: Bot,
+  rag_query: Eye,
+  inventory_rag_query: Database,
+  forecast_reasoning: Gauge,
+  insights_analyze: Sparkles,
+};
+
+/* ── Status config ── */
+const STATUS_CONFIG = {
+  healthy: {
+    bg: 'bg-success/10',
+    text: 'text-success',
+    border: 'border-success/30',
+    icon: CheckCircle2,
+    dot: 'bg-success',
+  },
+  degraded: {
+    bg: 'bg-destructive/10',
+    text: 'text-destructive',
+    border: 'border-destructive/30',
+    icon: AlertTriangle,
+    dot: 'bg-destructive',
+  },
+  idle: {
+    bg: 'bg-muted',
+    text: 'text-muted-foreground',
+    border: 'border-border',
+    icon: CircleDot,
+    dot: 'bg-muted-foreground',
+  },
+} as const;
+
 const MLOps = () => {
   const { isAuthenticated } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [metricsData, setMetricsData] = useState<MLOpsMetrics | null>(null);
+  const [langsmithData, setLangsmithData] = useState<LangSmithData | null>(null);
+  const [langsmithLoading, setLangsmithLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) return;
+
     const fetchMetrics = async () => {
       try {
         const res = await apiFetch<MLOpsMetrics>('/mlops/metrics');
@@ -71,8 +157,35 @@ const MLOps = () => {
         console.error('Failed to fetch MLOps metrics', e);
       }
     };
+
+    const fetchLangSmith = async () => {
+      setLangsmithLoading(true);
+      try {
+        const res = await apiFetch<LangSmithData>('/mlops/langsmith');
+        setLangsmithData(res);
+      } catch (e) {
+        console.error('Failed to fetch LangSmith data', e);
+        setLangsmithData(null);
+      } finally {
+        setLangsmithLoading(false);
+      }
+    };
+
     void fetchMetrics();
+    void fetchLangSmith();
   }, [isAuthenticated]);
+
+  const handleRefreshLangSmith = async () => {
+    setLangsmithLoading(true);
+    try {
+      const res = await apiFetch<LangSmithData>('/mlops/langsmith');
+      setLangsmithData(res);
+    } catch (e) {
+      console.error('Failed to refresh LangSmith data', e);
+    } finally {
+      setLangsmithLoading(false);
+    }
+  };
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -82,14 +195,16 @@ const MLOps = () => {
     return <div className="p-8">{t('mlops:loading')}</div>;
   }
 
+  const langsmithUrl = `https://smith.langchain.com/o/default/projects/p/${langsmithData?.project ?? 'supplymind-ai'}`;
+
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
-      
+
       <div className="flex-1 flex flex-col min-w-0">
-        <DashboardHeader 
-          title={t('mlops:title')} 
-          subtitle={t('mlops:subtitle')} 
+        <DashboardHeader
+          title={t('mlops:title')}
+          subtitle={t('mlops:subtitle')}
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
@@ -133,11 +248,273 @@ const MLOps = () => {
             ))}
           </div>
 
-          {/* Model Performance Chart */}
+          {/* ═══════════════════════════════════════════════════════════
+              LangSmith AI Agent Tracing Dashboard
+             ═══════════════════════════════════════════════════════════ */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.4 }}
+          >
+            <Card className="border-primary/20 overflow-hidden relative">
+              {/* Decorative gradient */}
+              <div className="absolute -top-20 -right-20 w-60 h-60 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+
+              <CardHeader className="pb-3 sm:pb-5 relative">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <BrainCircuit className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        {t('mlops:langsmith.title')}
+                        {langsmithData?.enabled && (
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success" />
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        {t('mlops:langsmith.description')}
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefreshLangSmith}
+                      disabled={langsmithLoading}
+                      className="h-8 text-xs"
+                    >
+                      <RefreshCw className={cn('w-3.5 h-3.5 mr-1.5', langsmithLoading && 'animate-spin')} />
+                      {t('mlops:langsmith.refresh')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => window.open(langsmithUrl, '_blank')}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                      {t('mlops:langsmith.viewInLangSmith')}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Summary stat bar */}
+                {langsmithData && !langsmithLoading && (
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-muted/40 rounded-xl p-3 text-center border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{t('mlops:langsmith.tracingStatus')}</p>
+                      <p className={cn('text-sm font-bold', langsmithData.enabled ? 'text-success' : 'text-destructive')}>
+                        {langsmithData.enabled ? t('mlops:langsmith.enabled') : t('mlops:langsmith.disabled')}
+                      </p>
+                    </div>
+                    <div className="bg-muted/40 rounded-xl p-3 text-center border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{t('mlops:langsmith.project')}</p>
+                      <p className="text-sm font-bold text-primary truncate">{langsmithData.project}</p>
+                    </div>
+                    <div className="bg-muted/40 rounded-xl p-3 text-center border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{t('mlops:langsmith.totalCalls')}</p>
+                      <p className="text-sm font-bold">
+                        <span className="flex items-center justify-center gap-1">
+                          <Hash className="w-3.5 h-3.5 text-primary" />
+                          {langsmithData.total_calls}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="bg-muted/40 rounded-xl p-3 text-center border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{t('mlops:langsmith.errorsToday')}</p>
+                      <p className={cn(
+                        'text-sm font-bold',
+                        langsmithData.errors_last_24h > 0 ? 'text-destructive' : 'text-success'
+                      )}>
+                        <span className="flex items-center justify-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {langsmithData.errors_last_24h}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardHeader>
+
+              <CardContent className="relative">
+                {langsmithLoading ? (
+                  <div className="flex flex-col items-center justify-center py-14 gap-3">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    <p className="text-sm text-muted-foreground">{t('mlops:langsmith.loading')}</p>
+                  </div>
+                ) : !langsmithData || langsmithData.agents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-14 gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
+                      <Bot className="w-7 h-7 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground max-w-xs text-center">
+                      {langsmithData?.error
+                        ? t('mlops:langsmith.fetchError')
+                        : t('mlops:langsmith.noAgents')}
+                    </p>
+                    {!langsmithData?.api_key_configured && (
+                      <Badge variant="outline" className="text-warning border-warning/40">
+                        {t('mlops:langsmith.notConfigured')}
+                      </Badge>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {langsmithData.agents.map((agent, index) => {
+                      const status = STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.idle;
+                      const StatusIcon = status.icon;
+                      const AgentIcon = AGENT_ICONS[agent.name] ?? Bot;
+
+                      return (
+                        <motion.div
+                          key={agent.name}
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.05 + index * 0.05 }}
+                          className={cn(
+                            'rounded-xl border bg-card p-4 sm:p-5 transition-all duration-200',
+                            'hover:shadow-md hover:shadow-primary/5 hover:-translate-y-0.5',
+                            status.border
+                          )}
+                        >
+                          {/* Top row: icon + name + status */}
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            <div className={cn(
+                              'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+                              status.bg
+                            )}>
+                              <AgentIcon className={cn('w-5 h-5', status.text)} />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-3 mb-2">
+                                <div className="min-w-0">
+                                  <h4 className="font-semibold text-sm sm:text-base truncate">
+                                    {agent.label}
+                                  </h4>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">
+                                    {t('mlops:langsmith.model')}: {agent.model}
+                                  </p>
+                                </div>
+
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'text-[10px] sm:text-xs flex items-center gap-1 flex-shrink-0 w-fit',
+                                    status.text,
+                                    status.border
+                                  )}
+                                >
+                                  <StatusIcon className="w-3 h-3" />
+                                  {t(`mlops:langsmith.status${agent.status.charAt(0).toUpperCase()}${agent.status.slice(1)}`)}
+                                </Badge>
+                              </div>
+
+                              {/* Metrics row */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3">
+                                <div className="bg-muted/30 rounded-lg px-3 py-2">
+                                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <Hash className="w-3 h-3" />
+                                    {t('mlops:langsmith.calls')}
+                                  </p>
+                                  <p className="text-sm font-bold mt-0.5">{agent.calls_last_24h}</p>
+                                </div>
+
+                                <div className="bg-muted/30 rounded-lg px-3 py-2">
+                                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {t('mlops:langsmith.errors')}
+                                  </p>
+                                  <p className={cn(
+                                    'text-sm font-bold mt-0.5',
+                                    agent.errors_last_24h > 0 ? 'text-destructive' : 'text-success'
+                                  )}>
+                                    {agent.errors_last_24h}
+                                  </p>
+                                </div>
+
+                                <div className="bg-muted/30 rounded-lg px-3 py-2">
+                                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <Gauge className="w-3 h-3" />
+                                    {t('mlops:langsmith.avgLatency')}
+                                  </p>
+                                  <p className="text-sm font-bold mt-0.5">
+                                    {agent.avg_latency_seconds != null
+                                      ? t('mlops:langsmith.seconds', { value: agent.avg_latency_seconds.toFixed(2) })
+                                      : t('mlops:langsmith.noLatency')}
+                                  </p>
+                                </div>
+
+                                <div className="bg-muted/30 rounded-lg px-3 py-2">
+                                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {t('mlops:langsmith.lastSeen')}
+                                  </p>
+                                  <p className="text-xs font-medium mt-0.5 truncate">
+                                    {agent.last_seen
+                                      ? new Date(agent.last_seen).toLocaleString(i18n.language, {
+                                          dateStyle: 'short',
+                                          timeStyle: 'short',
+                                        })
+                                      : t('mlops:langsmith.noLatency')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Error rate bar (only if calls > 0) */}
+                              {agent.calls_last_24h > 0 && (
+                                <div className="mt-3">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      <Shield className="w-3 h-3" />
+                                      Success Rate
+                                    </span>
+                                    <span className={cn(
+                                      'text-[10px] font-bold',
+                                      agent.errors_last_24h === 0 ? 'text-success' : 'text-warning'
+                                    )}>
+                                      {Math.round(((agent.calls_last_24h - agent.errors_last_24h) / agent.calls_last_24h) * 100)}%
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
+                                    <motion.div
+                                      initial={{ width: 0 }}
+                                      animate={{
+                                        width: `${Math.round(((agent.calls_last_24h - agent.errors_last_24h) / agent.calls_last_24h) * 100)}%`,
+                                      }}
+                                      transition={{ duration: 0.8, delay: 0.2 + index * 0.05 }}
+                                      className={cn(
+                                        'h-full rounded-full',
+                                        agent.errors_last_24h === 0 ? 'bg-success' : 'bg-warning'
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Model Performance Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
           >
             <Card>
               <CardHeader className="pb-3 sm:pb-6">
@@ -148,7 +525,6 @@ const MLOps = () => {
                 <div className="h-52 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={metricsData.modelAccuracy}>
-
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
@@ -188,7 +564,7 @@ const MLOps = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.5 }}
+              transition={{ duration: 0.4, delay: 0.6 }}
             >
               <Card>
                 <CardHeader className="pb-3 sm:pb-6">

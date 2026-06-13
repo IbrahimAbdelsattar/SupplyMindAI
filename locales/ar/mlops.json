@@ -1,98 +1,70 @@
 {
-  "header": {
-    "title": "مراقبة النماذج وعمليات التعلم الآلي",
-    "subtitle": "أداء النموذج وصحة خط أنابيب البيانات"
-  },
-  "investigation": {
-    "title": "تحري الانحراف",
-    "question": "لخّص انحراف النموذج وتاريخ إعادة التدريب وما إذا كانت تغييرات الدقة الأخيرة تتطلب إجراءً."
-  },
-  "statusCards": {
+  "title": "مراقبة النماذج وعمليات التعلم الآلي",
+  "subtitle": "أداء النموذج وصحة خط أنابيب البيانات",
+  "loading": "جارٍ تحميل مقاييس MLOps...",
+  "driftInvestigation": "تحري الانحراف",
+  "driftQuestion": "لخّص انحراف النموذج وتاريخ إعادة التدريب وما إذا كانت تغييرات الدقة الأخيرة تتطلب إجراءً.",
+  "healthy": "سليم",
+  "active": "نشط",
+  "twoDaysAgo": "منذ يومين",
+  "fortyFiveMs": "٤٥ ملي ثانية",
+  "cards": {
     "modelStatus": "حالة النموذج",
-    "healthy": "سليم",
-    "degraded": "متدهور",
-    "critical": "حرج",
     "lastRetrain": "آخر إعادة تدريب",
     "dataPipeline": "خط أنابيب البيانات",
-    "active": "نشط",
-    "inference": "الاستدلال",
-    "high": "مرتفع",
-    "moderate": "متوسط",
-    "fast": "سريع",
-    "na": "غير متاح",
-    "today": "اليوم",
-    "daysAgo": "منذ {{diff}} أيام",
-    "oneDayAgo": "منذ يوم واحد",
-    "unknown": "غير معروف"
+    "inference": "الاستدلال"
   },
-  "accuracy": {
-    "title": "اتجاه دقة النموذج",
-    "description": "دقة التوقعات الأسبوعية عبر الزمن",
-    "target": "الهدف ٩٠٪",
-    "accuracy": "الدقة"
+  "chart": {
+    "accuracyTitle": "اتجاه دقة النموذج",
+    "accuracyDescription": "دقة التوقعات الأسبوعية عبر الزمن",
+    "accuracySeriesName": "الدقة"
   },
   "drift": {
     "title": "مراقبة انحراف البيانات",
     "description": "استقرار توزيع الميزات (اختبار KS، حد p < 0.05)",
-    "noData": "لا توجد بيانات انحراف متاحة.",
-    "healthy": "سليم",
-    "warning": "تحذير",
-    "drift": "الانحراف: ",
-    "highlySignificant": "عالِ الدلالة",
-    "verySignificant": "شديد الدلالة",
-    "significant": "دال إحصائيًا",
-    "notSignificant": "غير دال إحصائيًا"
+    "driftLabel": "الانحراف: {{value}}",
+    "statusHealthy": "سليم",
+    "statusWarning": "تحذير"
   },
   "retraining": {
     "title": "تاريخ إعادة التدريب",
     "description": "آخر تحديثات النموذج والمحفزات",
-    "empty": "لا يوجد تاريخ إعادة تدريب متاح.",
-    "trigger": "المحفز: ",
-    "success": "نجاح"
+    "triggerLabel": "المحفز: {{trigger}}"
   },
-  "registry": {
-    "title": "سجل النماذج",
-    "description": "إصدارات النماذج النشطة وحالتها الصحية",
-    "retraining": "جارٍ إعادة التدريب...",
-    "triggerRetraining": "بدء إعادة التدريب",
-    "model": "النموذج",
-    "version": "الإصدار",
-    "accuracy": "الدقة",
-    "status": "الحالة",
-    "lastTrained": "آخر تدريب",
-    "demandForecastPipeline": "خط أنابيب توقعات الطلب",
-    "production": "إنتاج",
-    "dash": "\u2014"
-  },
-  "tracing": {
-    "title": "تتبع وكيل الذكاء الاصطناعي",
-    "noData": "مراقبة LangSmith \u2014 لا توجد بيانات متاحة",
-    "project": "مراقبة LangSmith \u2014 المشروع: {{project}}",
-    "totalCalls": "إجمالي الاستدعاءات (٢٤ ساعة): {{count}}",
-    "errors": "الأخطاء: {{count}}",
-    "active": "التتبع نشط",
-    "off": "التتبع متوقف",
-    "agent": "الوكيل",
-    "model": "النموذج",
-    "status": "الحالة",
-    "calls": "الاستدعاءات / ٢٤ ساعة",
-    "errorsHeader": "الأخطاء",
-    "avgLatency": "متوسط زمن الاستجابة",
-    "lastActive": "آخر نشاط",
-    "empty": "لا توجد بيانات تتبع متاحة بعد.",
-    "healthy": "سليم",
-    "degraded": "متدهور",
-    "idle": "خامل",
-    "justNow": "الآن",
-    "minutesAgo": "منذ {{diff}} د",
-    "hoursAgo": "منذ {{diff}} س"
-  },
-  "systemResources": {
+  "resources": {
     "title": "موارد النظام",
     "description": "استخدام البنية التحتية",
     "cpu": "استخدام المعالج",
     "memory": "استخدام الذاكرة",
     "gpu": "استخدام معالج الرسوميات"
   },
-  "loading": "جارٍ تحميل مقاييس MLOps..."
+  "langsmith": {
+    "title": "تتبع وكلاء الذكاء الاصطناعي عبر LangSmith",
+    "description": "مراقبة فورية لجميع نماذج ووكلاء الذكاء الاصطناعي في سلسلة التوريد",
+    "project": "المشروع",
+    "totalCalls": "إجمالي الاستدعاءات (٢٤ ساعة)",
+    "errorsToday": "الأخطاء (٢٤ ساعة)",
+    "tracingStatus": "حالة التتبع",
+    "enabled": "مُفعّل",
+    "disabled": "مُعطّل",
+    "notConfigured": "مفتاح API غير مُهيّأ",
+    "loading": "جارٍ تحميل بيانات التتبع...",
+    "noAgents": "لم يتم تسجيل أي نشاط للوكلاء في آخر ٢٤ ساعة.",
+    "agentName": "الوكيل / النموذج",
+    "model": "النموذج",
+    "status": "الحالة",
+    "calls": "الاستدعاءات",
+    "errors": "الأخطاء",
+    "avgLatency": "متوسط زمن الاستجابة",
+    "lastSeen": "آخر نشاط",
+    "firstSeen": "أول ظهور",
+    "statusHealthy": "سليم",
+    "statusDegraded": "متدهور",
+    "statusIdle": "خامل",
+    "noLatency": "—",
+    "seconds": "{{value}} ثانية",
+    "fetchError": "فشل تحميل بيانات LangSmith",
+    "viewInLangSmith": "فتح في LangSmith",
+    "refresh": "تحديث"
+  }
 }

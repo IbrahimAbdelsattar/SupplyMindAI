@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
@@ -14,7 +14,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Brain, TrendingUp, Calendar, Sun, Tag, Lightbulb, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import {
+  Brain,
+  TrendingUp,
+  Calendar,
+  Sun,
+  Tag,
+  Lightbulb,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  AlertTriangle,
+  Shield,
+  Zap,
+  Target,
+  BarChart3,
+  Send,
+  Bot,
+  User,
+} from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -47,6 +68,271 @@ const defaultFactors = [
   { key: 'other', name: 'Other', weight: 8, icon: Lightbulb, color: 'muted' },
 ];
 
+/* ── Circular SVG ring for factor weights ── */
+function FactorRing({
+  weight,
+  color,
+  animate: doAnimate,
+}: {
+  weight: number;
+  color: string;
+  animate: boolean;
+}) {
+  const r = 22;
+  const circ = 2 * Math.PI * r;
+  const fill = doAnimate ? (weight / 100) * circ : 0;
+
+  const colorMap: Record<string, string> = {
+    primary: 'var(--color-primary, #6366f1)',
+    accent: 'var(--color-accent, #8b5cf6)',
+    success: '#22c55e',
+    warning: '#f59e0b',
+    muted: '#6b7280',
+  };
+
+  return (
+    <svg width={56} height={56} className="mx-auto -rotate-90">
+      <circle cx={28} cy={28} r={r} stroke="currentColor" strokeWidth={4} className="text-border" fill="none" />
+      <circle
+        cx={28}
+        cy={28}
+        r={r}
+        stroke={colorMap[color] ?? colorMap.primary}
+        strokeWidth={4}
+        fill="none"
+        strokeDasharray={circ}
+        strokeDashoffset={circ - fill}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+      />
+    </svg>
+  );
+}
+
+/* ── Single Key Insight Card ── */
+function InsightCard({
+  insight,
+  index,
+}: {
+  insight: InsightItem;
+  index: number;
+}) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+
+  const isUp = insight.direction === 'up';
+  const isDown = insight.direction === 'down';
+  const isHigh = insight.impact === 'high';
+  const isMedium = insight.impact === 'medium';
+
+  const impactConfig = {
+    high: {
+      label: 'High',
+      bg: 'bg-destructive/10',
+      text: 'text-destructive',
+      border: 'border-destructive/20',
+      icon: AlertTriangle,
+    },
+    medium: {
+      label: 'Medium',
+      bg: 'bg-warning/10',
+      text: 'text-warning',
+      border: 'border-warning/20',
+      icon: Zap,
+    },
+    low: {
+      label: 'Low',
+      bg: 'bg-muted',
+      text: 'text-muted-foreground',
+      border: 'border-border',
+      icon: Shield,
+    },
+  } as const;
+
+  const impact = impactConfig[insight.impact as keyof typeof impactConfig] ?? impactConfig.low;
+  const ImpactIcon = impact.icon;
+
+  const directionConfig = isUp
+    ? { bg: 'bg-success/10', text: 'text-success', Icon: ArrowUp }
+    : isDown
+    ? { bg: 'bg-destructive/10', text: 'text-destructive', Icon: ArrowDown }
+    : { bg: 'bg-muted', text: 'text-muted-foreground', Icon: Minus };
+
+  const DirIcon = directionConfig.Icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.1 + index * 0.08 }}
+      className={cn(
+        'rounded-2xl border bg-card overflow-hidden transition-all duration-300',
+        'hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5',
+        isHigh ? 'border-destructive/20' : isMedium ? 'border-warning/15' : 'border-border'
+      )}
+    >
+      {/* Coloured top accent bar */}
+      <div
+        className={cn(
+          'h-1 w-full',
+          isHigh ? 'bg-destructive' : isMedium ? 'bg-warning' : 'bg-muted-foreground/30'
+        )}
+      />
+
+      <div className="p-4 sm:p-5">
+        {/* Header row */}
+        <div className="flex items-start gap-3 sm:gap-4">
+          {/* Direction badge */}
+          <div
+            className={cn(
+              'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+              directionConfig.bg
+            )}
+          >
+            <DirIcon className={cn('w-5 h-5', directionConfig.text)} />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+              <h4 className="font-semibold text-sm sm:text-base leading-snug">{insight.title}</h4>
+
+              {/* Badges */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-semibold border',
+                    impact.bg,
+                    impact.text,
+                    impact.border
+                  )}
+                >
+                  <ImpactIcon className="w-3 h-3" />
+                  {insight.impact.charAt(0).toUpperCase() + insight.impact.slice(1)} Impact
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-2">
+              {insight.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Confidence + factor row */}
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-border">
+          {/* Confidence bar */}
+          <div className="flex-1 max-w-[220px]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Target className="w-3 h-3" />
+                {t('insights:insights.confidence', 'Confidence')}
+              </span>
+              <span
+                className={cn(
+                  'text-[10px] font-bold',
+                  insight.confidence >= 80
+                    ? 'text-success'
+                    : insight.confidence >= 60
+                    ? 'text-warning'
+                    : 'text-destructive'
+                )}
+              >
+                {insight.confidence}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${insight.confidence}%` }}
+                transition={{ duration: 0.8, delay: 0.3 + index * 0.08 }}
+                className={cn(
+                  'h-full rounded-full',
+                  insight.confidence >= 80
+                    ? 'bg-success'
+                    : insight.confidence >= 60
+                    ? 'bg-warning'
+                    : 'bg-destructive'
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Factor chip + expand */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground">{t('insights:insights.factorLabel')}</span>
+            <span className="px-2.5 py-1 text-[10px] sm:text-xs rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
+              {insight.factor}
+            </span>
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="ml-1 p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+              aria-label={expanded ? 'Collapse' : 'Expand'}
+            >
+              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded detail panel */}
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 pt-3 border-t border-dashed border-border">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="bg-muted/50 rounded-lg p-2">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Direction</p>
+                    <p
+                      className={cn(
+                        'text-xs font-semibold capitalize',
+                        isUp ? 'text-success' : isDown ? 'text-destructive' : 'text-muted-foreground'
+                      )}
+                    >
+                      {insight.direction}
+                    </p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-2">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Impact Level</p>
+                    <p className={cn('text-xs font-semibold capitalize', impact.text)}>
+                      {insight.impact}
+                    </p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-2">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Confidence</p>
+                    <p
+                      className={cn(
+                        'text-xs font-semibold',
+                        insight.confidence >= 80
+                          ? 'text-success'
+                          : insight.confidence >= 60
+                          ? 'text-warning'
+                          : 'text-destructive'
+                      )}
+                    >
+                      {insight.confidence}%
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                  {insight.description}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   Main Page
+════════════════════════════════════════════════ */
 const AIInsights = () => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
@@ -54,6 +340,8 @@ const AIInsights = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [ringsVisible, setRingsVisible] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: products } = useQuery({
     queryKey: ['products'],
@@ -69,7 +357,18 @@ const AIInsights = () => {
         method: 'POST',
         body: JSON.stringify({ product_id: productId }),
       }),
+    onSuccess: () => setRingsVisible(true),
   });
+
+  // Trigger ring animation on mount too
+  useEffect(() => {
+    const t = setTimeout(() => setRingsVisible(true), 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isChatLoading]);
 
   const insights = insightsMutation.data?.insights ?? [];
   const summary = insightsMutation.data?.executive_summary;
@@ -107,14 +406,24 @@ const AIInsights = () => {
     return <Navigate to="/login" replace />;
   }
 
+  /* ─── Insight summary stats ─── */
+  const highCount = insights.filter((i) => i.impact === 'high').length;
+  const mediumCount = insights.filter((i) => i.impact === 'medium').length;
+  const lowCount = insights.filter((i) => i.impact === 'low').length;
+  const avgConfidence =
+    insights.length > 0
+      ? Math.round(insights.reduce((a, b) => a + b.confidence, 0) / insights.length)
+      : 0;
+
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <DashboardHeader title={t('insights:header.title')} subtitle={t('insights:header.subtitle')} />
+        <DashboardHeader title={t('insights:title')} subtitle={t('insights:subtitle')} />
 
-        <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto">
+          {/* ── Cached AI Summary Card ── */}
           {productId && (
             <AISummaryCard
               title={t('insights:summaryCard.title')}
@@ -124,6 +433,7 @@ const AIInsights = () => {
             />
           )}
 
+          {/* ── Product selector + generate button ── */}
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <Select value={productId} onValueChange={setSelectedProduct}>
               <SelectTrigger className="w-full sm:w-64">
@@ -140,29 +450,47 @@ const AIInsights = () => {
             <Button
               onClick={() => insightsMutation.mutate()}
               disabled={insightsMutation.isPending}
+              className="flex items-center gap-2"
             >
+              <Sparkles className="w-4 h-4" />
               {insightsMutation.isPending ? t('insights:actions.generating') : t('insights:actions.generate')}
             </Button>
           </div>
 
+          {/* ── Executive Summary ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardContent className="pt-4 sm:pt-6">
+            <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden relative">
+              {/* Decorative glow */}
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+              <CardContent className="pt-5 sm:pt-6">
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold mb-1 sm:mb-2">{t('insights:summary.title')}</h3>
-                    <p className="text-xs sm:text-base text-muted-foreground leading-relaxed">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold mb-2">{t('insights:summary.title')}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                       {summary || t('insights:summary.placeholder')}
                     </p>
+
+                    {/* Recommendations grid */}
                     {recommendations.length > 0 && (
-                      <ul className="mt-3 list-disc list-inside text-xs sm:text-sm text-muted-foreground space-y-1">
-                        {recommendations.map((rec) => (
-                          <li key={rec}>{rec}</li>
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {recommendations.map((rec, i) => (
+                          <motion.div
+                            key={rec}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 + i * 0.06 }}
+                            className="flex items-start gap-2 bg-primary/5 rounded-lg px-3 py-2 border border-primary/10"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                              {i + 1}
+                            </span>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{rec}</p>
+                          </motion.div>
                         ))}
-                      </ul>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -170,38 +498,44 @@ const AIInsights = () => {
             </Card>
           </motion.div>
 
+          {/* ── Demand Factor Weights (ring charts) ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
           >
             <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">{t('insights:factors.title')}</CardTitle>
+              <CardHeader className="pb-3 sm:pb-5">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <CardTitle className="text-base sm:text-lg">{t('insights:factors.title')}</CardTitle>
+                </div>
                 <CardDescription className="text-xs sm:text-sm">
                   {t('insights:factors.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
                   {defaultFactors.map((factor, index) => (
                     <motion.div
                       key={factor.name}
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={{ opacity: 0, scale: 0.85 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="text-center p-3 sm:p-4 rounded-xl border border-border hover:border-primary/30 transition-colors"
+                      transition={{ duration: 0.3, delay: index * 0.08 }}
+                      className="flex flex-col items-center text-center p-3 sm:p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/30 transition-all duration-200 cursor-default"
                     >
-                      <div
-                        className={cn(
-                          'w-10 h-10 sm:w-12 sm:h-12 rounded-xl mx-auto mb-2 sm:mb-3 flex items-center justify-center',
-                          `bg-${factor.color}/10`
-                        )}
-                      >
-                        <factor.icon className={cn('w-5 h-5 sm:w-6 sm:h-6', `text-${factor.color}`)} />
+                      <div className="relative mb-2">
+                        <FactorRing weight={factor.weight} color={factor.color} animate={ringsVisible} />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <factor.icon
+                            className={cn('w-4 h-4', `text-${factor.color}`)}
+                          />
+                        </div>
                       </div>
-                      <p className="text-lg sm:text-2xl font-bold gradient-text">{factor.weight}%</p>
-                      <p className="text-[10px] sm:text-sm text-muted-foreground">{t(`insights:factors.${factor.key}`)}</p>
+                      <p className="text-base sm:text-xl font-bold gradient-text">{factor.weight}%</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">
+                        {t(`insights:factors.${factor.key}`, factor.name)}
+                      </p>
                     </motion.div>
                   ))}
                 </div>
@@ -209,113 +543,132 @@ const AIInsights = () => {
             </Card>
           </motion.div>
 
+          {/* ── Key Insights (power section) ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
           >
             <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">{t('insights:insights.title')}</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  {t('insights:insights.description')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4">
-                {insights.length === 0 && !insightsMutation.isPending && (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    {t('insights:insights.empty')}
-                  </p>
-                )}
-                {insights.map((insight, index) => (
-                  <motion.div
-                    key={`${insight.title}-${index}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
-                    className="p-3 sm:p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-                      <div
-                        className={cn(
-                          'w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-                          insight.direction === 'up'
-                            ? 'bg-success/10'
-                            : insight.direction === 'down'
-                              ? 'bg-destructive/10'
-                              : 'bg-muted'
-                        )}
-                      >
-                        {insight.direction === 'up' ? (
-                          <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
-                        ) : insight.direction === 'down' ? (
-                          <ArrowDown className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
-                        ) : (
-                          <Minus className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4 mb-1">
-                          <h4 className="font-semibold text-sm sm:text-base">{insight.title}</h4>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span
-                              className={cn(
-                                'inline-block px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-medium',
-                                insight.impact === 'high'
-                                  ? 'bg-destructive/10 text-destructive'
-                                  : insight.impact === 'medium'
-                                    ? 'bg-warning/10 text-warning'
-                                    : 'bg-muted text-muted-foreground'
-                              )}
-                            >
-                              {insight.impact}
-                            </span>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground">
-                              {insight.confidence}%
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                          {insight.description}
-                        </p>
-                      </div>
+              <CardHeader className="pb-3 sm:pb-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Lightbulb className="w-4 h-4 text-primary" />
+                      <CardTitle className="text-base sm:text-lg">{t('insights:insights.title')}</CardTitle>
                     </div>
-                    <div className="flex items-center gap-2 pt-3 border-t border-border ml-11 sm:ml-14 rtl:mr-11 rtl:sm:mr-14 rtl:ml-0">
-                      <span className="text-[10px] sm:text-xs text-muted-foreground">{t('insights:insights.factorLabel')}</span>
-                      <span className="px-2 py-0.5 text-[10px] sm:text-xs rounded-full bg-secondary text-secondary-foreground">
-                        {insight.factor}
+                    <CardDescription className="text-xs sm:text-sm">
+                      {t('insights:insights.description')}
+                    </CardDescription>
+                  </div>
+
+                  {/* Stats bar — visible when there are insights */}
+                  {insights.length > 0 && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {highCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive border border-destructive/20">
+                          <AlertTriangle className="w-3 h-3" />
+                          {highCount} High
+                        </span>
+                      )}
+                      {mediumCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20">
+                          <Zap className="w-3 h-3" />
+                          {mediumCount} Med
+                        </span>
+                      )}
+                      {lowCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                          <Shield className="w-3 h-3" />
+                          {lowCount} Low
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                        <Target className="w-3 h-3" />
+                        {avgConfidence}% avg
                       </span>
                     </div>
-                  </motion.div>
+                  )}
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3 sm:space-y-4">
+                {insights.length === 0 && !insightsMutation.isPending && (
+                  <div className="flex flex-col items-center justify-center py-14 gap-4 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
+                      <Lightbulb className="w-7 h-7 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-1">No insights generated yet</p>
+                      <p className="text-xs text-muted-foreground max-w-xs">
+                        {t('insights:insights.empty')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {insightsMutation.isPending && (
+                  <div className="flex flex-col items-center justify-center py-14 gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
+                      <Brain className="w-6 h-6 text-primary" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{t('insights:actions.generating')}</p>
+                  </div>
+                )}
+
+                {insights.map((insight, index) => (
+                  <InsightCard key={`${insight.title}-${index}`} insight={insight} index={index} />
                 ))}
               </CardContent>
             </Card>
           </motion.div>
 
+          {/* ── Strategic Insights Chat ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.3 }}
           >
             <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">{t('insights:chat.title')}</CardTitle>
+              <CardHeader className="pb-3 sm:pb-5">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <Bot className="w-4 h-4 text-primary" />
+                  <CardTitle className="text-base sm:text-lg">{t('insights:chat.title')}</CardTitle>
+                </div>
                 <CardDescription className="text-xs sm:text-sm">
                   {t('insights:chat.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col h-80 space-y-4">
-                  <div className="flex-1 overflow-y-auto space-y-4 border rounded-md p-4 bg-muted/20">
+                <div className="flex flex-col h-80 space-y-3">
+                  {/* Message area */}
+                  <div className="flex-1 overflow-y-auto space-y-3 rounded-xl border border-border bg-muted/20 p-4">
                     {chatMessages.length === 0 && (
-                      <div className="text-sm text-muted-foreground text-center mt-10">
-                        {t('insights:chat.placeholder')}
+                      <div className="flex flex-col items-center justify-center h-full text-center gap-2">
+                        <Bot className="w-8 h-8 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground max-w-xs">
+                          {t('insights:chat.placeholder')}
+                        </p>
                       </div>
                     )}
+
                     {chatMessages.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div
+                        key={i}
+                        className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}
+                      >
+                        {msg.role === 'assistant' && (
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Bot className="w-3.5 h-3.5 text-primary" />
+                          </div>
+                        )}
                         <div
-                          className={`max-w-[80%] rounded-lg p-3 text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                          className={cn(
+                            'max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm',
+                            msg.role === 'user'
+                              ? 'bg-primary text-primary-foreground rounded-br-sm'
+                              : 'bg-card border border-border rounded-bl-sm'
+                          )}
                         >
                           {msg.role === 'user' ? (
                             msg.content
@@ -323,28 +676,48 @@ const AIInsights = () => {
                             <FormattedMessage content={msg.content} />
                           )}
                         </div>
+                        {msg.role === 'user' && (
+                          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <User className="w-3.5 h-3.5 text-primary-foreground" />
+                          </div>
+                        )}
                       </div>
                     ))}
+
                     {isChatLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted rounded-lg p-3 text-sm animate-pulse">{t('insights:chat.analyzing')}</div>
+                      <div className="flex gap-2 justify-start">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Bot className="w-3.5 h-3.5 text-primary animate-pulse" />
+                        </div>
+                        <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
+                          <div className="flex gap-1 items-center">
+                            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0ms]" />
+                            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:150ms]" />
+                            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:300ms]" />
+                          </div>
+                        </div>
                       </div>
                     )}
+
+                    <div ref={chatEndRef} />
                   </div>
+
+                  {/* Input row */}
                   <form onSubmit={handleChatSubmit} className="flex gap-2">
                     <input
                       type="text"
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       placeholder={t('insights:chat.inputPlaceholder')}
-                      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                      className="flex-1 rounded-xl border border-input bg-background px-4 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
                       disabled={isChatLoading}
                     />
                     <button
                       type="submit"
                       disabled={isChatLoading || !chatInput.trim()}
-                      className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 disabled:opacity-50"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 disabled:opacity-50 transition-all"
                     >
+                      <Send className="w-3.5 h-3.5" />
                       {t('insights:chat.send')}
                     </button>
                   </form>
