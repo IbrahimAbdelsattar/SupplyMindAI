@@ -192,25 +192,27 @@ def get_db() -> Session:
 
 def seed_users() -> None:
     from passlib.context import CryptContext
-    from backend.knowledge.auth import AUTHORIZED_EMAILS
     import uuid
     from datetime import datetime, timezone
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
+    default_users = [
+        {"email": "admin@supplymind.ai", "password": "Admin@123!", "role": "admin"},
+        {"email": "demo@supplymind.ai", "password": "demo", "role": "manager"}
+    ]
+    
     with SessionLocal() as db:
-        if not AUTHORIZED_EMAILS:
-            return
-            
-        for email in AUTHORIZED_EMAILS:
+        for user_data in default_users:
+            email = user_data["email"]
             existing = db.query(User).filter(User.email == email).first()
             if not existing:
                 user = User(
                     id=str(uuid.uuid4()),
                     name=email.split("@")[0],
                     email=email,
-                    password_hash=pwd_context.hash("Admin@123!"),
-                    role="admin",
+                    password_hash=pwd_context.hash(user_data["password"]),
+                    role=user_data["role"],
                     is_active=True,
                     created_at=datetime.now(timezone.utc),
                     updated_at=datetime.now(timezone.utc)
