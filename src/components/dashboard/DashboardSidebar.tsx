@@ -14,6 +14,7 @@ import {
   FileText,
   Settings,
   Activity,
+  Shield,
   BarChart3,
   Sun,
   Moon,
@@ -33,6 +34,7 @@ const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: s
   { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
   { icon: FileText, labelKey: 'common:nav.reports', path: '/reports' },
   { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops' },
+  { icon: Shield, labelKey: 'common:nav.security', path: '/security' },
   { icon: Settings, labelKey: 'common:nav.settings', path: '/settings' },
 ];
 
@@ -156,6 +158,7 @@ const SidebarContent = ({
 };
 
 export const DashboardSidebar = () => {
+  const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchApi, getToken, setToken } from "@/lib/api";
+import { fetchApi, getApiBaseUrl, getToken, setToken } from "@/lib/api";
 
 describe("API authentication handling", () => {
   afterEach(() => {
@@ -20,7 +20,7 @@ describe("API authentication handling", () => {
     await fetchApi("/settings");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/v1/settings",
+      `${getApiBaseUrl()}/settings`,
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
       }),

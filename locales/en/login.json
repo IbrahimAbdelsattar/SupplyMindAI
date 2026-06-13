@@ -30,5 +30,7 @@
   "accountCreated": "Account created",
   "nowSignedIn": "You are now signed in.",
   "failedToRegister": "Failed to create account. Please try again.",
-  "backToHome": "Back to Home"
+  "backToHome": "Back to Home",
+  "authorizedPortalUsers": "Authorized Portal Users",
+  "clickToAutofill": "Click to Autofill"
 }

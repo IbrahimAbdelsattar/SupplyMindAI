@@ -12,7 +12,8 @@
     "reports": "Reports",
     "mlops": "MLOps",
     "settings": "Settings",
-    "navigation": "Navigation"
+    "navigation": "Navigation",
+    "security": "Security"
   },
   "theme": {
     "light": "Light Mode",

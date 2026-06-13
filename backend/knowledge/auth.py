@@ -39,6 +39,9 @@ ACCESS_TOKEN_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 REFRESH_TOKEN_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 PASSWORD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+env_emails = os.getenv("AUTHORIZED_EMAILS", "").strip()
+AUTHORIZED_EMAILS = {email.strip().lower() for email in env_emails.split(",") if email.strip()}
+
 
 class AuthUser(BaseModel):
     id: str
@@ -143,32 +146,16 @@ def _decode(token: str, expected_type: str) -> dict[str, Any]:
 async def signup_with_email(
     email: str, password: str, metadata: dict[str, Any] | None = None
 ) -> AuthResponse:
-    email = email.strip().lower()
-    if len(password) < 8:
-        raise ValueError("Password must be at least 8 characters")
-    with SessionLocal() as db:
-        if db.scalar(select(User).where(User.email == email)):
-            raise ValueError("An account with this email already exists")
-        now = _now()
-        user = User(
-            id=str(uuid.uuid4()),
-            name=str((metadata or {}).get("name") or email.split("@")[0]),
-            email=email,
-            password_hash=PASSWORD_CONTEXT.hash(password),
-            role="analyst",
-            is_active=True,
-            created_at=now,
-            updated_at=now,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return _auth_response(user)
+    raise ValueError("Registration is disabled. Only pre-authorized accounts are permitted.")
 
 
 async def signin_with_email(email: str, password: str) -> AuthResponse:
+    email_clean = email.strip().lower()
+    if AUTHORIZED_EMAILS and email_clean not in AUTHORIZED_EMAILS:
+        raise ValueError("Unauthorized email address. Only registered team members can access this portal.")
+
     with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.email == email.strip().lower()))
+        user = db.scalar(select(User).where(User.email == email_clean))
         if not user or not user.is_active or not PASSWORD_CONTEXT.verify(password, user.password_hash):
             raise ValueError("Invalid email or password")
         return _auth_response(user)

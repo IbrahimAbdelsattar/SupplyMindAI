@@ -432,89 +432,16 @@ app.add_middleware(
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
-# Note: JWT auth routes are defined directly below — /api/v1/auth/login, /register, /me, etc.
-# Authentication routes are mounted below.
+# -----------------------------------------------------------------------------
+# Guardrails Middleware + shared monitor
+# -----------------------------------------------------------------------------
+from backend.guardrails import GuardrailsConfig, GuardrailMonitor
+from backend.guardrails.middleware import GuardrailsMiddleware
 
-# Mount local storage router
-try:
-    from backend.routers.storage import router as storage_router
-    app.include_router(storage_router)
-    logger.info("Storage router mounted")
-except Exception as exc:
-    logger.warning("Storage router not loaded: %s", exc)
-
-# Mount knowledge / RAG / copilot router
-try:
-    from backend.routers.knowledge import router as knowledge_router
-    app.include_router(knowledge_router, prefix="/api/v1")
-    logger.info("Knowledge router mounted at /api/v1")
-except Exception as exc:
-    logger.warning("Knowledge router not loaded: %s", exc)
-
-# Mount forecast intelligence router
-try:
-    from backend.routers.forecast_intelligence import router as fi_router
-    app.include_router(fi_router)
-    logger.info("Forecast intelligence router mounted")
-except Exception as exc:
-    logger.warning("Forecast intelligence router not loaded: %s", exc)
-
-# Mount forecast insights router
-try:
-    from backend.routers.forecast_insights import router as fi_insights_router
-    app.include_router(fi_insights_router)
-    logger.info("Forecast insights router mounted")
-except Exception as exc:
-    logger.warning("Forecast insights router not loaded: %s", exc)
-
-@app.get("/")
-def read_root():
-    return {"status": "ok", "message": "SupplyMindAI API is running"}
-
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    duration = time.time() - start_time
-    logger.info(
-        "Request: %s %s | Status: %s | Duration: %.4fs",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration
-    )
-    return response
-
-
-
-@app.get("/api/v1/health")
-def health() -> dict[str, Any]:
-    data_ok = all((DATA_DIR / name).exists() for name in ["products.csv", "sales_daily.csv", "inventory.csv"])
-    try:
-        from backend.knowledge.client import is_knowledge_available
-        from backend.knowledge.config import get_knowledge_settings
-
-        k_settings = get_knowledge_settings()
-        knowledge_ok = is_knowledge_available()
-    except Exception:
-        k_settings = None
-        knowledge_ok = False
-
-    return {
-        "status": "ok",
-        "time": _utc_now().isoformat(),
-        "components": {
-            "data_csv": data_ok,
-            "ml_model": ML_MODEL is not None,
-            "ml_trained": bool(ML_MODEL and getattr(ML_MODEL, "is_trained_model_loaded", False)),
-            "rag_service": RAG_SERVICE is not None,
-            "rag_loaded": bool(RAG_SERVICE and getattr(RAG_SERVICE, "is_initialized", True)),
-            "openrouter_key": bool(os.getenv("CHATBOT_API_KEY") or os.getenv("LLM_REASONING_API_KEY") or os.getenv("RAG_API_KEY")),
-            "knowledge_configured": bool(k_settings and k_settings.is_configured),
-            "knowledge_connected": knowledge_ok,
-            "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes", "on"},
-        },
+guardrail_monitor = GuardrailMonitor(GuardrailsConfig())
+app.add_middleware(GuardrailsMiddleware, monitor=guardrail_monitor)
+app.state.guardrail_monitor = guardrail_monitor
+# -----------------------------------------------------------------------------
 
 # Note: JWT auth routes are defined directly below — /api/v1/auth/login, /register, /me, etc.
 # Authentication routes are mounted below.
@@ -550,6 +477,22 @@ try:
     logger.info("Forecast insights router mounted")
 except Exception as exc:
     logger.warning("Forecast insights router not loaded: %s", exc)
+
+# Mount auth router
+try:
+    from backend.routers.auth import router as auth_router
+    app.include_router(auth_router)
+    logger.info("Auth router mounted")
+except Exception as exc:
+    logger.warning("Auth router not loaded: %s", exc)
+
+# Mount security router
+try:
+    from backend.routers.security import router as security_router
+    app.include_router(security_router)
+    logger.info("Security router mounted at /api/v1/security")
+except Exception as exc:
+    logger.warning("Security router not loaded: %s", exc)
 
 @app.get("/")
 def read_root():
@@ -604,12 +547,32 @@ def health() -> dict[str, Any]:
 
 @app.get("/api/v1/debug/model")
 def debug_model(user: User = Depends(_require_roles("admin"))) -> dict[str, Any]:
-    logger.warning("Auth router not loaded: %s", exc)
+    from backend.llm.client import get_llm_info
+    return get_llm_info()
 
 
-# -----------------------------------------------------------------------------
-# Data
-# -----------------------------------------------------------------------------
+@app.on_event("startup")
+def _startup() -> None:
+    global ML_MODEL, RAG_SERVICE, FORECAST_INTELLIGENCE
+
+    from backend.bootstrap import init_ml_model, init_rag_service, load_environment
+
+    load_environment()
+    create_tables()
+
+    from backend.db import seed_users
+    seed_users()
+
+    ML_MODEL = init_ml_model(STORE)
+    RAG_SERVICE = init_rag_service()
+
+    # Initialize forecast intelligence service
+    from pathlib import Path
+    from backend.services.forecast_intelligence_service import ForecastIntelligenceService
+
+    csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "Modeling" / "future_forecast.csv")))
+    FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
+
 @app.get("/api/v1/data/products")
 def list_products(user: User = Depends(_get_current_user)) -> list[dict[str, Any]]:
     df = STORE.products()

@@ -191,45 +191,29 @@ def get_db() -> Session:
 
 
 def seed_users() -> None:
-    from sqlalchemy import select
     from passlib.context import CryptContext
+    from backend.knowledge.auth import AUTHORIZED_EMAILS
     import uuid
     from datetime import datetime, timezone
 
-    PASSWORD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    default_password_hash = PASSWORD_CONTEXT.hash("supplymind123")
-    demo_password_hash = PASSWORD_CONTEXT.hash("demopassword123")
-
-    authorized_users = [
-        {"name": "Ibrahim Abdelsttar", "email": "ibrahim.abdelsattar@supplymind.ai", "role": "admin", "pwd": default_password_hash},
-        {"name": "Ibrahim Abdelsttar", "email": "ibrahim.abdelsttar@supplymind.ai", "role": "admin", "pwd": default_password_hash},
-        {"name": "Kenzi Walid", "email": "kenzi.walid@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Kenzi Walid", "email": "kenzi.hosny@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Rahma Shaaban", "email": "rahma.shaaban@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Karim Ayman", "email": "karim.ayman@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Karim Ayman", "email": "karim.deif@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Ali El Shaarawy", "email": "ali.elshaarawy@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Ali El Shaarawy", "email": "ali.shaarawy@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Ali Ehab", "email": "ali.ehab@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Ali Ehab", "email": "ali.abdelghany@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
-        {"name": "Demo User", "email": "demo@supplymind.ai", "role": "analyst", "pwd": demo_password_hash},
-    ]
-
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    
     with SessionLocal() as db:
-        for u in authorized_users:
-            email = u["email"].lower().strip()
-            existing = db.scalar(select(User).where(User.email == email))
+        if not AUTHORIZED_EMAILS:
+            return
+            
+        for email in AUTHORIZED_EMAILS:
+            existing = db.query(User).filter(User.email == email).first()
             if not existing:
-                now = datetime.now(timezone.utc)
                 user = User(
                     id=str(uuid.uuid4()),
-                    name=u["name"],
+                    name=email.split("@")[0],
                     email=email,
-                    password_hash=u["pwd"],
-                    role=u["role"],
+                    password_hash=pwd_context.hash("Admin@123!"),
+                    role="admin",
                     is_active=True,
-                    created_at=now,
-                    updated_at=now,
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 db.add(user)
         db.commit()

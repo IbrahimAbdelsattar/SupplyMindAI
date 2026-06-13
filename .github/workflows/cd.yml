@@ -116,6 +116,7 @@ jobs:
           REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+          AUTHORIZED_EMAILS=${{ vars.AUTHORIZED_EMAILS }}
           ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
           ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}
           OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}

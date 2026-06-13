@@ -12,7 +12,8 @@
     "reports": "التقارير",
     "mlops": "مراقبة النماذج",
     "settings": "الإعدادات",
-    "navigation": "التنقل"
+    "navigation": "التنقل",
+    "security": "الأمان"
   },
   "theme": {
     "light": "الوضع النهاري",

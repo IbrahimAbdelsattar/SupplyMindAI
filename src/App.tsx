@@ -14,6 +14,7 @@ import Inventory from "./pages/Inventory";
 import AIInsights from "./pages/AIInsights";
 import Reports from "./pages/Reports";
 import MLOps from "./pages/MLOps";
+import Security from "./pages/Security";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -56,6 +57,7 @@ const AppRoutes = () => (
     <Route path="/insights" element={<ProtectedRoute><AIInsights /></ProtectedRoute>} />
     <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
     <Route path="/mlops" element={<ProtectedRoute><MLOps /></ProtectedRoute>} />
+    <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
     <Route path="*" element={<NotFound />} />

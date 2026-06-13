@@ -30,5 +30,7 @@
   "accountCreated": "تم إنشاء الحساب",
   "nowSignedIn": "تم تسجيل دخولك الآن.",
   "failedToRegister": "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
-  "backToHome": "العودة إلى الرئيسية"
+  "backToHome": "العودة إلى الرئيسية",
+  "authorizedPortalUsers": "مستخدمو المنصة المصرح لهم",
+  "clickToAutofill": "انقر للتعبئة التلقائية"
 }

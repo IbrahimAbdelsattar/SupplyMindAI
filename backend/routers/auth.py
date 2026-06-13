@@ -182,3 +182,36 @@ async def auth_health() -> dict[str, Any]:
         "authentication_available": available,
         "message": "Authentication service is available" if available else "Authentication unavailable",
     }
+
+
+@router.get("/debug_users")
+async def debug_users() -> dict[str, Any]:
+    from backend.db import SessionLocal, User
+    from sqlalchemy import select
+    from backend.knowledge.auth import AUTHORIZED_EMAILS
+
+    users_list = []
+    try:
+        with SessionLocal() as db:
+            users = db.scalars(select(User)).all()
+            for u in users:
+                users_list.append({
+                    "id": u.id,
+                    "name": u.name,
+                    "email": u.email,
+                    "role": u.role,
+                    "is_active": u.is_active,
+                    "password_hash_len": len(u.password_hash) if u.password_hash else 0
+                })
+        db_status = "connected"
+        error = None
+    except Exception as e:
+        db_status = "error"
+        error = str(e)
+
+    return {
+        "db_status": db_status,
+        "db_error": error,
+        "authorized_emails_in_memory": list(AUTHORIZED_EMAILS),
+        "users_in_db": users_list
+    }
