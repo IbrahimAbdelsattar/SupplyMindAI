@@ -6,16 +6,34 @@ import os
 import uuid
 import hashlib
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
+from dotenv import load_dotenv
 
 from backend.db import AuthSession, SessionLocal, User
 
-JWT_SECRET = os.getenv("JWT_SECRET", "development-only-change-me")
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
+JWT_SECRET = os.getenv("JWT_SECRET", "").strip()
+INSECURE_JWT_SECRETS = {
+    "",
+    "development-only-change-me",
+    "change-me",
+    "changeme",
+    "replace-with-a-random-secret",
+    "your-jwt-secret",
+}
+if ENVIRONMENT == "production" and (JWT_SECRET.lower() in INSECURE_JWT_SECRETS or len(JWT_SECRET) < 32):
+    raise RuntimeError("JWT_SECRET must be a unique secret of at least 32 characters in production")
+if not JWT_SECRET:
+    JWT_SECRET = "development-only-change-me"
+
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 REFRESH_TOKEN_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
@@ -25,8 +43,8 @@ PASSWORD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class AuthUser(BaseModel):
     id: str
     email: str
-    user_metadata: dict[str, Any] = {}
-    app_metadata: dict[str, Any] = {}
+    user_metadata: dict[str, Any] = Field(default_factory=dict)
+    app_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str
     updated_at: str
     last_sign_in_at: Optional[str] = None

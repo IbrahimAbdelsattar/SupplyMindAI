@@ -11,6 +11,13 @@ interface CurrencyContextType {
   currencySymbol: string;
 }
 
+interface StoredSettings {
+  currency?: string;
+  display?: {
+    currency?: string;
+  };
+}
+
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export const useCurrency = () => {
@@ -40,7 +47,7 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const res = await apiFetch<{ settings: any }>('/settings');
+        const res = await apiFetch<{ settings: StoredSettings }>('/settings');
         const s = res?.settings || {};
         if (s.display && typeof s.display.currency === 'string') {
           setCurrencyState(s.display.currency as Currency);

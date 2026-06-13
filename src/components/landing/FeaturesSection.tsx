@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
 import { Database, Brain, Settings2, LineChart } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const steps = [
   {
     icon: Database,
-    title: 'Data Collection',
-    description: 'Real-time ingestion of sales, inventory, and market data from multiple sources.',
+    titleKey: 'features.dataCollection',
+    descKey: 'features.dataCollectionDesc',
     colorClass: 'text-primary',
     bgClass: 'bg-primary/10 border-primary/20',
     shadowClass: 'hover:shadow-primary/15',
@@ -13,8 +14,8 @@ const steps = [
   },
   {
     icon: Brain,
-    title: 'AI Forecasting',
-    description: 'Deep learning models analyze patterns and predict future demand with 95%+ accuracy.',
+    titleKey: 'features.aiForecasting',
+    descKey: 'features.aiForecastingDesc',
     colorClass: 'text-accent',
     bgClass: 'bg-accent/10 border-accent/20',
     shadowClass: 'hover:shadow-accent/15',
@@ -22,8 +23,8 @@ const steps = [
   },
   {
     icon: Settings2,
-    title: 'Optimization Engine',
-    description: 'Mathematical optimization algorithms determine optimal inventory levels.',
+    titleKey: 'features.optimizationEngine',
+    descKey: 'features.optimizationEngineDesc',
     colorClass: 'text-success',
     bgClass: 'bg-success/10 border-success/20',
     shadowClass: 'hover:shadow-success/15',
@@ -31,8 +32,8 @@ const steps = [
   },
   {
     icon: LineChart,
-    title: 'Business Decisions',
-    description: 'Actionable insights and automated recommendations for smarter decisions.',
+    titleKey: 'features.businessDecisions',
+    descKey: 'features.businessDecisionsDesc',
     colorClass: 'text-warning',
     bgClass: 'bg-warning/10 border-warning/20',
     shadowClass: 'hover:shadow-warning/15',
@@ -54,6 +55,8 @@ const itemVariants = {
 };
 
 export const FeaturesSection = () => {
+  const { t } = useTranslation('landing');
+
   return (
     <section className="py-20 sm:py-28 relative overflow-hidden bg-background">
       {/* Soft overlay gradients */}
@@ -68,10 +71,10 @@ export const FeaturesSection = () => {
           className="text-center mb-16 sm:mb-24"
         >
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4 text-foreground">
-            How It Works
+            {t('features.title')}
           </h2>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Our AI platform transforms raw operational metrics into clean, actionable intelligence in four dynamic steps.
+            {t('features.description')}
           </p>
         </motion.div>
 
@@ -84,13 +87,13 @@ export const FeaturesSection = () => {
         >
           {steps.map((step, index) => (
             <motion.div
-              key={step.title}
+              key={step.titleKey}
               variants={itemVariants}
               className="relative group cursor-pointer"
             >
               {/* Connector Line - futuristic dot design */}
               {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-14 left-full w-full h-[1px] bg-gradient-to-r from-border/80 via-primary/20 to-transparent z-0 pointer-events-none" />
+                <div className="hidden lg:block absolute top-14 left-full w-full h-[1px] bg-gradient-to-r from-border/80 via-primary/20 to-transparent z-0 pointer-events-none rtl:right-full rtl:left-auto rtl:bg-gradient-to-l" />
               )}
               
               <div 
@@ -113,8 +116,8 @@ export const FeaturesSection = () => {
                   <step.icon className={`w-7 h-7 ${step.colorClass} drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]`} />
                 </div>
                 
-                <h3 className="text-xl font-bold mb-3 text-foreground tracking-wide">{step.title}</h3>
-                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{step.description}</p>
+                <h3 className="text-xl font-bold mb-3 text-foreground tracking-wide">{t(step.titleKey)}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{t(step.descKey)}</p>
               </div>
             </motion.div>
           ))}

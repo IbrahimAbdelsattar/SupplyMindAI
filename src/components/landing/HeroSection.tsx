@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, TrendingUp, BarChart3, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 const heroChartData = Array.from({ length: 50 }, (_, i) => ({
   value: 30 + Math.sin(i / 5) * 20 + Math.random() * 10 + i * 0.5,
 }));
 
 export const HeroSection = () => {
+  const { t } = useTranslation('landing');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   
@@ -62,7 +64,7 @@ export const HeroSection = () => {
       });
     }
 
-    let mouse = { x: -1000, y: -1000 };
+    const mouse = { x: -1000, y: -1000 };
     const handleMouseMove = (e: MouseEvent) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
@@ -164,7 +166,7 @@ export const HeroSection = () => {
 
       {/* Floating Elements - premium glass style */}
       <motion.div
-        className="absolute top-1/4 left-[10%] w-20 h-20 rounded-2xl bg-primary/10 backdrop-blur-md border border-primary/20 hidden md:flex items-center justify-center shadow-lg"
+        className="absolute top-1/4 left-[10%] rtl:left-auto rtl:right-[10%] w-20 h-20 rounded-2xl bg-primary/10 backdrop-blur-md border border-primary/20 hidden md:flex items-center justify-center shadow-lg"
         animate={{ y: [0, -18, 0], rotate: [0, 6, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
       >
@@ -172,7 +174,7 @@ export const HeroSection = () => {
       </motion.div>
 
       <motion.div
-        className="absolute bottom-1/4 right-[15%] w-16 h-16 rounded-2xl bg-accent/10 backdrop-blur-md border border-accent/20 hidden md:flex items-center justify-center shadow-lg"
+        className="absolute bottom-1/4 right-[15%] rtl:right-auto rtl:left-[15%] w-16 h-16 rounded-2xl bg-accent/10 backdrop-blur-md border border-accent/20 hidden md:flex items-center justify-center shadow-lg"
         animate={{ y: [0, 16, 0], rotate: [0, -6, 0] }}
         transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
       >
@@ -180,7 +182,7 @@ export const HeroSection = () => {
       </motion.div>
 
       <motion.div
-        className="absolute top-1/3 right-[20%] w-14 h-14 rounded-2xl bg-success/10 backdrop-blur-md border border-success/20 hidden lg:flex items-center justify-center shadow-lg"
+        className="absolute top-1/3 right-[20%] rtl:right-auto rtl:left-[20%] w-14 h-14 rounded-2xl bg-success/10 backdrop-blur-md border border-success/20 hidden lg:flex items-center justify-center shadow-lg"
         animate={{ y: [0, -14, 0], rotate: [0, 9, 0] }}
         transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
       >
@@ -200,7 +202,7 @@ export const HeroSection = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
             </span>
-            <span className="text-xs sm:text-sm font-semibold text-primary tracking-wide uppercase">AI-Powered Intelligence Platform</span>
+            <span className="text-xs sm:text-sm font-semibold text-primary tracking-wide uppercase">{t('hero.badge')}</span>
           </motion.div>
 
           {/* Main Headline */}
@@ -210,8 +212,8 @@ export const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl sm:text-6xl md:text-8xl font-extrabold tracking-tight mb-6"
           >
-            <span className="block text-foreground drop-shadow-sm">Predict Demand.</span>
-            <span className="block gradient-text drop-shadow-[0_0_15px_rgba(99,102,241,0.25)]">Optimize Inventory.</span>
+            <span className="block text-foreground drop-shadow-sm">{t('hero.headline1')}</span>
+            <span className="block gradient-text drop-shadow-[0_0_15px_rgba(99,102,241,0.25)]">{t('hero.headline2')}</span>
           </motion.h1>
 
           {/* Subheadline */}
@@ -221,8 +223,7 @@ export const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 text-balance px-2"
           >
-            Make smarter, automated business decisions with deep AI-driven demand forecasting 
-            and inventory optimization that continually learns from your data.
+            {t('hero.subheadline')}
           </motion.p>
 
           {/* CTA Buttons */}
@@ -234,14 +235,14 @@ export const HeroSection = () => {
           >
             <Button asChild size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl glow transition-transform duration-350 hover:scale-[1.03]">
               <Link to="/dashboard">
-                View Live Dashboard
-                <ArrowRight className="ml-2 rtl:ml-0 rtl:mr-2 h-5 w-5" />
+                {t('hero.ctaPrimary')}
+                <ArrowRight className="ml-2 rtl:ml-0 rtl:mr-2 h-5 w-5 rtl:rotate-180" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl transition-all duration-350 hover:bg-muted/80 hover:scale-[1.03]">
               <Link to="/dashboard">
                 <Play className="mr-2 rtl:mr-0 rtl:ml-2 h-5 w-5 fill-current" />
-                Try AI Forecast
+                {t('hero.ctaSecondary')}
               </Link>
             </Button>
           </motion.div>
@@ -268,7 +269,7 @@ export const HeroSection = () => {
                   <div className="w-3.5 h-3.5 rounded-full bg-warning/80" />
                   <div className="w-3.5 h-3.5 rounded-full bg-success/80" />
                 </div>
-                <span className="text-xs sm:text-sm font-medium text-muted-foreground tracking-wider uppercase">Demand Forecast — Interactive Live Preview</span>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground tracking-wider uppercase">{t('hero.chartLabel')}</span>
               </div>
               
               <div className="h-44 sm:h-72">

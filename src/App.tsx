@@ -21,7 +21,10 @@ const queryClient = new QueryClient();
 
 /** Redirects unauthenticated users to /login */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) {
+    return null;
+  }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -30,7 +33,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 /** Redirects authenticated users away from public pages */
 const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) {
+    return null;
+  }
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }

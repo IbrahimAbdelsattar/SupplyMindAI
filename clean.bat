@@ -47,6 +47,28 @@ if exist ".sixth" (
 )
 
 echo.
+echo 6. Removing legacy AgentRouter and Sub-project files...
+if exist "backend\integrations\agentrouter.py" (
+    echo   Removing: backend\integrations\agentrouter.py
+    del /f /q "backend\integrations\agentrouter.py"
+)
+if exist "proxy.js" (
+    echo   Removing: proxy.js
+    del /f /q "proxy.js"
+)
+if exist "rag-powered-inventory-management" (
+    echo   Removing: rag-powered-inventory-management\
+    rmdir /S /Q "rag-powered-inventory-management"
+)
+
+echo.
+echo 7. Removing legacy root-level production Dockerfile...
+if exist "frontend.Dockerfile.prod" (
+    echo   Removing: frontend.Dockerfile.prod
+    del /f /q "frontend.Dockerfile.prod"
+)
+
+echo.
 echo ==============================================
 echo   Project cleaned successfully!
 echo ==============================================

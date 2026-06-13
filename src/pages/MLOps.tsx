@@ -195,7 +195,7 @@ const MLOps = () => {
     return <div className="p-8">{t('mlops:loading')}</div>;
   }
 
-  const langsmithUrl = `https://smith.langchain.com/o/default/projects/p/${langsmithData?.project ?? 'supplymind-ai'}`;
+  const langsmithUrl = `https://smith.langchain.com/o/8077c618-18ed-4827-bcfb-ec7d5516473c/projects/p/3f6b3cb0-c7ee-45b3-a428-9abeaa717b45?timeModel=%7B%22duration%22%3A%221d%22%7D`;
 
   return (
     <div className="flex min-h-screen bg-background">

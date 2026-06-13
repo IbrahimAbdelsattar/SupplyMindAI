@@ -37,8 +37,17 @@ async def verify_storage_configured() -> None:
 
 
 async def get_current_user_id(authorization: str | None = None) -> str:
-    """Extract user ID from authorization token (bypassed for demo/testing)."""
-    return "demo-user"
+    """Extract the authenticated user ID from a bearer token."""
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization scheme")
+    try:
+        user = await get_user_from_token(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from exc
+    return user.id
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -81,7 +90,7 @@ async def upload_document(
         # Upload
         response = await upload_file(
             bucket=StorageBucket.DOCUMENTS,
-            file_path=file.filename,
+            file_path=file.filename or "upload",
             file_data=content,
             content_type=file.content_type,
             user_id=user_id,
@@ -91,14 +100,14 @@ async def upload_document(
             # Get public URL
             public_url = get_public_url(
                 StorageBucket.DOCUMENTS,
-                file.filename,
+                file.filename or "upload",
                 user_id=user_id
             )
             
             return {
                 "success": True,
                 "message": "Document uploaded successfully",
-                "file_name": file.filename,
+                "file_name": file.filename or "upload",
                 "file_size": len(content),
                 "content_type": file.content_type,
                 "public_url": public_url,
@@ -150,7 +159,7 @@ async def upload_data_file(
         # Upload
         response = await upload_file(
             bucket=StorageBucket.DATA_IMPORTS,
-            file_path=file.filename,
+            file_path=file.filename or "upload",
             file_data=content,
             content_type=file.content_type,
             user_id=user_id,
@@ -160,7 +169,7 @@ async def upload_data_file(
             return {
                 "success": True,
                 "message": "Data file uploaded successfully",
-                "file_name": file.filename,
+                "file_name": file.filename or "upload",
                 "file_size": len(content),
             }
         else:
@@ -210,7 +219,7 @@ async def upload_report(
         # Upload
         response = await upload_file(
             bucket=StorageBucket.REPORTS,
-            file_path=file.filename,
+            file_path=file.filename or "upload",
             file_data=content,
             content_type=file.content_type,
             user_id=user_id,
@@ -220,7 +229,7 @@ async def upload_report(
             return {
                 "success": True,
                 "message": "Report uploaded successfully",
-                "file_name": file.filename,
+                "file_name": file.filename or "upload",
                 "file_size": len(content),
             }
         else:

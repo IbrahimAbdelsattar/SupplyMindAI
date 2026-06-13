@@ -53,31 +53,6 @@ const Login = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setIsLoading(true);
-    try {
-      try {
-        await login('demo@supplymind.ai', 'demopassword123');
-      } catch (err) {
-        // Create the local demo account on first use.
-        await register('Demo User', 'demo@supplymind.ai', 'demopassword123');
-      }
-      toast({
-        title: t('login:demoModeActivated'),
-        description: t('login:exploringAsDemoUser'),
-      });
-      navigate('/dashboard');
-    } catch (error) {
-      toast({
-        title: t('common:error'),
-        description: error instanceof Error ? error.message : t('login:failedToStartDemo'),
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!registerName || !registerEmail || !registerPassword) {
@@ -278,24 +253,6 @@ const Login = () => {
               </TabsContent>
             </Tabs>
 
-            {/* Subtle Demo login button */}
-            <div className="relative flex py-4 items-center">
-              <div className="flex-grow border-t border-border/40"></div>
-              <span className="flex-shrink mx-4 text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t('login:or')}</span>
-              <div className="flex-grow border-t border-border/40"></div>
-            </div>
-
-            <Button 
-              variant="outline" 
-              onClick={handleDemoLogin} 
-              disabled={isLoading} 
-              className="w-full h-11 border border-primary/20 text-primary hover:bg-primary/5 rounded-xl font-semibold transition-all hover:scale-[1.01]"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              {t('login:exploreDemoWorkspace')}
-            </Button>
           </CardContent>
         </Card>
       </motion.div>

@@ -1,23 +1,19 @@
-version: '3.9'
-
 services:
   # ─────────────────────────────────────────────────────────────────────────
   # PostgreSQL Database - Production Configuration
   # ─────────────────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: supplymind-postgres-prod
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-supplymind_prod}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-supplymind_prod}
       POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=200"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-supplymind_prod}"]
       interval: 10s
@@ -39,11 +35,9 @@ services:
     image: redis:7-alpine
     container_name: supplymind-redis-prod
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-CHANGE_ME} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required} --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -62,11 +56,7 @@ services:
   # Backend API - Production Configuration
   # ─────────────────────────────────────────────────────────────────────────
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile.prod
-      args:
-        ENVIRONMENT: production
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
     container_name: supplymind-backend-prod
     restart: unless-stopped
     expose:
@@ -74,11 +64,12 @@ services:
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-CHANGE_ME}@redis:6379
-      - JWT_SECRET=${JWT_SECRET}
-      - SESSION_SECRET=${SESSION_SECRET}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET is required}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-v4-flash:free}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
@@ -92,7 +83,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - app_data:/app/data
+      - app_data:/app/data/storage
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)\" || exit 1"]
       interval: 30s
@@ -117,19 +108,11 @@ services:
   # Frontend - Production Configuration
   # ─────────────────────────────────────────────────────────────────────────
   frontend:
-    build:
-      context: .
-      dockerfile: frontend.Dockerfile.prod
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-        NODE_ENV: production
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
     container_name: supplymind-frontend-prod
     restart: unless-stopped
     expose:
       - "80"
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     depends_on:
       - backend
     networks:
@@ -155,7 +138,6 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
-      - ./static:/usr/share/nginx/html:ro
     depends_on:
       - backend
       - frontend

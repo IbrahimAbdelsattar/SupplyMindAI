@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import logging
 from langchain_core.messages import SystemMessage, HumanMessage
-from backend.integrations.agentrouter import get_agentrouter_llm
+from backend.llm.client import get_llm
 from backend.knowledge.search import semantic_search
 from backend.knowledge.rag import get_operational_snapshot
 from backend.knowledge.config import get_knowledge_settings
@@ -27,8 +27,7 @@ Focus on inventory, suppliers, production, stock levels, demand patterns, and op
 
 class RagService:
     def __init__(self) -> None:
-        model = os.getenv("RAG_MODEL", "openai/gpt-oss-120b:free")
-        self.llm = get_agentrouter_llm(model_name=model)
+        self.llm = get_llm()
 
     def query(
         self,

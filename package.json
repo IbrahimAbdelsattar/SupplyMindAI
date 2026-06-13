@@ -8,6 +8,7 @@
     "diagnose": ".venv\\Scripts\\python -c \"from backend.main import app; print([r.path for r in app.routes])\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "typecheck": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

@@ -2,22 +2,30 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from dotenv import load_dotenv
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(PROJECT_ROOT / ".env")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "mysql+pymysql://supplymind:372045Enghema###@localhost:3306/supplymind",
+    f"sqlite:///{(PROJECT_ROOT / 'backend' / 'supplymind.db').as_posix()}",
 )
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
-    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
-    pool_pre_ping=True,
-)
+engine_options: dict = {"pool_pre_ping": True}
+if DATABASE_URL.startswith("sqlite"):
+    engine_options["connect_args"] = {"check_same_thread": False}
+else:
+    engine_options.update(
+        pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+    )
+
+engine = create_engine(DATABASE_URL, **engine_options)
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -167,6 +175,7 @@ def _ensure_user_columns() -> None:
     with engine.begin() as conn:
         if "role" not in existing_columns:
             conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'analyst'"))
+
         if "is_active" not in existing_columns:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true"))
         if "updated_at" not in existing_columns:
@@ -180,3 +189,47 @@ def get_db() -> Session:
     finally:
         db.close()
 
+
+def seed_users() -> None:
+    from sqlalchemy import select
+    from passlib.context import CryptContext
+    import uuid
+    from datetime import datetime, timezone
+
+    PASSWORD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    default_password_hash = PASSWORD_CONTEXT.hash("supplymind123")
+    demo_password_hash = PASSWORD_CONTEXT.hash("demopassword123")
+
+    authorized_users = [
+        {"name": "Ibrahim Abdelsttar", "email": "ibrahim.abdelsattar@supplymind.ai", "role": "admin", "pwd": default_password_hash},
+        {"name": "Ibrahim Abdelsttar", "email": "ibrahim.abdelsttar@supplymind.ai", "role": "admin", "pwd": default_password_hash},
+        {"name": "Kenzi Walid", "email": "kenzi.walid@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Kenzi Walid", "email": "kenzi.hosny@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Rahma Shaaban", "email": "rahma.shaaban@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Karim Ayman", "email": "karim.ayman@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Karim Ayman", "email": "karim.deif@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Ali El Shaarawy", "email": "ali.elshaarawy@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Ali El Shaarawy", "email": "ali.shaarawy@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Ali Ehab", "email": "ali.ehab@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Ali Ehab", "email": "ali.abdelghany@supplymind.ai", "role": "analyst", "pwd": default_password_hash},
+        {"name": "Demo User", "email": "demo@supplymind.ai", "role": "analyst", "pwd": demo_password_hash},
+    ]
+
+    with SessionLocal() as db:
+        for u in authorized_users:
+            email = u["email"].lower().strip()
+            existing = db.scalar(select(User).where(User.email == email))
+            if not existing:
+                now = datetime.now(timezone.utc)
+                user = User(
+                    id=str(uuid.uuid4()),
+                    name=u["name"],
+                    email=email,
+                    password_hash=u["pwd"],
+                    role=u["role"],
+                    is_active=True,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(user)
+        db.commit()

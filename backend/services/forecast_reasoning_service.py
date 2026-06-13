@@ -5,7 +5,7 @@ import json
 import logging
 from typing import Any, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
-from backend.integrations.agentrouter import get_agentrouter_llm
+from backend.llm.client import get_llm
 from backend.knowledge.langsmith_tracing import configure_langsmith
 
 LOGGER = logging.getLogger(__name__)
@@ -44,8 +44,7 @@ You MUST respond ONLY with a valid JSON object matching the following structure:
 
 class ForecastReasoningService:
     def __init__(self) -> None:
-        model = os.getenv("FORECAST_MODEL", "openai/gpt-oss-120b:free")
-        self.llm = get_agentrouter_llm(model_name=model)
+        self.llm = get_llm()
 
     def analyze(self, forecasts: list[dict[str, Any]], question: Optional[str] = None) -> dict[str, Any]:
         configure_langsmith()

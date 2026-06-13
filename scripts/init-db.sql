@@ -11,17 +11,9 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";  -- For text search
 CREATE EXTENSION IF NOT EXISTS "btree_gin";  -- For multi-column indexes
 CREATE EXTENSION IF NOT EXISTS "btree_gist";  -- For exclusion constraints
 
--- Create app-specific schema
-CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION supplymind_prod_app;
-
--- Set search path
-ALTER ROLE supplymind_prod_app SET search_path = public, app;
-
--- Create audit schema
-CREATE SCHEMA IF NOT EXISTS audit AUTHORIZATION supplymind_prod_app;
-
--- Store the application JWT secret in deployment secrets, not in SQL.
-ALTER DATABASE supplymind_prod SET "app.jwt_secret" = 'change-me-in-production';
+-- Schemas are owned by the database user configured through POSTGRES_USER.
+CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION CURRENT_USER;
+CREATE SCHEMA IF NOT EXISTS audit AUTHORIZATION CURRENT_USER;
 
 -- Create function to track updates
 CREATE OR REPLACE FUNCTION audit.update_updated_at_column()
@@ -57,14 +49,6 @@ CREATE TABLE IF NOT EXISTS audit.deleted_records (
 CREATE INDEX IF NOT EXISTS idx_audit_deleted_records_table_name ON audit.deleted_records(table_name);
 CREATE INDEX IF NOT EXISTS idx_audit_deleted_records_deleted_at ON audit.deleted_records(deleted_at DESC);
 
--- Grant permissions to app user
-GRANT USAGE ON SCHEMA app TO supplymind_prod_app;
-GRANT USAGE ON SCHEMA audit TO supplymind_prod_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app TO supplymind_prod_app;
-GRANT SELECT ON ALL TABLES IN SCHEMA audit TO supplymind_prod_app;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA app TO supplymind_prod_app;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA audit TO supplymind_prod_app;
-
 -- Create sequence for IDs if needed
 CREATE SEQUENCE IF NOT EXISTS app.id_sequence START 1000;
 
@@ -95,7 +79,6 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_entity_type ON app.activity_logs(en
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON app.activity_logs(created_at DESC);
 
 -- Grant permissions
-GRANT SELECT, INSERT ON app.activity_logs TO supplymind_prod_app;
 
 -- Create stats table for monitoring
 CREATE TABLE IF NOT EXISTS app.system_stats (
@@ -109,7 +92,6 @@ CREATE TABLE IF NOT EXISTS app.system_stats (
 CREATE INDEX IF NOT EXISTS idx_system_stats_metric_name ON app.system_stats(metric_name);
 CREATE INDEX IF NOT EXISTS idx_system_stats_recorded_at ON app.system_stats(recorded_at DESC);
 
-GRANT SELECT, INSERT ON app.system_stats TO supplymind_prod_app;
 
 -- Vacuum and analyze
 VACUUM ANALYZE;

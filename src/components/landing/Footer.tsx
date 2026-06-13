@@ -1,7 +1,10 @@
 import { BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export const Footer = () => {
+  const { t } = useTranslation('common');
+
   return (
     <footer className="py-8 border-t border-border bg-card/30 backdrop-blur-md">
       <div className="container mx-auto px-4 sm:px-6">
@@ -10,17 +13,17 @@ export const Footer = () => {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <BarChart3 className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <span className="text-base font-bold tracking-tight">Supply Mind</span>
+            <span className="text-base font-bold tracking-tight">{t('app.name')}</span>
           </Link>
           
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact Us</a>
+            <a href="#" className="hover:text-foreground transition-colors">{t('footer.privacy')}</a>
+            <a href="#" className="hover:text-foreground transition-colors">{t('footer.terms')}</a>
+            <a href="#" className="hover:text-foreground transition-colors">{t('footer.contact')}</a>
           </div>
           
           <p className="text-xs sm:text-sm text-muted-foreground">
-            © 2026 Supply Mind. All rights reserved. DEPI Evaluation.
+            {t('footer.copyright')}
           </p>
         </div>
       </div>

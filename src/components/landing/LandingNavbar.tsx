@@ -3,12 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Sun, Moon, BarChart3, Menu, X } from 'lucide-react';
+import { Sun, Moon, BarChart3, Menu, X, Languages } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const LandingNavbar = () => {
   const { theme, toggleTheme } = useTheme();
+  const { t, i18n } = useTranslation(['landing', 'common']);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language?.startsWith('ar') ? 'en' : 'ar');
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -38,18 +44,18 @@ export const LandingNavbar = () => {
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary flex items-center justify-center">
             <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
           </div>
-          <span className="text-lg sm:text-xl font-bold">Supply Mind</span>
+          <span className="text-lg sm:text-xl font-bold">{t('app.name', { ns: 'common' })}</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
           <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
-            Features
+            {t('navbar.features')}
           </a>
           <a href="#use-cases" className="text-muted-foreground hover:text-foreground transition-colors">
-            Use Cases
+            {t('navbar.useCases')}
           </a>
           <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-            Pricing
+            {t('navbar.pricing')}
           </a>
         </div>
 
@@ -57,11 +63,14 @@ export const LandingNavbar = () => {
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-xl">
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
+          <Button variant="ghost" size="icon" onClick={toggleLanguage} className="rounded-xl" title={i18n.language?.startsWith('ar') ? 'English' : 'العربية'}>
+            <Languages className="h-5 w-5" />
+          </Button>
           <Button asChild variant="ghost" className="rounded-xl">
-            <Link to="/dashboard">Sign In</Link>
+            <Link to="/dashboard">{t('navbar.signIn')}</Link>
           </Button>
           <Button asChild className="rounded-xl">
-            <Link to="/dashboard">Get Started</Link>
+            <Link to="/dashboard">{t('navbar.getStarted')}</Link>
           </Button>
         </div>
 
@@ -69,6 +78,9 @@ export const LandingNavbar = () => {
         <div className="flex md:hidden items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-xl h-9 w-9">
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={toggleLanguage} className="rounded-xl h-9 w-9" title={i18n.language?.startsWith('ar') ? 'English' : 'العربية'}>
+            <Languages className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)} className="rounded-xl h-9 w-9">
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -87,20 +99,20 @@ export const LandingNavbar = () => {
           >
             <div className="container mx-auto px-4 py-4 flex flex-col gap-3">
               <a href="#features" onClick={() => setMobileOpen(false)} className="py-2 text-muted-foreground hover:text-foreground transition-colors">
-                Features
+                {t('navbar.features')}
               </a>
               <a href="#use-cases" onClick={() => setMobileOpen(false)} className="py-2 text-muted-foreground hover:text-foreground transition-colors">
-                Use Cases
+                {t('navbar.useCases')}
               </a>
               <a href="#pricing" onClick={() => setMobileOpen(false)} className="py-2 text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
+                {t('navbar.pricing')}
               </a>
               <div className="flex gap-3 pt-2 border-t border-border/50">
                 <Button asChild variant="outline" className="flex-1 rounded-xl">
-                  <Link to="/dashboard">Sign In</Link>
+                  <Link to="/dashboard">{t('navbar.signIn')}</Link>
                 </Button>
                 <Button asChild className="flex-1 rounded-xl">
-                  <Link to="/dashboard">Get Started</Link>
+                  <Link to="/dashboard">{t('navbar.getStarted')}</Link>
                 </Button>
               </div>
             </div>

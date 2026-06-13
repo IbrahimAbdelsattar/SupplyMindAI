@@ -39,7 +39,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      ENVIRONMENT: production
+      ENVIRONMENT: development
       DATABASE_URL: postgresql://supplymind:password@postgres:5432/supplymind
       JWT_SECRET: ${JWT_SECRET:-lx2j0gBCb8QkFhK1qA4jbmbRtip54CiqrOaAtWfqM7P}
       RAG_API_KEY: ${RAG_API_KEY:-}
@@ -53,10 +53,14 @@ services:
       LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT:-supplymind-ai}
       MODEL_PATH: /app/Modeling/demand_model_pipeline.pkl
       FORECAST_CSV_PATH: /app/Modeling/future_forecast.csv
-      LOG_LEVEL: INFO
+      LOG_LEVEL: DEBUG
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - modeling_data:/app/Modeling
-      - data_data:/app/data
+      - ./backend:/app/backend
+      - ./data:/app/data
+      - ./Modeling:/app/Modeling
+      - modeling_data:/app/Modeling/persistent
+      - data_data:/app/data/persistent
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s

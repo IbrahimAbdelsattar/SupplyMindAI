@@ -87,7 +87,7 @@ const Reports = () => {
 
   const { data: invData } = useQuery({
     queryKey: ['inventory-list'],
-    queryFn: () => apiFetch<{ summary: InvSummary; items: any[] }>('/inventory'),
+    queryFn: () => apiFetch<{ summary: InvSummary; items: unknown[] }>('/inventory'),
     enabled: isAuthenticated,
   });
 
@@ -166,30 +166,45 @@ const Reports = () => {
   };
 
   const handleDownload = async (reportId: string) => {
-    const baseUrl = getApiBaseUrl();
-    const token = getToken();
-    const url = new URL(`${baseUrl}/reports/download`);
-    url.searchParams.set('report_id', reportId);
+    try {
+      let csv: string;
+      let filename = 'report.csv';
 
-    const res = await fetch(url.toString(), {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    
-    // Determine dynamic filename based on reportId
-    let filename = 'report.csv';
-    if (reportId === 'r_daily') filename = 'daily_operations_report.csv';
-    else if (reportId === 'r_weekly') filename = 'weekly_performance_report.csv';
-    else if (reportId === 'r_monthly') filename = 'monthly_performance_report.csv';
-    else if (reportId === 'r_quarterly') filename = 'quarterly_business_review.csv';
-    else if (reportId === 'r_yearly') filename = 'yearly_strategic_report.csv';
-    else if (reportId === 'r_forecast') filename = 'forecast_export.csv';
-    else if (reportId === 'r_inventory') filename = 'inventory_recommendations.csv';
-    
-    a.download = filename;
-    a.click();
+      if (reportId === 'r_inventory') {
+        const baseUrl = getApiBaseUrl();
+        const token = getToken();
+        const res = await fetch(`${baseUrl}/inventory/optimize?limit=100`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const data: InvRec[] = await res.json();
+        csv = buildInventoryCsv(data);
+        filename = 'inventory_recommendations.csv';
+      } else {
+        const baseUrl = getApiBaseUrl();
+        const token = getToken();
+        const url = new URL(`${baseUrl}/reports/download`);
+        url.searchParams.set('report_id', reportId);
+        const res = await fetch(url.toString(), {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        csv = await res.text();
+
+        if (reportId === 'r_daily') filename = 'daily_operations_report.csv';
+        else if (reportId === 'r_weekly') filename = 'weekly_performance_report.csv';
+        else if (reportId === 'r_monthly') filename = 'monthly_performance_report.csv';
+        else if (reportId === 'r_quarterly') filename = 'quarterly_business_review.csv';
+        else if (reportId === 'r_yearly') filename = 'yearly_strategic_report.csv';
+        else if (reportId === 'r_forecast') filename = 'forecast_export.csv';
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+    } catch (err) {
+      console.error('Failed to download report:', err);
+    }
   };
 
   return (
@@ -212,9 +227,9 @@ const Reports = () => {
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 sm:gap-6">
             {[
-              { icon: FileText, label: t('reports:stats_reports_generated'), value: '24', color: 'primary' },
-              { icon: Download, label: t('reports:stats_downloads_this_month'), value: '156', color: 'accent' },
-              { icon: Calendar, label: t('reports:stats_scheduled_reports'), value: '4', color: 'success' },
+              { icon: FileText, label: t('reports:stats_reports_generated'), value: String(totalProducts || reports.length), color: 'primary' },
+              { icon: Download, label: t('reports:stats_downloads_this_month'), value: String(recommendations.length), color: 'accent' },
+              { icon: DollarSign, label: t('reports:stats_scheduled_reports'), value: formatCurrency(totalSavings), color: 'success' },
             ].map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -326,17 +341,17 @@ const Reports = () => {
                 <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-6">
                   <div className="text-center p-3 sm:p-4 rounded-xl bg-success/5 border border-success/20">
                     <TrendingUp className="w-5 h-5 sm:w-8 sm:h-8 text-success mx-auto mb-1 sm:mb-2" />
-                    <p className="text-lg sm:text-3xl font-bold text-success">94.5%</p>
+                    <p className="text-lg sm:text-3xl font-bold text-success">{healthyPct}%</p>
                     <p className="text-[10px] sm:text-sm text-muted-foreground">{t('reports:forecast_accuracy')}</p>
                   </div>
                   <div className="text-center p-3 sm:p-4 rounded-xl bg-primary/5 border border-primary/20">
                     <Package className="w-5 h-5 sm:w-8 sm:h-8 text-primary mx-auto mb-1 sm:mb-2" />
-                    <p className="text-lg sm:text-3xl font-bold text-primary">-25%</p>
+                    <p className="text-lg sm:text-3xl font-bold text-primary">{formatCurrency(totalSavings)}</p>
                     <p className="text-[10px] sm:text-sm text-muted-foreground">{t('reports:inventory_costs')}</p>
                   </div>
-                  <div className="text-center p-3 sm:p-4 rounded-xl bg-accent/5 border border-accent/20">
-                    <TrendingUp className="w-5 h-5 sm:w-8 sm:h-8 text-accent mx-auto mb-1 sm:mb-2" />
-                    <p className="text-lg sm:text-3xl font-bold text-accent">+18%</p>
+                  <div className="text-center p-3 sm:p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+                    <AlertTriangle className="w-5 h-5 sm:w-8 sm:h-8 text-destructive mx-auto mb-1 sm:mb-2" />
+                    <p className="text-lg sm:text-3xl font-bold text-destructive">{issuesCount}</p>
                     <p className="text-[10px] sm:text-sm text-muted-foreground">{t('reports:revenue_impact')}</p>
                   </div>
                 </div>

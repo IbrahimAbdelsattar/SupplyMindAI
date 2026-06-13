@@ -14,6 +14,7 @@ from typing import Any, Literal, Optional
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Response, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -50,6 +51,14 @@ ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
+    if host.strip()
+]
+if ENVIRONMENT == "production" and not ALLOWED_ORIGINS:
+    raise RuntimeError("ALLOWED_ORIGINS must be configured in production")
 
 # Configure logging
 logging.basicConfig(
@@ -405,43 +414,107 @@ def _simple_forecast_series(product_id: str, horizon_days: int) -> list[Forecast
 # -----------------------------------------------------------------------------
 # App
 # -----------------------------------------------------------------------------
-app = FastAPI(title="SupplyMindAI API", version="0.1.0")
-
-# Startup seeding for demo user
-@app.on_event("startup")
-async def ensure_demo_user():
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.id == "demo-user").first()
-        if not user:
-            now = _utc_now()
-            demo_user = User(
-                id="demo-user",
-                name="Demo User",
-                email="demo@supplymind.ai",
-                password_hash="",
-                role="admin",
-                is_active=True,
-                created_at=now,
-                updated_at=now,
-            )
-            db.add(demo_user)
-            db.commit()
-            logger.info("Demo user created at startup")
-        else:
-            logger.info("Demo user already exists at startup")
-    finally:
-        db.close()
+app = FastAPI(
+    title="SupplyMindAI API",
+    version="1.0.0",
+    docs_url=None if ENVIRONMENT == "production" else "/docs",
+    redoc_url=None if ENVIRONMENT == "production" else "/redoc",
+    openapi_url=None if ENVIRONMENT == "production" else "/openapi.json",
+)
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+
+# Note: JWT auth routes are defined directly below — /api/v1/auth/login, /register, /me, etc.
+# Authentication routes are mounted below.
+
+# Mount local storage router
+try:
+    from backend.routers.storage import router as storage_router
+    app.include_router(storage_router)
+    logger.info("Storage router mounted")
+except Exception as exc:
+    logger.warning("Storage router not loaded: %s", exc)
+
+# Mount knowledge / RAG / copilot router
+try:
+    from backend.routers.knowledge import router as knowledge_router
+    app.include_router(knowledge_router, prefix="/api/v1")
+    logger.info("Knowledge router mounted at /api/v1")
+except Exception as exc:
+    logger.warning("Knowledge router not loaded: %s", exc)
+
+# Mount forecast intelligence router
+try:
+    from backend.routers.forecast_intelligence import router as fi_router
+    app.include_router(fi_router)
+    logger.info("Forecast intelligence router mounted")
+except Exception as exc:
+    logger.warning("Forecast intelligence router not loaded: %s", exc)
+
+# Mount forecast insights router
+try:
+    from backend.routers.forecast_insights import router as fi_insights_router
+    app.include_router(fi_insights_router)
+    logger.info("Forecast insights router mounted")
+except Exception as exc:
+    logger.warning("Forecast insights router not loaded: %s", exc)
+
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "SupplyMindAI API is running"}
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    logger.info(
+        "Request: %s %s | Status: %s | Duration: %.4fs",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration
+    )
+    return response
+
+
+
+@app.get("/api/v1/health")
+def health() -> dict[str, Any]:
+    data_ok = all((DATA_DIR / name).exists() for name in ["products.csv", "sales_daily.csv", "inventory.csv"])
+    try:
+        from backend.knowledge.client import is_knowledge_available
+        from backend.knowledge.config import get_knowledge_settings
+
+        k_settings = get_knowledge_settings()
+        knowledge_ok = is_knowledge_available()
+    except Exception:
+        k_settings = None
+        knowledge_ok = False
+
+    return {
+        "status": "ok",
+        "time": _utc_now().isoformat(),
+        "components": {
+            "data_csv": data_ok,
+            "ml_model": ML_MODEL is not None,
+            "ml_trained": bool(ML_MODEL and getattr(ML_MODEL, "is_trained_model_loaded", False)),
+            "rag_service": RAG_SERVICE is not None,
+            "rag_loaded": bool(RAG_SERVICE and getattr(RAG_SERVICE, "is_initialized", True)),
+            "openrouter_key": bool(os.getenv("CHATBOT_API_KEY") or os.getenv("LLM_REASONING_API_KEY") or os.getenv("RAG_API_KEY")),
+            "knowledge_configured": bool(k_settings and k_settings.is_configured),
+            "knowledge_connected": knowledge_ok,
+            "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes", "on"},
+        },
 
 # Note: JWT auth routes are defined directly below — /api/v1/auth/login, /register, /me, etc.
 # Authentication routes are mounted below.
@@ -530,41 +603,7 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/api/v1/debug/model")
-def debug_model() -> dict[str, Any]:
-    from backend.llm.client import get_llm_info
-    return get_llm_info()
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    global ML_MODEL, RAG_SERVICE, FORECAST_INTELLIGENCE
-
-    from backend.bootstrap import init_ml_model, init_rag_service, load_environment
-
-    load_environment()
-    create_tables()
-
-    ML_MODEL = init_ml_model(STORE)
-    RAG_SERVICE = init_rag_service()
-
-    # Initialize forecast intelligence service
-    from pathlib import Path
-    from backend.services.forecast_intelligence_service import ForecastIntelligenceService
-
-    csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "Modeling" / "future_forecast.csv")))
-    FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
-
-    pass
-
-
-# -----------------------------------------------------------------------------
-# Auth
-# -----------------------------------------------------------------------------
-try:
-    from backend.routers.auth import router as auth_router
-    app.include_router(auth_router)
-    logger.info("Database auth router mounted")
-except Exception as exc:
+def debug_model(user: User = Depends(_require_roles("admin"))) -> dict[str, Any]:
     logger.warning("Auth router not loaded: %s", exc)
 
 
@@ -836,7 +875,7 @@ def inventory_optimize(limit: int = 10, user: User = Depends(_get_current_user))
         return out
     except Exception as exc:
         logger.exception("inventory_optimize failed: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Internal inventory optimize error: {exc}")
+        raise HTTPException(status_code=500, detail="Inventory optimization failed") from exc
 
 
 
@@ -1328,42 +1367,95 @@ class InsightsGeneratePayload(BaseModel):
 @app.post("/api/v1/insights/generate")
 def insights_generate(payload: InsightsGeneratePayload, user: User = Depends(_get_current_user)):
     try:
+        import json, re
         from backend.agents.nodes import llm
         from langchain_core.messages import SystemMessage, HumanMessage
-        from pydantic import BaseModel, Field
-        from typing import List
 
-        class InsightItem(BaseModel):
-            title: str = Field(description="A concise title for the insight")
-            description: str = Field(description="2-3 sentence explanation")
-            impact: str = Field(description="high, medium, or low")
-            direction: str = Field(description="up, down, or neutral")
-            factor: str = Field(description="The category name (e.g. Seasonality, Promotions)")
-            confidence: int = Field(description="Confidence score from 0 to 100")
+        sys_msg = SystemMessage(content=(
+            "You are SupplyMind AI, a senior supply chain intelligence analyst. "
+            "Convert forecasting data and trends into clear, actionable business insights.\n\n"
+            "You MUST respond with ONLY valid raw JSON (no markdown, no code fences, no explanation). "
+            "The JSON MUST match this exact schema:\n"
+            "{\n"
+            '  "insights": [\n'
+            '    {\n'
+            '      "title": "string — concise insight title",\n'
+            '      "description": "string — 2-3 sentence explanation",\n'
+            '      "impact": "high | medium | low",\n'
+            '      "direction": "up | down | neutral",\n'
+            '      "factor": "string — category name e.g. Seasonality, Promotions",\n'
+            '      "confidence": 0-100\n'
+            '    }\n'
+            '  ],\n'
+            '  "executive_summary": "string — 2-3 paragraph business summary",\n'
+            '  "recommendations": ["string — actionable step"]\n'
+            "}\n\n"
+            "Return ONLY the JSON object. No extra text before or after."
+        ))
+        user_msg = HumanMessage(
+            content=f"Analyze the recent forecasting, seasonality, and promotional trends for {payload.product_id}. "
+                    f"Give me 4 actionable insights about this product. Respond with ONLY JSON."
+        )
 
-        class InsightsOutput(BaseModel):
-            insights: List[InsightItem]
-            executive_summary: str = Field(description="2-3 paragraph business summary")
-            recommendations: List[str] = Field(description="A list of actionable steps")
+        response = llm.invoke([sys_msg, user_msg])
+        raw_text = response.content.strip()
 
-        sys_msg = SystemMessage(content="You are SupplyMind AI, a senior supply chain intelligence analyst. Convert forecasting data and trends into clear, actionable business insights. ALWAYS respond strictly matching the requested JSON schema.")
-        user_msg = HumanMessage(content=f"Analyze the recent forecasting, seasonality, and promotional trends for {payload.product_id}. Give me 4 actionable insights about this product.")
+        # Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+        cleaned = re.sub(r'^```(?:json)?\s*', '', raw_text)
+        cleaned = re.sub(r'\s*```\s*$', '', cleaned)
+        cleaned = cleaned.strip()
 
-        structured_llm = llm.with_structured_output(InsightsOutput)
-        result = structured_llm.invoke([sys_msg, user_msg])
+        parsed = json.loads(cleaned)
 
-        return result.model_dump()
+        # Validate required keys exist
+        if "insights" not in parsed:
+            parsed["insights"] = []
+        if "executive_summary" not in parsed:
+            parsed["executive_summary"] = "AI analysis completed."
+        if "recommendations" not in parsed:
+            parsed["recommendations"] = []
 
-    except Exception as e:
-        print(f"Insights error: {e}")
+        # Validate each insight has required fields
+        valid_insights = []
+        for ins in parsed.get("insights", []):
+            valid_insights.append({
+                "title": ins.get("title", "Untitled Insight"),
+                "description": ins.get("description", ""),
+                "impact": ins.get("impact", "medium") if ins.get("impact") in ("high", "medium", "low") else "medium",
+                "direction": ins.get("direction", "neutral") if ins.get("direction") in ("up", "down", "neutral") else "neutral",
+                "factor": ins.get("factor", "General"),
+                "confidence": max(0, min(100, int(ins.get("confidence", 70)))),
+            })
+        parsed["insights"] = valid_insights
+
+        return parsed
+
+    except json.JSONDecodeError as je:
+        logger.warning("Insights response was not valid JSON: %s", je)
         return {
             "insights": [
                 {
-                    "title": "Fallback Analysis",
-                    "description": "The AI insight generator encountered an error: " + str(e),
+                    "title": "AI Response Parsing Error",
+                    "description": "The AI returned a response that could not be parsed as valid JSON. This usually happens with free-tier models. Try again or switch to a higher-quality model.",
                     "impact": "low",
                     "direction": "neutral",
-                    "factor": "system",
+                    "factor": "System",
+                    "confidence": 30
+                }
+            ],
+            "executive_summary": "The AI model returned an unparseable response. Please retry.",
+            "recommendations": ["Retry the generation", "Consider using a model with better structured output support"]
+        }
+    except Exception as exc:
+        logger.exception("Insights generation failed: %s", exc)
+        return {
+            "insights": [
+                {
+                    "title": "Generation Error",
+                    "description": "The AI insight generator is temporarily unavailable.",
+                    "impact": "low",
+                    "direction": "neutral",
+                    "factor": "System",
                     "confidence": 50
                 }
             ],
@@ -1544,8 +1636,8 @@ def chat_endpoint(payload: ChatRequest, user: User = Depends(_get_current_user))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        print(f"Chat Graph Error: {exc}")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.exception("Chat graph failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Chat service is temporarily unavailable") from exc
 
 
 # -----------------------------------------------------------------------------
@@ -1608,6 +1700,6 @@ def save_settings(payload: UserSettingsPayload, user: User = Depends(_get_curren
     except Exception as exc:
         db.rollback()
         logger.error("save_settings error for user %s: %s", user.id, exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to save settings: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Failed to save settings") from exc
     finally:
         db.close()

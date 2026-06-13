@@ -2,33 +2,35 @@ import { motion } from 'framer-motion';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { TrendingDown, TrendingUp, DollarSign, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const MetricsSection = () => {
   const { currencySymbol, convertCurrency } = useCurrency();
+  const { t } = useTranslation('landing');
 
   const metrics = [
     {
       icon: TrendingDown,
       value: 25,
       suffix: '%',
-      label: 'Inventory Cost Reduction',
-      description: 'Average reduction in holding costs',
+      labelKey: 'metrics.inventoryCost',
+      descKey: 'metrics.inventoryCostDesc',
       color: 'success',
     },
     {
       icon: Package,
       value: 30,
       suffix: '%',
-      label: 'Stock-Out Reduction',
-      description: 'Fewer missed sales opportunities',
+      labelKey: 'metrics.stockOut',
+      descKey: 'metrics.stockOutDesc',
       color: 'primary',
     },
     {
       icon: TrendingUp,
       value: 18,
       suffix: '%',
-      label: 'Revenue Increase',
-      description: 'Through optimized availability',
+      labelKey: 'metrics.revenue',
+      descKey: 'metrics.revenueDesc',
       color: 'accent',
     },
     {
@@ -36,8 +38,8 @@ export const MetricsSection = () => {
       value: convertCurrency(2.5),
       prefix: currencySymbol,
       suffix: 'M+',
-      label: 'Annual Savings',
-      description: 'Average enterprise savings',
+      labelKey: 'metrics.annualSavings',
+      descKey: 'metrics.annualSavingsDesc',
       decimals: 1,
       color: 'warning',
     },
@@ -53,16 +55,16 @@ export const MetricsSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-10 sm:mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">Business Impact</h2>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">{t('metrics.title')}</h2>
           <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Real results from companies using our AI-powered platform
+            {t('metrics.description')}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
           {metrics.map((metric, index) => (
             <motion.div
-              key={metric.label}
+              key={metric.labelKey}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -83,8 +85,8 @@ export const MetricsSection = () => {
                     className="gradient-text"
                   />
                 </div>
-                <h3 className="text-sm sm:text-lg font-semibold mb-1">{metric.label}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">{metric.description}</p>
+                <h3 className="text-sm sm:text-lg font-semibold mb-1">{t(metric.labelKey)}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">{t(metric.descKey)}</p>
               </div>
             </motion.div>
           ))}

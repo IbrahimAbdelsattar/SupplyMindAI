@@ -53,7 +53,7 @@ export const FormattedMessage: React.FC<FormattedMessageProps> = ({ content, cla
 
   const parseTableRow = (rowText: string): string[] => {
     const trimmed = rowText.trim();
-    let cells = trimmed.split('|');
+    const cells = trimmed.split('|');
     if (trimmed.startsWith('|')) {
       cells.shift();
     }

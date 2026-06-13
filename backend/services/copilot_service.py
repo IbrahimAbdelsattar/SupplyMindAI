@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from langchain_core.messages import SystemMessage, HumanMessage
-from backend.integrations.agentrouter import get_agentrouter_llm
+from backend.llm.client import get_llm
 from backend.knowledge.langsmith_tracing import configure_langsmith
 
 COPILOT_SYSTEM_PROMPT = """You are SupplyMind AI Copilot.
@@ -19,8 +19,7 @@ If a question requires business data, direct the user to the Inventory Assistant
 
 class CopilotService:
     def __init__(self) -> None:
-        model = os.getenv("COPILOT_MODEL", "glm5.1")
-        self.llm = get_agentrouter_llm(model_name=model)
+        self.llm = get_llm()
 
     def chat(self, message: str) -> str:
         # Enable LangSmith observability/tracing

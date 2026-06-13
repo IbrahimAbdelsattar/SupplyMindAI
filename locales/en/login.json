@@ -2,7 +2,7 @@
   "welcomeToApp": "Welcome to {{appName}}",
   "tagline": "AI-driven demand & inventory orchestration",
   "accessPlatform": "Access Platform",
-  "cardDescription": "Sign in to your account or register a new one",
+  "cardDescription": "Sign in to your authorized team account",
   "signIn": "Sign In",
   "signUp": "Sign Up",
   "email": "Email",
