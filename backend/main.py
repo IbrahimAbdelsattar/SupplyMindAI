@@ -551,6 +551,22 @@ def debug_model(user: User = Depends(_require_roles("admin"))) -> dict[str, Any]
     return get_llm_info()
 
 
+def _run_migrations() -> None:
+    alembic_ini = Path(__file__).resolve().parent / "alembic.ini"
+    if not alembic_ini.exists():
+        logger.info("No alembic.ini found — skipping Alembic migrations, using create_tables()")
+        return
+    try:
+        from alembic.config import Config
+        from alembic import command
+
+        cfg = Config(str(alembic_ini))
+        command.upgrade(cfg, "head")
+        logger.info("Alembic migrations up to date")
+    except Exception as exc:
+        logger.warning("Alembic migration failed (%s), falling back to create_tables()", exc)
+
+
 @app.on_event("startup")
 def _startup() -> None:
     global ML_MODEL, RAG_SERVICE, FORECAST_INTELLIGENCE
@@ -558,6 +574,8 @@ def _startup() -> None:
     from backend.bootstrap import init_ml_model, init_rag_service, load_environment
 
     load_environment()
+
+    _run_migrations()
     create_tables()
 
     from backend.db import seed_users, SessionLocal, User

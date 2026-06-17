@@ -4,17 +4,19 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine, inspect, text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"sqlite:///{(PROJECT_ROOT / 'backend' / 'supplymind.db').as_posix()}",
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL environment variable is required. "
+        "Set it in .env (e.g., postgresql://user:pass@host:port/dbname)."
+    )
 
 engine_options: dict = {"pool_pre_ping": True}
 if DATABASE_URL.startswith("sqlite"):
@@ -158,28 +160,6 @@ class UserSettings(Base):
 
 def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
-    _ensure_user_columns()
-
-
-def _ensure_mysql_extensions() -> None:
-    pass
-
-
-def _ensure_user_columns() -> None:
-    inspector = inspect(engine)
-    if "users" not in inspector.get_table_names():
-        return
-
-    existing_columns = {c["name"] for c in inspector.get_columns("users")}
-
-    with engine.begin() as conn:
-        if "role" not in existing_columns:
-            conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'analyst'"))
-
-        if "is_active" not in existing_columns:
-            conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true"))
-        if "updated_at" not in existing_columns:
-            conn.execute(text("ALTER TABLE users ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE"))
 
 
 def get_db() -> Session:
