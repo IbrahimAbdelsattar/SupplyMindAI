@@ -176,14 +176,22 @@ def seed_users() -> None:
     from datetime import datetime, timezone
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    
-    default_users = [
-        {"email": "admin@supplymind.ai", "password": "Admin@123!", "role": "admin"},
-        {"email": "demo@supplymind.ai", "password": "demo", "role": "manager"}
+
+    seed_users_list = [
+        {
+            "email": os.getenv("ADMIN_EMAIL", "admin@supplymind.ai"),
+            "password": os.getenv("ADMIN_PASSWORD", "Admin@123!"),
+            "role": "admin",
+        },
+        {
+            "email": os.getenv("DEMO_EMAIL", "demo@supplymind.ai"),
+            "password": os.getenv("DEMO_PASSWORD", "demo"),
+            "role": "manager",
+        },
     ]
-    
+
     with SessionLocal() as db:
-        for user_data in default_users:
+        for user_data in seed_users_list:
             email = user_data["email"]
             existing = db.query(User).filter(User.email == email).first()
             if not existing:
@@ -195,7 +203,7 @@ def seed_users() -> None:
                     role=user_data["role"],
                     is_active=True,
                     created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc)
+                    updated_at=datetime.now(timezone.utc),
                 )
                 db.add(user)
         db.commit()

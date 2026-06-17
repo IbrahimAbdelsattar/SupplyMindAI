@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.dependencies import _get_current_user
-from backend.main import FORECAST_INTELLIGENCE  # noqa: F811
+from backend.globals import FORECAST_INTELLIGENCE
 from backend.services.forecast_intelligence_service import ForecastIntelligenceService
 
 LOGGER = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/forecast/intelligence", tags=["forecast-intel
 
 
 def _get_service() -> ForecastIntelligenceService:
-    from backend.main import FORECAST_INTELLIGENCE
+    from backend.globals import FORECAST_INTELLIGENCE
 
     if FORECAST_INTELLIGENCE is None:
         raise HTTPException(status_code=503, detail="Forecast intelligence service not initialized")

@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/v1/forecast", tags=["forecast-insights"])
 
 
 def _get_service() -> ForecastIntelligenceService:
-    from backend.main import FORECAST_INTELLIGENCE
+    from backend.globals import FORECAST_INTELLIGENCE
 
     if FORECAST_INTELLIGENCE is None:
         raise HTTPException(status_code=503, detail="Forecast intelligence service not initialized")

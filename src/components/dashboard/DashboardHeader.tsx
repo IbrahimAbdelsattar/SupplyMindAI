@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from "react-i18next";
 import { motion } from 'framer-motion';
 import { Bell, Search, Calendar } from 'lucide-react';
@@ -13,16 +13,33 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { alerts } from '@/lib/mockData';
 
 interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
 }
 
+interface Alert {
+  id: string;
+  type: 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+  time: string;
+}
+
 export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const { t } = useTranslation();
   const [dateRange, setDateRange] = useState(t('common:dateRange.last7days'));
+  const [notifications, setNotifications] = useState<Alert[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/data/dashboard')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.alerts) setNotifications(data.alerts);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <motion.header
@@ -69,14 +86,14 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
             <Button variant="outline" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9">
               <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="absolute -top-1 -right-1 rtl:-right-auto rtl:-left-1 w-4 h-4 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center">
-                {alerts.length}
+                {notifications.length}
               </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72 sm:w-80 bg-popover">
             <DropdownMenuLabel>{t('common:notifications.title')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {alerts.slice(0, 4).map((alert) => (
+            {notifications.slice(0, 4).map((alert) => (
               <DropdownMenuItem key={alert.id} className="flex flex-col items-start gap-1 p-3">
                 <div className="flex items-center gap-2">
                   <Badge
