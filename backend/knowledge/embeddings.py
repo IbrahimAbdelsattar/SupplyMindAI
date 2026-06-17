@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 from functools import lru_cache
 from threading import Lock
 from typing import Sequence
@@ -11,12 +12,25 @@ from typing import Sequence
 from backend.knowledge.config import get_knowledge_settings
 
 LOGGER = logging.getLogger(__name__)
+
+# Force single-threaded execution for embedding generation to avoid
+# sentence-transformers/transformers/rayon thread-pool initialization panics.
+# These must be set before importing SentenceTransformer.
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("RAYON_NUM_THREADS", "1")
+
 _embed_lock = Lock()
 _cache: dict[str, list[float]] = {}
 
 
 @lru_cache(maxsize=1)
 def _get_model():
+    # Model loading is serialized by _embed_lock (callers must hold the lock).
     settings = get_knowledge_settings()
     try:
         from sentence_transformers import SentenceTransformer
@@ -25,6 +39,7 @@ def _get_model():
     except Exception as exc:
         LOGGER.exception("Embedding model load failed: %s", exc)
         raise
+
 
 
 def _cache_key(text: str) -> str:

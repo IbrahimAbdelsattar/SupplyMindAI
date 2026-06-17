@@ -47,7 +47,7 @@ ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
+        "http://localhost:8081,http://127.0.0.1:8081,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
     ).split(",")
     if origin.strip()
 ]
@@ -428,7 +428,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["*"],
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
@@ -560,8 +560,38 @@ def _startup() -> None:
     load_environment()
     create_tables()
 
-    from backend.db import seed_users
+    from backend.db import seed_users, SessionLocal, User
     seed_users()
+
+    # Ensure the default admin user exists (authorized accounts only; signup is disabled)
+    try:
+        from backend.knowledge.auth import PASSWORD_CONTEXT
+
+        admin_email = "admin@supplymind.ai"
+        default_password = "Admin@123!"
+        admin_name = "Admin"
+
+        with SessionLocal() as db:
+            existing = db.query(User).filter(User.email == admin_email).first()
+            if not existing:
+                import uuid
+                from datetime import datetime, timezone
+
+                db.add(
+                    User(
+                        id=str(uuid.uuid4()),
+                        name=admin_name,
+                        email=admin_email,
+                        password_hash=PASSWORD_CONTEXT.hash(default_password),
+                        role="admin",
+                        is_active=True,
+                        created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc),
+                    )
+                )
+                db.commit()
+    except Exception as exc:
+        logger.warning("Default admin user seeding failed: %s", exc)
 
     ML_MODEL = init_ml_model(STORE)
     RAG_SERVICE = init_rag_service()

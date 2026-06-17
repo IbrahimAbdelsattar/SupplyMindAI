@@ -46,6 +46,11 @@ class GuardrailsMiddleware(BaseHTTPMiddleware):
         }
 
     async def dispatch(self, request: Request, call_next):
+        # Never block browser preflight requests with auth/input/output guardrails.
+        # This prevents OPTIONS from failing (e.g., 400) and breaking login.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         start = time.monotonic()
         self.monitor.record_request(request.url.path)
 

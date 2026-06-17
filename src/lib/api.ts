@@ -1,11 +1,10 @@
-const API_BASE = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/$/, '');
-
 type ApiFetchOptions = RequestInit & {
   auth?: boolean;
 };
 
-export function getApiBaseUrl() {
-  return API_BASE;
+export function getApiBaseUrl(): string {
+  const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:8081/api/v1';
+  return apiBase.replace(/\/$/, '');
 }
 
 export function setToken(token: string | null) {
@@ -34,7 +33,7 @@ export async function fetchApi(endpoint: string, options: ApiFetchOptions = {}) 
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
     ...fetchOptions,
     headers,
   });
