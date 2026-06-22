@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-.agents
+.agents/
 # Distribution / packaging
 .Python
 build/
@@ -87,6 +87,8 @@ celerybeat-schedule
 .env
 .env.local
 .env.production
+.env.development
+.env.staging
 .env.*.local
 !.env.example
 
@@ -101,6 +103,10 @@ dmypy.json
 # VS Code settings
 .vscode/
 .claude/
+.cursor/
+.qodo/
+.sixth/
+
 # PyCharm
 .idea/
 
@@ -116,3 +122,39 @@ backend/supplymind.db
 backend/alembic.ini
 bun.lock
 bun.lockb
+package-lock.json
+
+# Build artifacts
+*.tsbuildinfo
+
+# Test files in root
+test_auth.py
+test_imports.py
+data_audit.py
+
+# Credentials and secrets
+credentials.md
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Plans and docs (not for deployment)
+plans/
+TODO.md
+AI_ARCHITECTURE.md
+COPILOT_ARCHITECTURE.md
+RAG_ARCHITECTURE.md
+SELF_HOSTED_SERVICES.md
+LANGSMITH_SETUP.md
+architecture-diagrams.md
+
+# Data files (not for deployment)
+data/*.csv
+data/enriched\ data/
+
+# Batch scripts (Windows-only, not for deployment)
+start.bat
+stop.bat
+clean.bat

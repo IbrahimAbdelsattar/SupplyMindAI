@@ -10,10 +10,10 @@ from backend.dependencies import _get_current_user
 from backend.globals import PROJECT_ROOT, MODELS, STORE
 from backend.knowledge.auth import AuthUser
 
-router = APIRouter(tags=["mlops"])
+router = APIRouter(prefix="/api/v1/mlops", tags=["mlops"])
 
 
-@router.get("/api/v1/mlops/metrics")
+@router.get("/metrics")
 def mlops_metrics(user: AuthUser = Depends(_get_current_user)):
     try:
         metrics = {
@@ -33,7 +33,7 @@ def mlops_metrics(user: AuthUser = Depends(_get_current_user)):
         return {"metrics": {}, "error": str(exc)}
 
 
-@router.get("/api/v1/mlops/langsmith")
+@router.get("/langsmith")
 def mlops_langsmith(user: AuthUser = Depends(_get_current_user)):
     try:
         from backend.services.langsmith_tracing_service import fetch_tracing_data

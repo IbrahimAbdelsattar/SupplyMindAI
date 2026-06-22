@@ -11,10 +11,10 @@ from backend.globals import STORE
 from backend.knowledge.auth import AuthUser
 from backend.schemas.alerts import AlertItem
 
-router = APIRouter(tags=["alerts"])
+router = APIRouter(prefix="/api/v1/alerts", tags=["alerts"])
 
 
-@router.get("/api/v1/alerts/active")
+@router.get("/active")
 def alerts_active(user: AuthUser = Depends(_get_current_user)):
     try:
         prods = STORE.products()

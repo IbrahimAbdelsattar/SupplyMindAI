@@ -3,7 +3,8 @@ type ApiFetchOptions = RequestInit & {
 };
 
 export function getApiBaseUrl(): string {
-  const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:8081/api/v1';
+  // Default to relative API base so local dev hits the backend via Vite (or same-origin nginx) instead of hardcoding the wrong port.
+  const apiBase = import.meta.env.VITE_API_URL ?? '/api/v1';
   return apiBase.replace(/\/$/, '');
 }
 

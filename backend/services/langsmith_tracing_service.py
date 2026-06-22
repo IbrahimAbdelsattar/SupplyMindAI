@@ -124,7 +124,7 @@ def fetch_tracing_data(  # noqa: C901
             errors = run_errors.get(agent_key, 0)
             latencies = run_latencies.get(agent_key, [])
             model_env = LLM_MODEL_MAP.get(agent_key, "COPILOT_MODEL")
-            model_name = os.getenv(model_env, "glm5.1")
+            model_name = os.getenv(model_env, "openai/gpt-oss-120b:free")
 
             avg_latency = round(sum(latencies) / len(latencies), 2) if latencies else None
             first_seen = run_first_seen.get(agent_key)
@@ -161,7 +161,7 @@ def _agent_list_without_data() -> list[dict[str, Any]]:
     agents: list[dict[str, Any]] = []
     for agent_key, label in AGENT_LABELS.items():
         model_env = LLM_MODEL_MAP.get(agent_key, "COPILOT_MODEL")
-        model_name = os.getenv(model_env, "glm5.1")
+        model_name = os.getenv(model_env, "openai/gpt-oss-120b:free")
         agents.append({
             "name": agent_key,
             "label": label,

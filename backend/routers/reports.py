@@ -18,7 +18,7 @@ from backend.globals import PROJECT_ROOT, STORE
 from backend.knowledge.auth import AuthUser
 from backend.schemas.reports import ReportItem
 
-router = APIRouter(tags=["reports"])
+router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
 REPORTS_DIR = PROJECT_ROOT / "reports"
 os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -90,7 +90,7 @@ def create_demo_reports():
         generated_at=now,
         status="ready",
         file_size=file_size,
-        download_url=f"/api/v1/reports/download/inventory_summary.csv",
+        download_url=f"/reports/download/inventory_summary.csv",
     ))
 
     period_ranges = [
@@ -121,13 +121,13 @@ def create_demo_reports():
             period_end=end_d,
             generated_at=now,
             status="ready",
-            download_url=f"/api/v1/reports/download/report_{report_id}.json",
+            download_url=f"/reports/download/report_{report_id}.json",
         ))
 
     return reports_list
 
 
-@router.get("/api/v1/reports/list")
+@router.get("/list")
 def reports_list(user: AuthUser = Depends(_get_current_user)):
     try:
         reports = create_demo_reports()
@@ -136,7 +136,7 @@ def reports_list(user: AuthUser = Depends(_get_current_user)):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/api/v1/reports/download/{filename}")
+@router.get("/download/{filename}")
 def reports_download(filename: str, user: AuthUser = Depends(_get_current_user)):
     try:
         safe_path = (REPORTS_DIR / filename).resolve()

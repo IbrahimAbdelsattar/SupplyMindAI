@@ -13,7 +13,7 @@ from backend.globals import STORE
 from backend.knowledge.auth import AuthUser
 from backend.schemas.inventory import InventoryRecommendation, InventoryItemOut, InventorySummaryOut
 
-router = APIRouter(tags=["inventory"])
+router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
 
 
 class InventoryUpdateRequest(BaseModel):
@@ -22,7 +22,7 @@ class InventoryUpdateRequest(BaseModel):
     reason: Optional[str] = None
 
 
-@router.get("/api/v1/inventory/optimize")
+@router.get("/optimize")
 def inventory_optimize(user: AuthUser = Depends(_get_current_user)):
     try:
         prods = STORE.products()
@@ -90,7 +90,7 @@ def inventory_optimize(user: AuthUser = Depends(_get_current_user)):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.post("/api/v1/inventory/update")
+@router.post("/update")
 def inventory_update(payload: InventoryUpdateRequest, user: AuthUser = Depends(_get_current_user)):
     try:
         return {"status": "ok", "message": f"Inventory for {payload.sku} updated to {payload.stock}"}
@@ -98,7 +98,7 @@ def inventory_update(payload: InventoryUpdateRequest, user: AuthUser = Depends(_
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/api/v1/inventory")
+@router.get("")
 def inventory_list(user: AuthUser = Depends(_get_current_user)):
     try:
         prods = STORE.products()

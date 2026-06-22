@@ -4,122 +4,81 @@ from langchain_openai import ChatOpenAI
 
 LOGGER = logging.getLogger(__name__)
 
+DEFAULT_MODEL = "openai/gpt-oss-120b:free"
+
+
+def _resolve_key() -> str | None:
+    """Resolve LLM API key from env vars (priority order)."""
+    for var in ("LLM_REASONING_API_KEY", "RAG_API_KEY", "CHATBOT_API_KEY", "OPENROUTER_API_KEY"):
+        key = os.getenv(var)
+        if key:
+            return key.strip()
+    return None
+
+
+def _resolve_provider(key: str) -> tuple[str, str]:
+    """Detect provider base_url and default model from key prefix."""
+    if key.startswith("nvapi-"):
+        return "https://integrate.api.nvidia.com/v1", DEFAULT_MODEL
+    if key.startswith("sk-or-"):
+        return "https://openrouter.ai/api/v1", DEFAULT_MODEL
+    if key.startswith("sk-"):
+        return "https://api.openai.com/v1", "openai/gpt-4o-mini"
+    # Unknown key prefix — default to OpenRouter
+    return "https://openrouter.ai/api/v1", DEFAULT_MODEL
+
+
+def _openrouter_headers() -> dict[str, str]:
+    return {
+        "HTTP-Referer": "https://supplymind.ai",
+        "X-Title": "SupplyMind AI",
+    }
+
+
 def get_llm(temperature: float = 0.1) -> ChatOpenAI:
     """
-    Unified client factory to build and return a ChatOpenAI instance.
-    Supports OpenRouter, NVIDIA NIM, OpenAI, and custom OpenAI-compatible endpoints.
-    Auto-detects provider based on the API key format if base_url is not specified.
+    Unified client factory. Returns a ChatOpenAI instance.
+    Auto-detects provider based on API key prefix.
     """
-    key = (
-        os.getenv("LLM_REASONING_API_KEY")
-        or os.getenv("RAG_API_KEY")
-        or os.getenv("CHATBOT_API_KEY")
-        or os.getenv("OPENROUTER_API_KEY")
-    )
-    if key:
-        key = key.strip()
-
+    key = _resolve_key()
     base_url = os.getenv("LLM_BASE_URL")
     model = os.getenv("LLM_MODEL")
 
     if key:
-        # Auto-detect base_url and model based on the key prefix if not overridden
-        if key.startswith("nvapi-"):
-            if not base_url:
-                base_url = "https://integrate.api.nvidia.com/v1"
-            if not model or model == "glm5.1":
-                model = "openai/gpt-oss-120b:free"
-        if key.startswith("sk-or-"):
-            if not base_url:
-                base_url = "https://openrouter.ai/api/v1"
-            if not model or model == "glm5.1":
-                model = "openai/gpt-oss-120b:free"
-        elif key.startswith("sk-"):
-            # Standard OpenAI key
-            if not base_url:
-                base_url = None  # Use default OpenAI endpoint
-            if not model or model == "glm5.1":
-                model = "openai/gpt-4o-mini"
+        # Auto-detect if not explicitly set
+        if not base_url or not model:
+            detected_url, detected_model = _resolve_provider(key)
+            base_url = base_url or detected_url
+            model = model or detected_model
+    else:
+        LOGGER.warning("No LLM API key configured — calls will fail")
 
-    # Set ultimate fallbacks if still not resolved
-    if not base_url and key:
-        # Default to OpenRouter for general keys (like the user's OpenRouter key)
-        base_url = "https://openrouter.ai/api/v1"
-    
-    if not model or model == "glm5.1":
-        model = "openai/gpt-oss-120b:free"
-    LOGGER.info(f"Using model: {model}")
+    LOGGER.info("Using model: %s", model)
 
-    LOGGER.info(
-        "Initializing ChatOpenAI with model=%s, base_url=%s (key_configured=%s)",
-        model,
-        base_url,
-        bool(key),
-    )
-
-    # Extra headers for OpenRouter compliance if needed
-    extra_headers = {}
-    if base_url and "openrouter.ai" in base_url:
-        extra_headers = {
-            "HTTP-Referer": "https://supplymind.ai",
-            "X-Title": "SupplyMind AI",
-        }
+    extra_headers = _openrouter_headers() if base_url and "openrouter.ai" in base_url else {}
 
     return ChatOpenAI(
         model=model,
         api_key=key or "not-set",
         base_url=base_url or None,
         temperature=temperature,
-        default_headers=extra_headers if extra_headers else None,
+        default_headers=extra_headers or None,
     )
 
 
 def get_llm_info() -> dict:
-    """
-    Returns the resolved LLM configuration details (model, base_url, key configuration status).
-    """
-    key = (
-        os.getenv("LLM_REASONING_API_KEY")
-        or os.getenv("RAG_API_KEY")
-        or os.getenv("CHATBOT_API_KEY")
-        or os.getenv("OPENROUTER_API_KEY")
-    )
-    if key:
-        key = key.strip()
-
+    """Returns resolved LLM configuration for diagnostics."""
+    key = _resolve_key()
     base_url = os.getenv("LLM_BASE_URL")
     model = os.getenv("LLM_MODEL")
 
-    if key:
-        # Auto-detect base_url and model based on the key prefix if not overridden
-        if key.startswith("nvapi-"):
-            if not base_url:
-                base_url = "https://integrate.api.nvidia.com/v1"
-            if not model or model == "glm5.1":
-                model = "openai/gpt-oss-120b:free"
-        if key.startswith("sk-or-"):
-            if not base_url:
-                base_url = "https://openrouter.ai/api/v1"
-            if not model or model == "glm5.1":
-                model = "openai/gpt-oss-120b:free"
-        elif key.startswith("sk-"):
-            # Standard OpenAI key
-            if not base_url:
-                base_url = None  # Use default OpenAI endpoint
-            if not model or model == "glm5.1":
-                model = "openai/gpt-4o-mini"
-
-    # Set ultimate fallbacks if still not resolved
-    if not base_url and key:
-        # Default to OpenRouter for general keys (like the user's OpenRouter key)
-        base_url = "https://openrouter.ai/api/v1"
-
-    if not model or model == "glm5.1":
-        model = "openai/gpt-oss-120b:free"
+    if key and (not base_url or not model):
+        detected_url, detected_model = _resolve_provider(key)
+        base_url = base_url or detected_url
+        model = model or detected_model
 
     return {
-        "model": model,
+        "model": model or DEFAULT_MODEL,
         "base_url": base_url or "https://api.openai.com/v1",
         "api_key_configured": bool(key),
     }
-

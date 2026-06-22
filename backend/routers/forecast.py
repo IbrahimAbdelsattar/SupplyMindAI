@@ -16,10 +16,10 @@ from backend.globals import PROJECT_ROOT, STORE, MODELS
 from backend.knowledge.auth import AuthUser
 from backend.schemas.forecast import ForecastPredictRequest, ForecastPredictResponse, ForecastPoint, MonthlyPrediction
 
-router = APIRouter(tags=["forecast"])
+router = APIRouter(prefix="/api/v1/forecast", tags=["forecast"])
 
 
-@router.post("/api/v1/forecast/predict", response_model=ForecastPredictResponse)
+@router.post("/predict", response_model=ForecastPredictResponse)
 def forecast_predict(payload: ForecastPredictRequest, user: AuthUser = Depends(_get_current_user)):
     from prophet import Prophet
 
@@ -145,7 +145,7 @@ def forecast_predict(payload: ForecastPredictRequest, user: AuthUser = Depends(_
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.post("/api/v1/forecast/shap")
+@router.post("/shap")
 def forecast_shap(payload: dict, user: AuthUser = Depends(_get_current_user)):
     try:
         product_id = payload.get("product_id", "")

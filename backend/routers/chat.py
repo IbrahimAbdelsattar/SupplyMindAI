@@ -6,10 +6,10 @@ from backend.dependencies import _get_current_user
 from backend.knowledge.auth import AuthUser
 from backend.schemas.insights import ChatRequest
 
-router = APIRouter(tags=["chat"])
+router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
 
-@router.post("/api/v1/chat")
+@router.post("")
 def chat_endpoint(payload: ChatRequest, user: AuthUser = Depends(_get_current_user)):
     from loguru import logger
 

@@ -12,10 +12,10 @@ from backend.globals import STORE, MODELS
 from backend.knowledge.auth import AuthUser
 from backend.schemas.insights import InsightsGeneratePayload, ChatPayload
 
-router = APIRouter(tags=["insights"])
+router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
 
 
-@router.post("/api/v1/insights/generate")
+@router.post("/generate")
 def insights_generate(payload: InsightsGeneratePayload, user: AuthUser = Depends(_get_current_user)):
     logger = None
     try:
@@ -165,7 +165,7 @@ def _fallback_insights(product_id: str, reason: str = "") -> dict:
     }
 
 
-@router.post("/api/v1/insights/chat")
+@router.post("/chat")
 def insights_chat(payload: ChatPayload, user: AuthUser = Depends(_get_current_user)):
     try:
         from backend.agents.graph import app_graph

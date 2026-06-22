@@ -9,10 +9,10 @@ from backend.db import SessionLocal, UserSettings
 from backend.knowledge.auth import AuthUser
 from backend.schemas.settings import UserSettingsPayload
 
-router = APIRouter(tags=["settings"])
+router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
 
-@router.get("/api/v1/settings")
+@router.get("")
 def get_settings(user: AuthUser = Depends(_get_current_user)):
     db = SessionLocal()
     try:
@@ -24,7 +24,7 @@ def get_settings(user: AuthUser = Depends(_get_current_user)):
         db.close()
 
 
-@router.put("/api/v1/settings")
+@router.put("")
 def save_settings(payload: UserSettingsPayload, user: AuthUser = Depends(_get_current_user)):
     from loguru import logger
 
