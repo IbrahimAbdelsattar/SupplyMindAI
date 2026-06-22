@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     // This prevents accidental requests to the frontend server (which would 404).
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8081',
         changeOrigin: true,
       },
     },

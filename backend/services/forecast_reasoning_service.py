@@ -47,6 +47,15 @@ class ForecastReasoningService:
         self.llm = get_llm()
 
     def analyze(self, forecasts: list[dict[str, Any]], question: Optional[str] = None) -> dict[str, Any]:
+        if not self.llm:
+            LOGGER.warning("Forecast reasoning LLM is not configured or disabled.")
+            return {
+                "summary": "Forecast reasoning analysis is currently disabled (LLM not configured).",
+                "risks": [],
+                "recommendations": [],
+                "revenue_opportunities": [],
+            }
+
         configure_langsmith()
 
         # Build context from the forecasts

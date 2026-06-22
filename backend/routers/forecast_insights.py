@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_user
+from backend.llm.client import is_forecast_insights_enabled
 from backend.llm.forecast_reasoning import (
     generate_executive_insights,
     generate_high_risk_insights,
@@ -37,6 +38,8 @@ class InsightsResponse(BaseModel):
 
 @router.post("/insights", response_model=InsightsResponse)
 def forecast_insights(user: Any = Depends(_get_current_user)) -> InsightsResponse:
+    if not is_forecast_insights_enabled():
+        raise HTTPException(status_code=503, detail="Forecast Insights service is currently disabled or LLM is not configured.")
     svc = _get_service()
     if not svc.is_loaded:
         raise HTTPException(status_code=503, detail="Forecast intelligence data not available")
@@ -48,6 +51,8 @@ def forecast_insights(user: Any = Depends(_get_current_user)) -> InsightsRespons
 
 @router.post("/insights/product/{product_id}", response_model=InsightsResponse)
 def product_insight(product_id: str, user: Any = Depends(_get_current_user)) -> InsightsResponse:
+    if not is_forecast_insights_enabled():
+        raise HTTPException(status_code=503, detail="Forecast Insights service is currently disabled or LLM is not configured.")
     svc = _get_service()
     forecasts = svc.get_product_forecast(product_id)
     if not forecasts:
@@ -59,6 +64,8 @@ def product_insight(product_id: str, user: Any = Depends(_get_current_user)) -> 
 
 @router.post("/insights/high-risk", response_model=InsightsResponse)
 def high_risk_insight(user: Any = Depends(_get_current_user)) -> InsightsResponse:
+    if not is_forecast_insights_enabled():
+        raise HTTPException(status_code=503, detail="Forecast Insights service is currently disabled or LLM is not configured.")
     svc = _get_service()
     high_risk = svc.get_high_risk_products()
     if not high_risk:
@@ -70,6 +77,8 @@ def high_risk_insight(user: Any = Depends(_get_current_user)) -> InsightsRespons
 
 @router.post("/insights/revenue", response_model=InsightsResponse)
 def revenue_insight(user: Any = Depends(_get_current_user)) -> InsightsResponse:
+    if not is_forecast_insights_enabled():
+        raise HTTPException(status_code=503, detail="Forecast Insights service is currently disabled or LLM is not configured.")
     svc = _get_service()
     revenue_data = svc.get_revenue_forecasts()
     if not revenue_data:

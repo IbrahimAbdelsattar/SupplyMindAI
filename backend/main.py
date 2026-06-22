@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 import sys
@@ -207,6 +207,35 @@ async def log_requests(request: Request, call_next):
 
 @app.get("/api/v1/health")
 def health() -> dict[str, Any]:
+    # Database check
+    db_ok = False
+    try:
+        db = SessionLocal()
+        db.execute(select(1))
+        db_ok = True
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+    from backend.llm.client import get_llm_info, is_copilot_enabled, is_rag_enabled, is_forecast_insights_enabled
+    
+    llm_info = get_llm_info()
+    llm_available = llm_info.get("api_key_configured", False)
+    
+    provider = None
+    model = None
+    if llm_available:
+        model = llm_info.get("model")
+        base_url = llm_info.get("base_url", "")
+        if base_url:
+            if "api.openai.com" in base_url:
+                provider = "openai"
+            elif "integrate.api.nvidia.com" in base_url:
+                provider = "nvidia"
+            else:
+                provider = "openrouter"
+
     data_ok = all((DATA_DIR / name).exists() for name in ["products.csv", "sales_daily.csv", "inventory.csv"])
     try:
         from backend.knowledge.client import is_knowledge_available
@@ -220,6 +249,14 @@ def health() -> dict[str, Any]:
 
     return {
         "status": "ok",
+        "backend": "healthy",
+        "database": db_ok,
+        "llm": llm_available,
+        "provider": provider,
+        "model": model,
+        "rag": is_rag_enabled(),
+        "forecast_insights": is_forecast_insights_enabled(),
+        "copilot": is_copilot_enabled(),
         "time": _utc_now().isoformat(),
         "components": {
             "data_csv": data_ok,
@@ -227,7 +264,7 @@ def health() -> dict[str, Any]:
             "ml_trained": bool(ML_MODEL and getattr(ML_MODEL, "is_trained_model_loaded", False)),
             "rag_service": RAG_SERVICE is not None,
             "rag_loaded": bool(RAG_SERVICE and getattr(RAG_SERVICE, "is_initialized", True)),
-            "openrouter_key": bool(os.getenv("CHATBOT_API_KEY") or os.getenv("LLM_REASONING_API_KEY") or os.getenv("RAG_API_KEY")),
+            "openrouter_key": llm_available,
             "knowledge_configured": bool(k_settings and k_settings.is_configured),
             "knowledge_connected": knowledge_ok,
             "langsmith_tracing": os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes", "on"},

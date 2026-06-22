@@ -37,7 +37,15 @@ _copilot_tool_node = ToolNode(_copilot_tools)
 
 from backend.llm.client import get_llm
 
-_copilot_llm = get_llm(temperature=0.15).bind_tools(_copilot_tools)
+_copilot_llm_cache = None
+
+def _get_copilot_llm():
+    global _copilot_llm_cache
+    if _copilot_llm_cache is None:
+        llm = get_llm(temperature=0.15)
+        if llm is not None:
+            _copilot_llm_cache = llm.bind_tools(_copilot_tools)
+    return _copilot_llm_cache
 
 
 _COPILOT_SYSTEM = """You are SupplyMind Copilot — a supply chain intelligence assistant.
@@ -49,7 +57,10 @@ If tools return no data, say so and suggest running forecast/inventory/insights 
 
 def copilot_agent_node(state: AgentState):
     messages = [SystemMessage(content=_COPILOT_SYSTEM)] + state["messages"]
-    response = _copilot_llm.invoke(messages)
+    model = _get_copilot_llm()
+    if not model:
+        return {"messages": [AIMessage(content="Copilot agent is currently unavailable (LLM disabled).")]}
+    response = model.invoke(messages)
     return {"messages": [response]}
 
 

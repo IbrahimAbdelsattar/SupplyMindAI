@@ -83,12 +83,16 @@ OPERATIONAL_SNAPSHOT:
                 HumanMessage(content=user_content)
             ]
 
-            try:
-                response = self.llm.invoke(messages)
-                answer = response.content if hasattr(response, "content") else str(response)
-            except Exception as exc:
-                LOGGER.exception("RAG LLM execution failed: %s", exc)
-                answer = f"I don't have enough information to answer that question. (System Error: {exc})"
+            if not self.llm:
+                LOGGER.warning("RAG LLM is not configured or disabled.")
+                answer = "RAG service is currently unavailable (LLM disabled)."
+            else:
+                try:
+                    response = self.llm.invoke(messages)
+                    answer = response.content if hasattr(response, "content") else str(response)
+                except Exception as exc:
+                    LOGGER.exception("RAG LLM execution failed: %s", exc)
+                    answer = f"I don't have enough information to answer that question. (System Error: {exc})"
 
             return {
                 "answer": answer,

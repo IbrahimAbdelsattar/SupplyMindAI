@@ -11,12 +11,15 @@ from backend.dependencies import _get_current_user
 from backend.globals import STORE, MODELS
 from backend.knowledge.auth import AuthUser
 from backend.schemas.insights import InsightsGeneratePayload, ChatPayload
+from backend.llm.client import is_ai_insights_enabled
 
 router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
 
 
 @router.post("/generate")
 def insights_generate(payload: InsightsGeneratePayload, user: AuthUser = Depends(_get_current_user)):
+    if not is_ai_insights_enabled():
+        raise HTTPException(status_code=503, detail="AI Insights service is currently disabled or LLM is not configured.")
     logger = None
     try:
         from loguru import logger as loguru_logger
@@ -167,6 +170,8 @@ def _fallback_insights(product_id: str, reason: str = "") -> dict:
 
 @router.post("/chat")
 def insights_chat(payload: ChatPayload, user: AuthUser = Depends(_get_current_user)):
+    if not is_ai_insights_enabled():
+        return {"response": "AI Insights service is currently disabled or LLM is not configured.", "sources": []}
     try:
         from backend.agents.graph import app_graph
         from langchain_core.messages import HumanMessage

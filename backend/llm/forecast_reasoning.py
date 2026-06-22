@@ -20,7 +20,8 @@ LOGGER = logging.getLogger(__name__)
 
 from backend.llm.client import get_llm
 
-_reasoning_llm = get_llm(temperature=0.1)
+def _get_reasoning_llm():
+    return get_llm(temperature=0.1)
 
 
 
@@ -38,12 +39,21 @@ def _safe_parse_json(text: str) -> dict[str, Any]:
 
 
 def _invoke_llm(system: str, human: str) -> dict[str, Any]:
+    llm = _get_reasoning_llm()
+    if llm is None:
+        LOGGER.warning("Reasoning LLM is not configured or disabled.")
+        return {
+            "summary": "Forecast reasoning analysis is currently unavailable (LLM disabled).",
+            "risks": [],
+            "recommendations": [],
+            "revenue_opportunities": [],
+        }
     messages = [
         SystemMessage(content=system),
         HumanMessage(content=human),
     ]
     try:
-        response = _reasoning_llm.invoke(messages)
+        response = llm.invoke(messages)
         content = response.content if hasattr(response, "content") else str(response)
         return _safe_parse_json(str(content))
     except Exception as exc:

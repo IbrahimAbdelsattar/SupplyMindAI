@@ -22,6 +22,10 @@ class CopilotService:
         self.llm = get_llm()
 
     def chat(self, message: str) -> str:
+        if not self.llm:
+            LOGGER.warning("Copilot LLM is not configured or disabled.")
+            return "Copilot service is currently unavailable (LLM disabled)."
+
         # Enable LangSmith observability/tracing
         configure_langsmith()
 
