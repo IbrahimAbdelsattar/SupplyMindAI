@@ -12,10 +12,10 @@ from backend.globals import PROJECT_ROOT, STORE
 from backend.db import SessionLocal, ForecastResult
 from backend.knowledge.auth import AuthUser
 
-router = APIRouter(tags=["data"])
+router = APIRouter(prefix="/api/v1/data", tags=["data"])
 
 
-@router.get("/api/v1/data/products")
+@router.get("/products")
 def data_products(user: AuthUser = Depends(_get_current_user)):
     try:
         prods = STORE.products()
@@ -58,7 +58,7 @@ def data_products(user: AuthUser = Depends(_get_current_user)):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/api/v1/data/kpis")
+@router.get("/kpis")
 def data_kpis(user: AuthUser = Depends(_get_current_user)):
     try:
         inventory = STORE.inventory()
@@ -144,7 +144,7 @@ def data_kpis(user: AuthUser = Depends(_get_current_user)):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/api/v1/data/heatmap")
+@router.get("/heatmap")
 def data_heatmap(user: AuthUser = Depends(_get_current_user)):
     try:
         inventory = STORE.inventory()

@@ -114,7 +114,7 @@ echo ==============================================
 echo   Frontend:  http://127.0.0.1:8080
 echo   Backend:   http://127.0.0.1:8081
 echo   API docs:  http://127.0.0.1:8081/docs
-echo   Demo login: demo@supplymind.ai / demo
+echo   Demo login: admin@supplymind.ai / Admin@123!
 echo.
 echo   Optional: set OPENROUTER_API_KEY in .env for AI chat and insights.
 echo ==============================================

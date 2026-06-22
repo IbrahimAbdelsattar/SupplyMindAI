@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { BarChart3, ArrowLeft, Loader2, KeyRound, Mail, ShieldCheck } from 'lucide-react';
+import { BarChart3, ArrowLeft, Loader2, KeyRound, Mail, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -113,13 +114,21 @@ const Login = () => {
                   <KeyRound className="absolute left-3.5 rtl:left-auto rtl:right-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder={t('login:passwordPlaceholder')}
                     value={loginPassword}
                     onChange={(event) => setLoginPassword(event.target.value)}
-                    className="h-11 pl-10 rtl:pl-3 rtl:pr-10 bg-background/50 border-border/50 focus:border-primary"
+                    className="h-11 pl-10 rtl:pl-3 pr-10 rtl:pr-10 bg-background/50 border-border/50 focus:border-primary"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 rtl:right-auto rtl:left-3.5 top-3.5 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
