@@ -44,8 +44,8 @@ npm run dev &
 FRONTEND_PID=$!
 
 echo "SupplyMind AI is running."
-echo "  Frontend: http://127.0.0.1:8080"
-echo "  Backend:  http://127.0.0.1:8000"
+echo "  Frontend: http://127.0.0.1:5173"
+echo "  Backend:  http://127.0.0.1:8000 (or http://127.0.0.1:8081)"
 echo "  Demo:     demo@supplymind.ai / demo"
 
 wait $BACKEND_PID

@@ -7,15 +7,16 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 5173,
+    strictPort: false,
     hmr: {
       overlay: false,
     },
     // Forward frontend API calls to FastAPI during local development.
-    // This prevents accidental requests to the frontend server (which would 404).
+    // The backend runs on port 8081 (FastAPI).
     proxy: {
       '/api': {
-        target: 'http://localhost:8081',
+        target: 'http://127.0.0.1:8081',
         changeOrigin: true,
       },
     },

@@ -28,6 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lowercase repo name
+        id: string
+        run: |
+          echo "repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -42,7 +47,7 @@ jobs:
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/backend
+          images: ${{ env.REGISTRY }}/${{ steps.string.outputs.repo }}/backend
           tags: |
             type=raw,value=${{ github.sha }},priority=200
             type=raw,value=latest,enable={{is_default_branch}}
@@ -62,7 +67,7 @@ jobs:
         id: meta-frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/frontend
+          images: ${{ env.REGISTRY }}/${{ steps.string.outputs.repo }}/frontend
           tags: |
             type=raw,value=${{ github.sha }},priority=200
             type=raw,value=latest,enable={{is_default_branch}}
@@ -120,7 +125,17 @@ jobs:
           ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
           ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}
           OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-          LLM_MODEL=${{ vars.LLM_MODEL }}
+          LLM_REASONING_API_KEY=${{ secrets.LLM_REASONING_API_KEY }}
+          RAG_API_KEY=${{ secrets.RAG_API_KEY }}
+          CHATBOT_API_KEY=${{ secrets.CHATBOT_API_KEY }}
+          AGENTROUTER_API_KEY=${{ secrets.AGENTROUTER_API_KEY }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER=${{ vars.LLM_PROVIDER || 'openrouter' }}
+          LLM_MODEL=${{ vars.LLM_MODEL || 'google/gemini-2.5-flash' }}
+          ENABLE_COPILOT=${{ vars.ENABLE_COPILOT || 'true' }}
+          ENABLE_RAG=${{ vars.ENABLE_RAG || 'true' }}
+          ENABLE_AI_INSIGHTS=${{ vars.ENABLE_AI_INSIGHTS || 'true' }}
+          ENABLE_FORECAST_INSIGHTS=${{ vars.ENABLE_FORECAST_INSIGHTS || 'true' }}
           EMBEDDING_MODEL=${{ vars.EMBEDDING_MODEL }}
           LANGCHAIN_TRACING_V2=${{ vars.LANGCHAIN_TRACING_V2 }}
           LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}

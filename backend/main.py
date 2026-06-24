@@ -47,7 +47,8 @@ ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:8081,http://127.0.0.1:8081,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
+        # Default dev origins: frontend (5173 Vite, 3000 alt, 8080 nginx/Docker) and backend (8081)
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080,http://localhost:8081,http://127.0.0.1:8081",
     ).split(",")
     if origin.strip()
 ]
@@ -184,8 +185,97 @@ app.include_router(settings_router)
 app.include_router(copilot_router)
 app.include_router(inventory_rag_router)
 
-@app.get("/")
+from fastapi.responses import HTMLResponse
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def read_root():
+    """
+    Show a friendly HTML page so users who accidentally hit the backend URL
+    see helpful information instead of a blank page or JSON blob.
+    """
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SupplyMindAI API</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #14141f;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 48px 40px;
+      max-width: 520px;
+      width: 90%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .badge {
+      display: inline-block;
+      background: #00c85322;
+      color: #00c853;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      border: 1px solid #00c85344;
+    }
+    p { color: #888; line-height: 1.6; margin-bottom: 16px; }
+    .url-box {
+      background: #1a1a2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: monospace;
+      font-size: 14px;
+      margin: 16px 0;
+      color: #7c7cff;
+    }
+    hr { border: none; border-top: 1px solid #2a2a3a; margin: 24px 0; }
+    a { color: #7c7cff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footer { font-size: 12px; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">SupplyMindAI API</div>
+    <h1>Backend API is running</h1>
+    <p>This is the backend server. The frontend application runs on a different port.</p>
+
+    <p>Open the frontend at:</p>
+    <div class="url-box">
+      <a href="http://localhost:5173">http://localhost:5173</a>
+    </div>
+
+    <hr />
+    <p class="footer">
+      API docs: <a href="/docs">/docs</a> &middot;
+      Health: <a href="/api/v1/health">/api/v1/health</a>
+    </p>
+  </div>
+</body>
+</html>
+"""
+
+
+@app.get("/api/v1", include_in_schema=False)
+def read_api_root():
     return {"status": "ok", "message": "SupplyMindAI API is running"}
 
 
