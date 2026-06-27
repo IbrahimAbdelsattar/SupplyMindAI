@@ -2,6 +2,14 @@ type ApiFetchOptions = RequestInit & {
   auth?: boolean;
 };
 
+type AuthTokenProvider = () => Promise<string | null>;
+
+let authTokenProvider: AuthTokenProvider | null = null;
+
+export function setAuthTokenProvider(provider: AuthTokenProvider | null) {
+  authTokenProvider = provider;
+}
+
 export function getApiBaseUrl(): string {
   // Default to relative API base so local dev hits the backend via Vite (or same-origin nginx) instead of hardcoding the wrong port.
   const apiBase = import.meta.env.VITE_API_URL ?? '/api/v1';
@@ -21,9 +29,20 @@ export function getToken(): string | null {
   return localStorage.getItem('access_token');
 }
 
+async function resolveAccessToken(): Promise<string | null> {
+  if (authTokenProvider) {
+    try {
+      return await authTokenProvider();
+    } catch {
+      return null;
+    }
+  }
+  return getToken();
+}
+
 export async function fetchApi(endpoint: string, options: ApiFetchOptions = {}) {
   const { auth = true, headers: optionHeaders, ...fetchOptions } = options;
-  const token = getToken();
+  const token = auth ? await resolveAccessToken() : null;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

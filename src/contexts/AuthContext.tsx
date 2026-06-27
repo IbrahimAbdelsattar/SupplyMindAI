@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { apiFetch, getToken, setToken } from '@/lib/api';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, ReactNode } from 'react';
+import { useAuth as useClerkAuth, useClerk, useSignIn, useSignUp, useUser } from '@clerk/clerk-react';
+import { setAuthTokenProvider } from '@/lib/api';
 
 interface User {
   id: string;
@@ -28,76 +29,101 @@ export const useAuth = () => {
   return context;
 };
 
-type LoginResponse = {
-  access_token: string;
-  token_type: 'bearer';
-  user: User;
-};
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const clerk = useClerk();
+  const { isLoaded: authLoaded, isSignedIn, getToken } = useClerkAuth();
+  const { isLoaded: userLoaded, user: clerkUser } = useUser();
+  const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
+  const { isLoaded: signUpLoaded, signUp, setActive: setSignUpActive } = useSignUp();
 
   const logout = useCallback(() => {
-    setUser(null);
-    void apiFetch('/auth/signout', { method: 'POST' })
-      .catch(() => undefined)
-      .finally(() => setToken(null));
-  }, []);
+    void clerk.signOut().catch(() => undefined);
+  }, [clerk]);
 
   useEffect(() => {
-    const restoreSession = async () => {
-      if (!getToken()) {
-        setIsLoading(false);
-        return;
+    setAuthTokenProvider(async () => {
+      if (!authLoaded || !isSignedIn) {
+        return null;
       }
-      try {
-        const response = await apiFetch<{ user: User }>('/auth/me');
-        setUser(response.user);
-      } catch {
-        setToken(null);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      return await getToken();
+    });
 
-    const handleUnauthorized = () => setUser(null);
-    window.addEventListener('auth:unauthorized', handleUnauthorized);
-    void restoreSession();
-    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
-  }, []);
+    return () => {
+      setAuthTokenProvider(null);
+    };
+  }, [authLoaded, isSignedIn, getToken]);
+
+  const user = useMemo<User | null>(() => {
+    if (!clerkUser) {
+      return null;
+    }
+
+    const displayName =
+      clerkUser.fullName ||
+      [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
+      clerkUser.primaryEmailAddress?.emailAddress ||
+      clerkUser.username ||
+      'User';
+
+    const role = (clerkUser.publicMetadata?.role as string | undefined) ||
+      (clerkUser.unsafeMetadata?.role as string | undefined);
+
+    return {
+      id: clerkUser.id,
+      name: displayName,
+      email: clerkUser.primaryEmailAddress?.emailAddress || '',
+      role,
+      avatar: clerkUser.imageUrl,
+    };
+  }, [clerkUser]);
+
+  const isLoading = !(authLoaded && userLoaded);
 
   const login = useCallback(async (email: string, password: string) => {
-    const response = await apiFetch<LoginResponse>('/auth/signin', {
-      method: 'POST',
-      auth: false,
-      body: JSON.stringify({ email, password }),
+    if (!signInLoaded || !signIn || !setActive) {
+      throw new Error('Authentication is still loading. Please try again.');
+    }
+
+    const result = await signIn.create({
+      identifier: email,
+      password,
     });
-    setToken(response.access_token);
-    setUser(response.user);
-  }, []);
+
+    if (result.status !== 'complete' || !result.createdSessionId) {
+      throw new Error('Additional authentication steps are required.');
+    }
+
+    await setActive({ session: result.createdSessionId });
+  }, [signInLoaded, signIn, setActive]);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
-    const response = await apiFetch<LoginResponse>('/auth/signup', {
-      method: 'POST',
-      auth: false,
-      body: JSON.stringify({ name, email, password }),
+    if (!signUpLoaded || !signUp || !setSignUpActive) {
+      throw new Error('Authentication is still loading. Please try again.');
+    }
+
+    const result = await signUp.create({
+      emailAddress: email,
+      password,
+      firstName: name,
     });
-    setToken(response.access_token);
-    setUser(response.user);
-  }, []);
+
+    if (result.status !== 'complete' || !result.createdSessionId) {
+      throw new Error('Account created. Please complete verification to continue.');
+    }
+
+    await setSignUpActive({ session: result.createdSessionId });
+  }, [signUpLoaded, signUp, setSignUpActive]);
 
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: !!user,
+      isAuthenticated: !!isSignedIn,
       isLoading,
       login,
       register,
       logout,
     }),
-    [isLoading, login, logout, register, user]
+    [isSignedIn, isLoading, login, logout, register, user]
   );
 
   return (
