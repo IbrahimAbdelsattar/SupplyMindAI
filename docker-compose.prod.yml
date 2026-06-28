@@ -71,7 +71,7 @@ services:
       - AUTHORIZED_EMAILS=${AUTHORIZED_EMAILS:-}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-nry-W3mg3O3jGOW6FhCQ12xqccChOOxBAKks_g1iBBbk8TI}
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-v4-flash:free}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
       - STORAGE_PATH=/app/data/storage

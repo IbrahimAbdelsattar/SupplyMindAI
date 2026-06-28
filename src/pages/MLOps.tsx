@@ -257,9 +257,6 @@ const MLOps = () => {
             transition={{ duration: 0.4, delay: 0.4 }}
           >
             <Card className="border-primary/20 overflow-hidden relative">
-              {/* Decorative gradient */}
-              <div className="absolute -top-20 -right-20 w-60 h-60 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
 
               <CardHeader className="pb-3 sm:pb-5 relative">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -381,7 +378,7 @@ const MLOps = () => {
                           transition={{ duration: 0.3, delay: 0.05 + index * 0.05 }}
                           className={cn(
                             'rounded-xl border bg-card p-4 sm:p-5 transition-all duration-200',
-                            'hover:shadow-md hover:shadow-primary/5 hover:-translate-y-0.5',
+                            'hover:border-primary/30',
                             status.border
                           )}
                         >

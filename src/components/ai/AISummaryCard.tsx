@@ -144,7 +144,7 @@ export function AISummaryCard({
             </div>
             <Button
               onClick={handleGenerate}
-              className="relative group overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl px-5 py-2.5 flex items-center gap-2 shadow-lg transition-all duration-300 hover:shadow-primary/25 hover:scale-[1.02]"
+              className="relative group bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl px-5 py-2.5 flex items-center gap-2 transition-all duration-300"
             >
               <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-12" />
               {t('ai:generate')}

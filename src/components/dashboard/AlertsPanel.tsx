@@ -2,9 +2,9 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchApi } from '@/lib/api';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 
 const alertIcons = {
   warning: AlertTriangle,
@@ -42,19 +42,49 @@ export const AlertsPanel = () => {
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
   const [apiAlerts, setApiAlerts] = useState<AlertItem[]>([]);
 
+  const { getToken } = useAuth();
+
   useEffect(() => {
+    let cancelled = false;
+
+    const waitForToken = async (timeoutMs: number) => {
+      const start = Date.now();
+      while (!cancelled && Date.now() - start < timeoutMs) {
+        const token = await getToken();
+        if (token) return token;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      return null;
+    };
+
     const loadAlerts = async () => {
       try {
-        const data = await fetchApi('/alerts/active') as AlertItem[];
-        if (data) setApiAlerts(data);
+        const token = await waitForToken(2000);
+        if (!token) return;
+
+        const data = await fetchApi('/alerts/active') as unknown;
+        const alerts = Array.isArray(data)
+          ? (data as AlertItem[])
+          : ((data as any)?.alerts ??
+              (data as any)?.items ??
+              (data as any)?.results ??
+              []);
+        if (!cancelled) setApiAlerts(alerts);
       } catch (err) {
         console.error(err);
       }
     };
-    loadAlerts();
-  }, []);
 
-  const visibleAlerts = apiAlerts.filter((alert) => !dismissedAlerts.includes(alert.id));
+    void loadAlerts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
+
+  const visibleAlerts = (Array.isArray(apiAlerts) ? apiAlerts : []).filter(
+    (alert) => !dismissedAlerts.includes(alert.id)
+  );
 
   const dismissAlert = (id: number) => {
     setDismissedAlerts((prev) => [...prev, id]);

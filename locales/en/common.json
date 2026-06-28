@@ -19,6 +19,8 @@
     "light": "Light Mode",
     "dark": "Dark Mode"
   },
+  "backToHome": "Back to Home",
+  "backToLogin": "Back to sign in",
   "auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",

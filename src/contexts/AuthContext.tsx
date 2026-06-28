@@ -36,22 +36,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
   const { isLoaded: signUpLoaded, signUp, setActive: setSignUpActive } = useSignUp();
 
+
   const logout = useCallback(() => {
     void clerk.signOut().catch(() => undefined);
   }, [clerk]);
 
-  useEffect(() => {
-    setAuthTokenProvider(async () => {
-      if (!authLoaded || !isSignedIn) {
-        return null;
-      }
-      return await getToken();
-    });
-
-    return () => {
-      setAuthTokenProvider(null);
-    };
-  }, [authLoaded, isSignedIn, getToken]);
+  useMemo(() => {
+    setAuthTokenProvider(() => getToken());
+  }, [getToken]);
 
   const user = useMemo<User | null>(() => {
     if (!clerkUser) {

@@ -142,7 +142,10 @@ def forecast_predict(payload: ForecastPredictRequest, user: AuthUser = Depends(_
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        import traceback
+        tb = traceback.format_exc()
+        # include traceback in the detail to make CORS/500 debugging actionable
+        raise HTTPException(status_code=500, detail=f"{str(exc)}\n{tb}")
 
 
 @router.post("/shap")

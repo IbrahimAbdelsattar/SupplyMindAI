@@ -42,9 +42,9 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql://supplymind:password@postgres:5432/supplymind
       JWT_SECRET: ${JWT_SECRET:-lx2j0gBCb8QkFhK1qA4jbmbRtip54CiqrOaAtWfqM7P}
-      RAG_API_KEY: ${RAG_API_KEY:-}
-      LLM_REASONING_API_KEY: ${LLM_REASONING_API_KEY:-}
-      CHATBOT_API_KEY: ${CHATBOT_API_KEY:-}
+      RAG_API_KEY: ${RAG_API_KEY:-sk-nry-W3mg3O3jGOW6FhCQ12xqccChOOxBAKks_g1iBBbk8TI}
+      LLM_REASONING_API_KEY: ${LLM_REASONING_API_KEY:-sk-nry-W3mg3O3jGOW6FhCQ12xqccChOOxBAKks_g1iBBbk8TI}
+      CHATBOT_API_KEY: ${CHATBOT_API_KEY:-sk-nry-W3mg3O3jGOW6FhCQ12xqccChOOxBAKks_g1iBBbk8TI}
       LLM_MODEL: ${LLM_MODEL:-moonshotai/kimi-k2.6:free}
       EMBEDDING_MODEL: all-MiniLM-L6-v2
       STORAGE_PATH: /app/data/storage

@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
+
 from backend.knowledge.auth import AuthUser, get_user_from_token
 
 VALID_ROLES = {"admin", "manager", "analyst", "viewer"}
@@ -35,12 +36,15 @@ def _normalize_role(role: Optional[str]) -> str:
 
 
 async def _get_current_user(token: str | None = Depends(oauth2_scheme)) -> AuthUser:
+    # NOTE: FastAPI's OAuth2PasswordBearer only extracts tokens from the Authorization header.
+    # If the caller doesn't send it, `token` will be None -> 401.
     if not token:
-        raise _auth_error("Authentication required")
+        raise _auth_error("Missing authentication header")
     try:
         return await get_user_from_token(token)
     except ValueError as exc:
         raise _auth_error() from exc
+
 
 
 def _require_roles(*roles: str):

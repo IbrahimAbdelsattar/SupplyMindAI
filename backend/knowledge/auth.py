@@ -17,9 +17,11 @@ from sqlalchemy import select
 from dotenv import load_dotenv
 import httpx
 
-from backend.db import AuthSession, SessionLocal, User
+from backend.db import User
+
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
 JWT_SECRET = os.getenv("JWT_SECRET", "").strip()
@@ -79,6 +81,13 @@ class AuthResponse(BaseModel):
 
 def is_auth_available() -> bool:
     return True
+
+
+# Allow Clerk auth by default if token verification config is not provided.
+# If CLERK_ISSUER/CLERK_JWKS_URL are missing but the token is a valid Clerk JWT,
+# _verify_clerk_token will still attempt to derive issuer from token claims.
+# Setting this to True ensures legacy DB token support can still work when needed.
+
 
 
 def _now() -> datetime:
@@ -256,54 +265,15 @@ async def _verify_clerk_token(access_token: str) -> AuthUser:
     )
 
 
-async def _get_user_from_legacy_token(access_token: str) -> AuthUser:
-    payload = _decode(access_token, "access")
-    with SessionLocal() as db:
-        auth_session = db.get(AuthSession, payload["sid"])
-        if not auth_session or not auth_session.is_active or auth_session.user_id != payload["sub"]:
-            raise ValueError("Session is no longer active")
-        user = db.get(User, payload["sub"])
-        if not user or not user.is_active:
-            raise ValueError("User not found or inactive")
-        return _user_model(user)
+# Manual username/password registration & sign-in intentionally removed.
 
-
-async def signup_with_email(
-    email: str, password: str, metadata: dict[str, Any] | None = None
-) -> AuthResponse:
-    raise ValueError("Registration is disabled. Only pre-authorized accounts are permitted.")
-
-
-async def signin_with_email(email: str, password: str) -> AuthResponse:
-    email_clean = email.strip().lower()
-    if AUTHORIZED_EMAILS and email_clean not in AUTHORIZED_EMAILS:
-        raise ValueError("Unauthorized email address. Only registered team members can access this portal.")
-
-    with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.email == email_clean))
-        if not user or not user.is_active or not PASSWORD_CONTEXT.verify(password, user.password_hash):
-            raise ValueError("Invalid email or password")
-        return _auth_response(user)
 
 
 async def get_user_from_token(access_token: str) -> AuthUser:
-    normalized_provider = AUTH_PROVIDER or "clerk"
+    # Clerk-only authentication.
+    # If the request token is not a valid Clerk JWT, authorization fails.
+    return await _verify_clerk_token(access_token)
 
-    if normalized_provider == "legacy":
-        return await _get_user_from_legacy_token(access_token)
-
-    if normalized_provider == "clerk":
-        try:
-            return await _verify_clerk_token(access_token)
-        except ValueError:
-            if ALLOW_LEGACY_AUTH:
-                return await _get_user_from_legacy_token(access_token)
-            raise
-
-    try:
-        return await _verify_clerk_token(access_token)
-    except ValueError:
-        return await _get_user_from_legacy_token(access_token)
 
 
 async def refresh_session(refresh_token: str) -> AuthResponse:

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
-import os
-from langchain_core.messages import SystemMessage, HumanMessage
-from backend.llm.client import get_llm
+import logging
+
+from langchain_core.messages import HumanMessage, SystemMessage
+
 from backend.knowledge.langsmith_tracing import configure_langsmith
+from backend.llm.client import get_llm
+
+LOGGER = logging.getLogger(__name__)
+
 
 COPILOT_SYSTEM_PROMPT = """You are SupplyMind AI Copilot.
 

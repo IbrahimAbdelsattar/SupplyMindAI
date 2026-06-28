@@ -31,6 +31,7 @@
   "nowSignedIn": "You are now signed in.",
   "failedToRegister": "Failed to create account. Please try again.",
   "backToHome": "Back to Home",
+  "provisionNote": "Ask an administrator to provision your account before signing in.",
   "authorizedPortalUsers": "Authorized Portal Users",
   "clickToAutofill": "Click to Autofill"
 }

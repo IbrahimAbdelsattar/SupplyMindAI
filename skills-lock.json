@@ -5,6 +5,18 @@
       "source": "C:\\Users\\C-LAB\\AppData\\Local\\Temp\\clerk-cli-skill-OH0CB5",
       "sourceType": "local",
       "computedHash": "40da1ab8bae6401f5f70657f176473f646ef517279383b0f53a3a6c75603ce68"
+    },
+    "emil-design-eng": {
+      "source": "emilkowalski/skill",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "ac3fc5b4e206488ffc408a2806f829bb2e5eaf518fded09be34790685c2b3a0d"
+    },
+    "review-animations": {
+      "source": "emilkowalski/skill",
+      "sourceType": "github",
+      "skillPath": "skills/review-animations/SKILL.md",
+      "computedHash": "57c681344448379fbec8c11b45e355b70799998427240662318d017f292571bd"
     }
   }
 }

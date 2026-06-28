@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Response, status
+from fastapi import APIRouter, Header, HTTPException, Response
+
 from pydantic import BaseModel
 
 from backend.knowledge.auth import (
@@ -15,26 +16,17 @@ from backend.knowledge.auth import (
     is_auth_available,
     refresh_session,
     reset_password,
-    signin_with_email,
     signout,
-    signup_with_email,
     update_password,
     update_user_metadata,
 )
 
+
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-class SignupRequest(BaseModel):
-    email: str
-    password: str
-    name: Optional[str] = None
-    company: Optional[str] = None
+# Manual username/password auth request bodies intentionally removed.
 
-
-class SigninRequest(BaseModel):
-    email: str
-    password: str
 
 
 class RefreshRequest(BaseModel):
@@ -96,25 +88,8 @@ async def get_current_user(authorization: str | None) -> AuthUser:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
 
-@router.post("/signup", response_model=AuthResponse)
-async def signup(request: SignupRequest) -> AuthResponse:
-    try:
-        result = await signup_with_email(
-            request.email,
-            request.password,
-            {"name": request.name, "company": request.company},
-        )
-        return _response(result, "Signup successful")
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+# Manual username/password authentication endpoints intentionally removed.
 
-
-@router.post("/signin", response_model=AuthResponse)
-async def signin(request: SigninRequest) -> AuthResponse:
-    try:
-        return _response(await signin_with_email(request.email, request.password), "Signin successful")
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
 
 
 @router.post("/refresh", response_model=AuthResponse)
@@ -125,7 +100,11 @@ async def refresh(request: RefreshRequest) -> AuthResponse:
         raise HTTPException(status_code=401, detail="Failed to refresh session") from exc
 
 
+
+
+
 @router.get("/me")
+
 async def current_user_info(
     authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:

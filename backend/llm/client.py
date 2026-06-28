@@ -27,7 +27,12 @@ def _resolve_key() -> str | None:
     ):
         key = os.getenv(var)
         if key:
-            return key.strip()
+            key_str = key.strip()
+            if key_str:
+                masked = key_str[:8] + "..." + key_str[-4:] if len(key_str) > 12 else "..."
+                LOGGER.info("Resolved LLM API key from environment variable '%s': %s", var, masked)
+                return key_str
+    LOGGER.warning("No LLM API key could be resolved from any expected environment variable.")
     return None
 
 
@@ -108,7 +113,9 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     Auto-detects provider, model, base_url and configuration, applying fallbacks.
     """
     from dotenv import load_dotenv
-    load_dotenv()
+    from pathlib import Path
+    project_root = Path(__file__).resolve().parents[2]
+    load_dotenv(project_root / ".env")
     
     # Audit log print diagnostics as required by Phase 2
     LOGGER.info("LLM_MODEL=%s", os.getenv("LLM_MODEL"))
@@ -124,7 +131,11 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     base_url = os.getenv("LLM_BASE_URL") or detected_url
     model = os.getenv("LLM_MODEL") or detected_model
     
-    extra_headers = _openrouter_headers() if base_url and "openrouter.ai" in base_url else {}
+    extra_headers = {}
+    if base_url and "openrouter.ai" in base_url:
+        extra_headers.update(_openrouter_headers())
+    if key:
+        extra_headers["Authorization"] = f"Bearer {key}"
     
     timeout = float(os.getenv("LLM_TIMEOUT", "30.0"))
     max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))

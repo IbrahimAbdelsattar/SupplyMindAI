@@ -1,10 +1,12 @@
-import { useRef, useState, useEffect } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { useRef, useEffect, useCallback } from 'react';
+import { motion, useSpring, useMotionValue } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { ArrowRight, Play, TrendingUp, Zap, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { SPRING_NORMAL } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 const heroChartData = Array.from({ length: 50 }, (_, i) => ({
   value: 30 + Math.sin(i / 5) * 20 + Math.random() * 10 + i * 0.5,
@@ -13,17 +15,29 @@ const heroChartData = Array.from({ length: 50 }, (_, i) => ({
 export const HeroSection = () => {
   const { t } = useTranslation('landing');
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-  
-  // 3D Tilt Motion Values
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  
-  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 20 });
-  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 20 });
-  
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], [10, -10]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], [-10, 10]);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  // ── 3D Mouse Tracking with Spring Interpolation ──
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const springX = useSpring(mouseX, { stiffness: 50, damping: 20 });
+  const springY = useSpring(mouseY, { stiffness: 50, damping: 20 });
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!sectionRef.current) return;
+    const rect = sectionRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    mouseX.set(x);
+    mouseY.set(y);
+  }, [mouseX, mouseY]);
+
+  // ── Floating Elements State ──
+  const floaters = [
+    { Icon: TrendingUp, bgClass: 'bg-primary/10 border-primary/20', textClass: 'text-primary', top: '25%', left: '10%', size: 'w-20 h-20', iconSize: 'w-8 h-8', duration: 7, delay: 0, rotateRange: 8 },
+    { Icon: BarChart3, bgClass: 'bg-secondary/10 border-secondary/20', textClass: 'text-secondary', bottom: '25%', left: '85%', size: 'w-16 h-16', iconSize: 'w-6 h-6', duration: 6, delay: 1, rotateRange: -6 },
+    { Icon: Zap, bgClass: 'bg-success/10 border-success/20', textClass: 'text-success', top: '35%', left: '80%', size: 'w-14 h-14', iconSize: 'w-5 h-5', duration: 5.5, delay: 0.5, rotateRange: 10 },
+  ];
 
   // Interactive Particle canvas background
   useEffect(() => {
@@ -60,32 +74,29 @@ export const HeroSection = () => {
         vx: (Math.random() - 0.5) * 0.4,
         vy: (Math.random() - 0.5) * 0.4,
         radius: Math.random() * 2 + 1.5,
-        color: i % 2 === 0 ? 'rgba(59, 130, 246, 0.3)' : 'rgba(6, 182, 212, 0.25)',
+        color: i % 2 === 0 ? 'rgba(37, 99, 235, 0.3)' : 'rgba(16, 185, 129, 0.25)',
       });
     }
 
     const mouse = { x: -1000, y: -1000 };
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouse = (e: MouseEvent) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
     };
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouse);
 
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Draw neural connections
       ctx.lineWidth = 0.55;
       for (let i = 0; i < numParticles; i++) {
         const p1 = particles[i];
 
-        // Particle movement & bounds bounce
         p1.x += p1.vx;
         p1.y += p1.vy;
         if (p1.x < 0 || p1.x > width) p1.vx *= -1;
         if (p1.y < 0 || p1.y > height) p1.vy *= -1;
 
-        // Subtle attraction to mouse
         const dxMouse = mouse.x - p1.x;
         const dyMouse = mouse.y - p1.y;
         const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
@@ -94,13 +105,11 @@ export const HeroSection = () => {
           p1.y += dyMouse * 0.005;
         }
 
-        // Draw particle node
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
         ctx.fillStyle = p1.color;
         ctx.fill();
 
-        // Connect nodes close to each other
         for (let j = i + 1; j < numParticles; j++) {
           const p2 = particles[j];
           const dx = p1.x - p2.x;
@@ -111,9 +120,8 @@ export const HeroSection = () => {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
-            // Higher opacity for closer connections
             const alpha = (1 - distance / 130) * 0.15;
-            ctx.strokeStyle = `rgba(99, 102, 241, ${alpha})`;
+            ctx.strokeStyle = `rgba(37, 99, 235, ${alpha})`;
             ctx.stroke();
           }
         }
@@ -126,77 +134,57 @@ export const HeroSection = () => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousemove', handleMouse);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = cardRef.current;
-    if (!card) return;
-    
-    const rect = card.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    
-    // Relative coordinates between -0.5 and 0.5
-    const relativeX = (e.clientX - rect.left) / width - 0.5;
-    const relativeY = (e.clientY - rect.top) / height - 0.5;
-    
-    x.set(relativeX);
-    y.set(relativeY);
-  };
-
-  const handleCardMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <section
+      ref={sectionRef}
+      onMouseMove={handleMouseMove}
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16"
+    >
       {/* Dynamic Interactive Neural Orbit Canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-      {/* Radial Theme Overlays */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.18),transparent_55%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(var(--accent)/0.12),transparent_55%)] pointer-events-none" />
-      
       {/* Backdrop Grid Lines */}
       <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:65px_65px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_75%)] pointer-events-none" />
 
-      {/* Floating Elements - premium glass style */}
-      <motion.div
-        className="absolute top-1/4 left-[10%] rtl:left-auto rtl:right-[10%] w-20 h-20 rounded-2xl bg-primary/10 backdrop-blur-md border border-primary/20 hidden md:flex items-center justify-center shadow-lg"
-        animate={{ y: [0, -18, 0], rotate: [0, 6, 0] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <TrendingUp className="w-8 h-8 text-primary drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-      </motion.div>
-
-      <motion.div
-        className="absolute bottom-1/4 right-[15%] rtl:right-auto rtl:left-[15%] w-16 h-16 rounded-2xl bg-accent/10 backdrop-blur-md border border-accent/20 hidden md:flex items-center justify-center shadow-lg"
-        animate={{ y: [0, 16, 0], rotate: [0, -6, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-      >
-        <BarChart3 className="w-6 h-6 text-accent drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
-      </motion.div>
-
-      <motion.div
-        className="absolute top-1/3 right-[20%] rtl:right-auto rtl:left-[20%] w-14 h-14 rounded-2xl bg-success/10 backdrop-blur-md border border-success/20 hidden lg:flex items-center justify-center shadow-lg"
-        animate={{ y: [0, -14, 0], rotate: [0, 9, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-      >
-        <Zap className="w-5 h-5 text-success drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-      </motion.div>
+      {/* ── Floating Elements with 3D Parallax ── */}
+      {floaters.map((f, i) => (
+        <motion.div
+          key={i}
+          className={cn('absolute rounded-2xl hidden md:flex items-center justify-center', f.size, f.bgClass)}
+          style={{
+            top: f.top,
+            left: f.left,
+            bottom: f.bottom,
+            transformStyle: 'preserve-3d',
+          }}
+          animate={{
+            y: [0, i % 2 === 0 ? -18 : 16, 0],
+            rotateX: [0, f.rotateRange, 0],
+            rotateY: [0, -f.rotateRange, 0],
+          }}
+          transition={{
+            y: { duration: f.duration, repeat: Infinity, ease: 'easeInOut', delay: f.delay },
+            rotateX: { duration: f.duration * 1.2, repeat: Infinity, ease: 'easeInOut', delay: f.delay },
+            rotateY: { duration: f.duration * 1.3, repeat: Infinity, ease: 'easeInOut', delay: f.delay + 0.3 },
+          }}
+        >
+          <f.Icon className={cn(f.iconSize, f.textClass)} />
+        </motion.div>
+      ))}
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="max-w-5xl mx-auto text-center">
           {/* Badge */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 backdrop-blur-sm mb-8"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 mb-8"
           >
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -207,63 +195,82 @@ export const HeroSection = () => {
 
           {/* Main Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-4xl sm:text-6xl md:text-8xl font-extrabold tracking-tight mb-6"
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
+            className="text-display mb-6"
           >
-            <span className="block text-foreground drop-shadow-sm">{t('hero.headline1')}</span>
-            <span className="block gradient-text drop-shadow-[0_0_15px_rgba(99,102,241,0.25)]">{t('hero.headline2')}</span>
+            <span className="block text-foreground">{t('hero.headline1')}</span>
+            <span className="block text-primary">{t('hero.headline2')}</span>
           </motion.h1>
 
           {/* Subheadline */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 text-balance px-2"
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="text-body sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 text-balance px-2"
           >
             {t('hero.subheadline')}
           </motion.p>
 
           {/* CTA Buttons */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: [0.23, 1, 0.32, 1] }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 px-4 sm:px-0"
           >
-            <Button asChild size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl glow transition-transform duration-350 hover:scale-[1.03]">
-              <Link to="/dashboard">
-                {t('hero.ctaPrimary')}
-                <ArrowRight className="ml-2 rtl:ml-0 rtl:mr-2 h-5 w-5 rtl:rotate-180" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl transition-all duration-350 hover:bg-muted/80 hover:scale-[1.03]">
-              <Link to="/dashboard">
-                <Play className="mr-2 rtl:mr-0 rtl:ml-2 h-5 w-5 fill-current" />
-                {t('hero.ctaSecondary')}
-              </Link>
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={SPRING_NORMAL}
+              className="w-full sm:w-auto"
+            >
+              <Button asChild size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl">
+                <Link to="/dashboard">
+                  {t('hero.ctaPrimary')}
+                  <ArrowRight className="ml-2 rtl:ml-0 rtl:mr-2 h-5 w-5 rtl:rotate-180" />
+                </Link>
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={SPRING_NORMAL}
+              className="w-full sm:w-auto"
+            >
+              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold rounded-xl">
+                <Link to="/dashboard">
+                  <Play className="mr-2 rtl:mr-0 rtl:ml-2 h-5 w-5 fill-current" />
+                  {t('hero.ctaSecondary')}
+                </Link>
+              </Button>
+            </motion.div>
           </motion.div>
 
-          {/* Interactive 3D Parallax Tilt Hero Chart */}
+          {/* ── Hero Chart with 3D Perspective Mouse Tracking ── */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="relative mx-auto max-w-4xl perspective-1000"
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.23, 1, 0.32, 1] }}
+            className="relative mx-auto max-w-4xl"
+            style={{ perspective: 1200 }}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10 pointer-events-none" />
-            
             <motion.div
-              ref={cardRef}
-              onMouseMove={handleCardMouseMove}
-              onMouseLeave={handleCardMouseLeave}
-              style={{ rotateX, rotateY }}
-              className="relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-md p-4 sm:p-7 shadow-2xl preserve-3d transition-shadow duration-300 hover:shadow-[0_0_50px_rgba(99,102,241,0.25)]"
+              className="rounded-2xl border border-border bg-card p-4 sm:p-7 relative overflow-hidden"
+              style={{
+                rotateY: springX,
+                rotateX: springY,
+                transformStyle: 'preserve-3d',
+              }}
+              whileHover={{ scale: 1.01 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
             >
-              <div className="flex items-center justify-between mb-4">
+              {/* Subtle glow behind card */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 via-transparent to-secondary/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+              <div className="flex items-center justify-between mb-4 relative">
                 <div className="flex items-center gap-3">
                   <div className="w-3.5 h-3.5 rounded-full bg-destructive/80" />
                   <div className="w-3.5 h-3.5 rounded-full bg-warning/80" />
@@ -272,7 +279,7 @@ export const HeroSection = () => {
                 <span className="text-xs sm:text-sm font-medium text-muted-foreground tracking-wider uppercase">{t('hero.chartLabel')}</span>
               </div>
               
-              <div className="h-44 sm:h-72">
+              <div className="h-44 sm:h-72 relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={heroChartData}>
                     <defs>
@@ -295,6 +302,9 @@ export const HeroSection = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* ── Radial gradient glow behind hero content ── */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
     </section>
   );
 };

@@ -3,21 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
-    <title>Supply Mind — AI Demand Forecasting & Inventory Optimization</title>
-    <meta name="description" content="AI-powered demand forecasting and inventory optimization for modern businesses." />
-    <meta name="author" content="Supply Mind" />
 
-    <meta property="og:title" content="Supply Mind" />
-    <meta property="og:description" content="AI-powered demand forecasting and inventory optimization for modern businesses." />
+    <!-- Favicon - SupplyMind Geometric "S" Network Logo -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M8 10 C8 6 12 4 16 6 C20 8 22 6 24 6' stroke='%232563EB' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M24 12 C24 16 20 18 16 16 C12 14 10 16 8 16' stroke='%2310B981' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M8 22 C8 26 12 28 16 26 C20 24 22 26 24 26' stroke='%232563EB' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='8' cy='10' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='24' cy='6' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='24' cy='12' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='8' cy='16' r='2.5' fill='%2310B981'/%3E%3Ccircle cx='24' cy='26' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%232563EB'/%3E%3C/svg%3E" />
+    <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAARlJREFUWEftl7ENwjAQRd9N6jAgNIAJYAIKOkZgBEZgBEZgBDoWYARGYAQYoFMEQhSJc3bOSZD4S5aon3/+P9sR/LlC+HOPQYACQYECAYECBAEKBAQKECAoEBAoQBAgCBAgCBAECBAECBAECAsBAgQFAgIFCAIEBQgIFCAIEAQIAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAgQBAj4CQj4DqgQIEBQQBAgQFCAIEBQgCBAECBAECBAECBAECBAECBAgIMAfzU+EBSFOKSAAAAASUVORK5CYII=" />
+    <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAQ1JREFUOE9jYGBg+M9AAWA0QIEBAwMDh/79+wX+/Pmz/P///5wMDQ0NfxkYGC4xMDDMAUowKpAKUFRU1P/ly5fy/////wJUJuDg4KDw8+fP9cAm0QwMDBqgPqQIUFFRUdPZs2eF/v79ux8YAiJAJo+amtoDYAuwAElJyWfAQJ0HFv0ByZSVlU8Ba0ARQCpAAmh4LtAmsb9//+4HmZ6fn38HGB3IDpAHmpAOM56BgYEFaOhRkMEg9uXLl5n+/v37BFS3G+gETqCF88BmzgOa+B8UAPQFIyDKiXU0IQAlAAJQSwCBBoIAAgiBowgEoJY0Ag0AAQQIdQ0EAQQgE1R1wH9qBgi93U1kXzMAAAAASUVORK5CYII=" />
+    <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M8 10 C8 6 12 4 16 6 C20 8 22 6 24 6' stroke='%232563EB' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M24 12 C24 16 20 18 16 16 C12 14 10 16 8 16' stroke='%2310B981' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Cpath d='M8 22 C8 26 12 28 16 26 C20 24 22 26 24 26' stroke='%232563EB' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='8' cy='10' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='24' cy='6' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='24' cy='12' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='8' cy='16' r='2.5' fill='%2310B981'/%3E%3Ccircle cx='24' cy='26' r='2.5' fill='%232563EB'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%232563EB'/%3E%3C/svg%3E" />
+
+    <title>SupplyMind AI — Demand Forecasting & Inventory Optimization</title>
+    <meta name="description" content="AI-powered demand forecasting and inventory optimization platform. Predict demand, optimize stock, and reduce costs with SupplyMind AI." />
+    <meta name="author" content="SupplyMind AI" />
+
+    <meta property="og:title" content="SupplyMind AI" />
+    <meta property="og:description" content="AI-powered demand forecasting and inventory optimization for modern supply chains." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:site" content="@SupplyMindAI" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
   </head>
 

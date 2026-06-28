@@ -79,10 +79,10 @@ ipython_config.py
 
 # pyenv
 .python-version
-
+caveman/
 # celery beat schedule file
 celerybeat-schedule
-
+graphify-out
 # dotenv
 .env
 .env.local

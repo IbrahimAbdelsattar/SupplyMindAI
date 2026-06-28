@@ -66,7 +66,7 @@ function SummaryCard({ icon: Icon, label, value, color }: {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border bg-card p-4 sm:p-5 flex items-center gap-4 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5"
+      className="rounded-2xl border bg-card p-4 sm:p-5 flex items-center gap-4 transition-all duration-300 hover:border-primary/30"
     >
       <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', color)}>
         <Icon className="w-6 h-6 text-white" />

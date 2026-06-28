@@ -167,7 +167,7 @@ function InsightCard({
       transition={{ duration: 0.35, delay: 0.1 + index * 0.08 }}
       className={cn(
         'rounded-2xl border bg-card overflow-hidden transition-all duration-300',
-        'hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5',
+        'hover:border-primary/30',
         isHigh ? 'border-destructive/20' : isMedium ? 'border-warning/15' : 'border-border'
       )}
     >
@@ -459,9 +459,7 @@ const AIInsights = () => {
 
           {/* ── Executive Summary ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden relative">
-              {/* Decorative glow */}
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <Card className="border-primary/30 bg-primary/[0.02] overflow-hidden relative">
               <CardContent className="pt-5 sm:pt-6">
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -532,7 +530,7 @@ const AIInsights = () => {
                           />
                         </div>
                       </div>
-                      <p className="text-base sm:text-xl font-bold gradient-text">{factor.weight}%</p>
+                      <p className="text-base sm:text-xl font-bold text-primary">{factor.weight}%</p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">
                         {t(`insights:factors.${factor.key}`, factor.name)}
                       </p>

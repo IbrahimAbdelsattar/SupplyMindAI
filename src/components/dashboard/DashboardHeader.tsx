@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { fetchApi } from '@/lib/api';
 
 interface DashboardHeaderProps {
   title: string;
@@ -33,12 +34,17 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const [notifications, setNotifications] = useState<Alert[]>([]);
 
   useEffect(() => {
-    fetch('/api/v1/data/dashboard')
-      .then(r => r.json())
-      .then(data => {
-        if (data?.alerts) setNotifications(data.alerts);
-      })
-      .catch(() => {});
+    const load = async () => {
+      try {
+        // fetchApi attaches Clerk Authorization header via src/lib/api.ts
+        const data = await fetchApi('/data/dashboard', { auth: true }) as any;
+        const alerts = Array.isArray(data?.alerts) ? data.alerts : [];
+        setNotifications(alerts);
+      } catch {
+        // keep silent to avoid killing the dashboard header
+      }
+    };
+    void load();
   }, []);
 
   return (
@@ -46,10 +52,10 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
       initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="h-auto min-h-[56px] sm:h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40 flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-0 gap-2 sm:gap-0 pl-14 sm:pl-6 rtl:pr-14 rtl:sm:pr-6 rtl:pl-4 rtl:sm:pl-6"
+      className="h-auto min-h-[56px] sm:h-16 border-b border-border bg-card sticky top-0 z-40 flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-0 gap-2 sm:gap-0 pl-14 sm:pl-6 rtl:pr-14 rtl:sm:pr-6 rtl:pl-4 rtl:sm:pl-6"
     >
       <div className="min-w-0">
-        <h1 className="text-lg sm:text-xl font-semibold truncate">{title}</h1>
+        <h1 className="text-lg sm:text-xl font-semibold truncate text-foreground">{title}</h1>
         {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
       </div>
 

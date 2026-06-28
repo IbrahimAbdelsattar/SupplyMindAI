@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LanguageSwitcher } from '@/components/language/LanguageSwitcher';
+import { SupplyMindLogo } from '@/components/brand/SupplyMindLogo';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -15,7 +16,6 @@ import {
   Settings,
   Activity,
   Shield,
-  BarChart3,
   Sun,
   Moon,
   LogOut,
@@ -57,10 +57,7 @@ const SidebarContent = ({
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-border">
         <Link to="/dashboard" className="flex items-center gap-2" onClick={onNavigate}>
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
-            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
-          </div>
-          {!isCollapsed && <span className="text-lg font-bold">{t('common:app.name')}</span>}
+          <SupplyMindLogo iconOnly={isCollapsed} iconClassName="w-8 h-8" />
         </Link>
         {!isCollapsed && (
           <Button
@@ -170,7 +167,7 @@ export const DashboardSidebar = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="fixed top-3 left-3 rtl:left-auto rtl:right-3 z-50 h-10 w-10 rounded-xl bg-card border border-border shadow-md"
+            className="fixed top-3 left-3 rtl:left-auto rtl:right-3 z-50 h-10 w-10 rounded-xl bg-card border border-border"
           >
             <Menu className="w-5 h-5" />
           </Button>

@@ -22,6 +22,9 @@ const MLOps = lazy(() => import("./pages/MLOps"));
 const Security = lazy(() => import("./pages/Security"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const SignUp = lazy(() => import("./pages/SignUp"));
+const FactorOne = lazy(() => import("./pages/FactorOne"));
+const ClerkLoginCatchAll = lazy(() => import("./pages/ClerkLoginCatchAll"));
 
 const queryClient = new QueryClient();
 
@@ -61,7 +64,10 @@ const AppRoutes = () => (
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Index />} />
-      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/login" element={<PublicOnlyRoute><ClerkLoginCatchAll /></PublicOnlyRoute>} />
+      <Route path="/login/*" element={<PublicOnlyRoute><ClerkLoginCatchAll /></PublicOnlyRoute>} />
+      <Route path="/sign-up" element={<PublicOnlyRoute><ClerkLoginCatchAll /></PublicOnlyRoute>} />
+
 
       {/* Protected routes — require authentication */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

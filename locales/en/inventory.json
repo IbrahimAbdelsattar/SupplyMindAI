@@ -53,6 +53,14 @@
     "units": "units",
     "days": "days"
   },
+  "stockChart": {
+    "snapshotDate": "Snapshot Date",
+    "totalUnits": "Total Units",
+    "criticalItems": "Critical Items",
+    "activeProducts": "Active Products",
+    "title": "Latest Stock by Category",
+    "description": "Inventory distribution across product categories"
+  },
   "badges": {
     "healthy": "Healthy",
     "low": "Low",

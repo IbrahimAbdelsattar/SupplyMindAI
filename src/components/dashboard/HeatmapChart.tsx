@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@clerk/clerk-react';
 
 type Product = {
   product_id: string;
@@ -32,18 +33,34 @@ const getHeatmapColor = (value: number) => {
 };
 
 export const HeatmapChart = () => {
+  const { getToken } = useAuth();
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [apiStores, setApiStores] = useState<Store[]>([{ id: 's1', name: 'Store 1' }]);
   const [apiData, setApiData] = useState<HeatmapCell[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const waitForToken = async (timeoutMs: number) => {
+      const start = Date.now();
+      while (!cancelled && Date.now() - start < timeoutMs) {
+        const token = await getToken();
+        if (token) return token;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      return null;
+    };
+
     const loadData = async () => {
       try {
+        const token = await waitForToken(2000);
+        if (!token) return;
+
         const prods = await fetchApi('/data/products') as Product[];
-        if (prods) setApiProducts(prods);
+        if (prods && !cancelled) setApiProducts(prods);
 
         const heat = await fetchApi('/data/heatmap') as HeatmapResponse;
-        if (heat) {
+        if (heat && !cancelled) {
           setApiData(heat.data);
           if (heat.stores?.length) setApiStores(heat.stores);
         }
@@ -51,8 +68,13 @@ export const HeatmapChart = () => {
         console.error(err);
       }
     };
-    loadData();
-  }, []);
+
+    void loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

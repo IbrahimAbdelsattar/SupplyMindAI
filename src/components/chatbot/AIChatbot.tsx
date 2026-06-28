@@ -94,7 +94,7 @@ export const AIChatbot = () => {
         transition={{ delay: 0.5, type: 'spring' }}
         onClick={() => setIsOpen(true)}
         className={cn(
-          'fixed bottom-4 right-4 rtl:right-auto rtl:left-4 sm:bottom-6 sm:right-6 rtl:sm:right-auto rtl:sm:left-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-50',
+          'fixed bottom-4 right-4 rtl:right-auto rtl:left-4 sm:bottom-6 sm:right-6 rtl:sm:right-auto rtl:sm:left-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center z-50',
           'hover:scale-110 transition-transform duration-200',
           isOpen && 'hidden'
         )}
@@ -112,7 +112,7 @@ export const AIChatbot = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 rtl:sm:right-auto rtl:sm:left-6 sm:w-96 sm:h-[600px] bg-card border-0 sm:border sm:border-border sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50"
+            className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 rtl:sm:right-auto rtl:sm:left-6 sm:w-96 sm:h-[600px] bg-card border-0 sm:border sm:border-border sm:rounded-2xl flex flex-col overflow-hidden z-50"
           >
             <div className="flex items-center justify-between p-4 border-b border-border bg-card">
               <div className="flex items-center gap-3">
