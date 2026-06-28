@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, ReactNode } from 'react';
-import { useAuth as useClerkAuth, useClerk, useSignIn, useSignUp, useUser } from '@clerk/clerk-react';
+import { useAuth as useClerkAuth, useClerk, useUser } from '@clerk/clerk-react';
 import { setAuthTokenProvider } from '@/lib/api';
 
 interface User {
@@ -14,8 +14,6 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -33,9 +31,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const clerk = useClerk();
   const { isLoaded: authLoaded, isSignedIn, getToken } = useClerkAuth();
   const { isLoaded: userLoaded, user: clerkUser } = useUser();
-  const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
-  const { isLoaded: signUpLoaded, signUp, setActive: setSignUpActive } = useSignUp();
-
 
   const logout = useCallback(() => {
     void clerk.signOut().catch(() => undefined);
@@ -71,51 +66,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const isLoading = !(authLoaded && userLoaded);
 
-  const login = useCallback(async (email: string, password: string) => {
-    if (!signInLoaded || !signIn || !setActive) {
-      throw new Error('Authentication is still loading. Please try again.');
-    }
-
-    const result = await signIn.create({
-      identifier: email,
-      password,
-    });
-
-    if (result.status !== 'complete' || !result.createdSessionId) {
-      throw new Error('Additional authentication steps are required.');
-    }
-
-    await setActive({ session: result.createdSessionId });
-  }, [signInLoaded, signIn, setActive]);
-
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    if (!signUpLoaded || !signUp || !setSignUpActive) {
-      throw new Error('Authentication is still loading. Please try again.');
-    }
-
-    const result = await signUp.create({
-      emailAddress: email,
-      password,
-      firstName: name,
-    });
-
-    if (result.status !== 'complete' || !result.createdSessionId) {
-      throw new Error('Account created. Please complete verification to continue.');
-    }
-
-    await setSignUpActive({ session: result.createdSessionId });
-  }, [signUpLoaded, signUp, setSignUpActive]);
-
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: !!isSignedIn,
       isLoading,
-      login,
-      register,
       logout,
     }),
-    [isSignedIn, isLoading, login, logout, register, user]
+    [isSignedIn, isLoading, logout, user]
   );
 
   return (

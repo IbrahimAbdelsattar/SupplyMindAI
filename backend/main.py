@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import sys
@@ -15,15 +15,10 @@ import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Response, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
-from backend.db import SessionLocal, User, create_tables, get_db
+from backend.db import SessionLocal, create_tables
 
 
 # -----------------------------------------------------------------------------
@@ -34,15 +29,6 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-
-from backend.dependencies import (
-    DEFAULT_USER_ROLE,
-    _get_current_user,
-    _normalize_role,
-    _require_roles,
-    _utc_now,
-)
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
@@ -65,16 +51,13 @@ if ENVIRONMENT == "production" and not ALLOWED_ORIGINS:
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("backend")
 
 
 
-
 from backend.globals import STORE, ML_MODEL, RAG_SERVICE, FORECAST_INTELLIGENCE
-
-
 
 
 
@@ -110,9 +93,6 @@ app.add_middleware(GuardrailsMiddleware, monitor=guardrail_monitor)
 app.state.guardrail_monitor = guardrail_monitor
 # -----------------------------------------------------------------------------
 
-# Note: JWT auth routes are defined directly below â€” /api/v1/auth/login, /register, /me, etc.
-# Authentication routes are mounted below.
-
 # Mount local storage router
 try:
     from backend.routers.storage import router as storage_router
@@ -144,14 +124,6 @@ try:
     logger.info("Forecast insights router mounted")
 except Exception as exc:
     logger.warning("Forecast insights router not loaded: %s", exc)
-
-# Mount auth router
-try:
-    from backend.routers.auth import router as auth_router
-    app.include_router(auth_router)
-    logger.info("Auth router mounted")
-except Exception as exc:
-    logger.warning("Auth router not loaded: %s", exc)
 
 # Mount security router
 try:
@@ -365,7 +337,7 @@ def health() -> dict[str, Any]:
 def _run_migrations() -> None:
     alembic_ini = Path(__file__).resolve().parent / "alembic.ini"
     if not alembic_ini.exists():
-        logger.info("No alembic.ini found â€” skipping Alembic migrations, using create_tables()")
+        logger.info("No alembic.ini found — skipping Alembic migrations, using create_tables()")
         return
     try:
         from alembic.config import Config
@@ -389,9 +361,6 @@ def _startup() -> None:
 
     _run_migrations()
     create_tables()
-
-    from backend.db import seed_users
-    seed_users()
 
     ML_MODEL = init_ml_model(STORE)
     bg.ML_MODEL = ML_MODEL
