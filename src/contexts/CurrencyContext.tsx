@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Currency, formatCurrency as formatCurrencyUtil, convertToCurrency, currencySymbols } from '@/lib/Currency';
+import { Currency, formatCurrency as formatCurrencyUtil, convertToCurrency, currencySymbols } from '@/lib/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
 
