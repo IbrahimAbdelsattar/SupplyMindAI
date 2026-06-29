@@ -34,9 +34,18 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchApi('/data/dashboard', { auth: true }) as any;
-        const alerts = Array.isArray(data?.alerts) ? data.alerts : [];
-        setNotifications(alerts);
+        const data = await fetchApi('/alerts/active', { auth: true }) as any;
+        const rawAlerts = Array.isArray(data?.alerts) ? data.alerts : [];
+        const mappedAlerts: Alert[] = rawAlerts.map((item: any) => ({
+          id: item.id,
+          type: item.severity === 'critical' ? 'error' : (item.severity === 'high' ? 'warning' : 'info'),
+          title: item.title,
+          message: item.description,
+          time: item.created_at 
+            ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+            : 'Just now'
+        }));
+        setNotifications(mappedAlerts);
       } catch {
         // keep silent to avoid killing the dashboard header
       }

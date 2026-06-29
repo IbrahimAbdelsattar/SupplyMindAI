@@ -50,7 +50,7 @@ class LazyRagService:
 
 
 def load_environment() -> None:
-    load_dotenv(PROJECT_ROOT / ".env")
+    load_dotenv(PROJECT_ROOT / ".env", override=True)
     load_dotenv(RAG_ROOT / ".env", override=False)
 
 

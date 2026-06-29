@@ -1,5 +1,6 @@
 type ApiFetchOptions = RequestInit & {
   auth?: boolean;
+  responseType?: 'json' | 'text';
 };
 
 type AuthTokenProvider = () => Promise<string | null>;
@@ -59,7 +60,7 @@ async function resolveAccessToken(): Promise<string | null> {
 }
 
 export async function fetchApi(endpoint: string, options: ApiFetchOptions = {}) {
-  const { auth = true, headers: optionHeaders, ...fetchOptions } = options;
+  const { auth = true, responseType = 'json', headers: optionHeaders, ...fetchOptions } = options;
   const token = auth ? await resolveAccessToken() : null;
 
   // If token is missing, force auth header off so endpoints that don't require auth
@@ -113,6 +114,10 @@ export async function fetchApi(endpoint: string, options: ApiFetchOptions = {}) 
 
   if (response.status === 204) {
     return null;
+  }
+
+  if (responseType === 'text') {
+    return response.text();
   }
 
   return response.json();

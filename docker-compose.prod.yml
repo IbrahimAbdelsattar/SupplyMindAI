@@ -51,12 +51,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
   # ─────────────────────────────────────────────────────────────────────────
   # Backend API - Production Configuration
   # ─────────────────────────────────────────────────────────────────────────
   backend:
     image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: supplymind-backend-prod
     restart: unless-stopped
     expose:
@@ -71,7 +73,7 @@ services:
       - AUTHORIZED_EMAILS=${AUTHORIZED_EMAILS:-}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-sk-nry-W3mg3O3jGOW6FhCQ12xqccChOOxBAKks_g1iBBbk8TI}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-v4-flash:free}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
       - STORAGE_PATH=/app/data/storage
@@ -110,6 +112,11 @@ services:
   # ─────────────────────────────────────────────────────────────────────────
   frontend:
     image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        - VITE_API_URL=/api/v1
     container_name: supplymind-frontend-prod
     restart: unless-stopped
     expose:

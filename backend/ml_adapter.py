@@ -28,7 +28,8 @@ class DemandForecastService:
     def __init__(self, store: "DataStore", model_path: Path | None = None) -> None:
         self._store = store
         self._forecast_model: Any = None
-        self._load_forecast_model(model_path)
+        import threading
+        threading.Thread(target=self._load_forecast_model, args=(model_path,), daemon=True).start()
 
     def _load_forecast_model(self, model_path: Path | None = None) -> None:
         path = self._resolve_model_path(model_path)

@@ -115,6 +115,7 @@ async def _verify_clerk_token(access_token: str) -> AuthUser:
     options = {
         "verify_aud": bool(audience),
         "verify_iss": bool(issuer),
+        "leeway": 120,
     }
 
     try:
@@ -125,7 +126,6 @@ async def _verify_clerk_token(access_token: str) -> AuthUser:
             audience=audience,
             issuer=issuer,
             options=options,
-            leeway=120,
         )
     except JWTError as exc:
         raise ValueError("Invalid or expired Clerk token") from exc

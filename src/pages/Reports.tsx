@@ -13,7 +13,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch, getApiBaseUrl, getToken } from '@/lib/api';
+import { apiFetch, fetchApi } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,7 @@ type ReportItem = {
   type: string;
   date: string;
   status: string;
+  download_url?: string;
 };
 
 type InvRec = {
@@ -123,30 +124,19 @@ const Reports = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const handlePreview = async (reportId: string, reportTitle: string) => {
+  const handlePreview = async (report: ReportItem) => {
     setIsPreviewLoading(true);
-    setPreviewTitle(reportTitle);
+    setPreviewTitle(report.title);
 
     try {
       let text: string;
 
-      if (reportId === 'r_inventory') {
-        const baseUrl = getApiBaseUrl();
-        const token = getToken();
-        const res = await fetch(`${baseUrl}/inventory/optimize?limit=100`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        const data: InvRec[] = await res.json();
+      if (report.type === 'inventory') {
+        const data = await apiFetch<InvRec[]>('/inventory/optimize?limit=100');
         text = buildInventoryCsv(data);
       } else {
-        const baseUrl = getApiBaseUrl();
-        const token = getToken();
-        const url = new URL(`${baseUrl}/reports/download`);
-        url.searchParams.set('report_id', reportId);
-        const res = await fetch(url.toString(), {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        text = await res.text();
+        const downloadPath = report.download_url || `/reports/download/report_${report.id}.json`;
+        text = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
       }
 
       const rows = text.split('\n').map(row => {
@@ -165,36 +155,25 @@ const Reports = () => {
     }
   };
 
-  const handleDownload = async (reportId: string) => {
+  const handleDownload = async (report: ReportItem) => {
     try {
       let csv: string;
       let filename = 'report.csv';
 
-      if (reportId === 'r_inventory') {
-        const baseUrl = getApiBaseUrl();
-        const token = getToken();
-        const res = await fetch(`${baseUrl}/inventory/optimize?limit=100`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        const data: InvRec[] = await res.json();
+      if (report.type === 'inventory') {
+        const data = await apiFetch<InvRec[]>('/inventory/optimize?limit=100');
         csv = buildInventoryCsv(data);
         filename = 'inventory_recommendations.csv';
       } else {
-        const baseUrl = getApiBaseUrl();
-        const token = getToken();
-        const url = new URL(`${baseUrl}/reports/download`);
-        url.searchParams.set('report_id', reportId);
-        const res = await fetch(url.toString(), {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        csv = await res.text();
+        const downloadPath = report.download_url || `/reports/download/report_${report.id}.json`;
+        csv = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
 
-        if (reportId === 'r_daily') filename = 'daily_operations_report.csv';
-        else if (reportId === 'r_weekly') filename = 'weekly_performance_report.csv';
-        else if (reportId === 'r_monthly') filename = 'monthly_performance_report.csv';
-        else if (reportId === 'r_quarterly') filename = 'quarterly_business_review.csv';
-        else if (reportId === 'r_yearly') filename = 'yearly_strategic_report.csv';
-        else if (reportId === 'r_forecast') filename = 'forecast_export.csv';
+        if (report.type === 'daily') filename = 'daily_operations_report.csv';
+        else if (report.type === 'weekly') filename = 'weekly_performance_report.csv';
+        else if (report.type === 'monthly') filename = 'monthly_performance_report.csv';
+        else if (report.type === 'quarterly') filename = 'quarterly_business_review.csv';
+        else if (report.type === 'yearly') filename = 'yearly_strategic_report.csv';
+        else if (report.type === 'forecast') filename = 'forecast_export.csv';
       }
 
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -305,14 +284,14 @@ const Reports = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => handlePreview(report.id, report.title)}
+                            onClick={() => handlePreview(report)}
                             disabled={isPreviewLoading}
                             className="gap-1 text-xs hidden sm:flex"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             {isPreviewLoading && previewTitle === report.title ? t('reports:loading') : t('reports:preview')}
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDownload(report.id)} className="text-xs">
+                          <Button variant="outline" size="sm" onClick={() => handleDownload(report)} className="text-xs">
                             {t('reports:download')}
                           </Button>
                         </>

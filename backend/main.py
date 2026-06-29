@@ -27,7 +27,7 @@ from backend.db import SessionLocal, create_tables
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(PROJECT_ROOT / ".env", override=True)
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -251,19 +251,94 @@ def read_api_root():
     return {"status": "ok", "message": "SupplyMindAI API is running"}
 
 
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(
+        "🚫 SUCCESS_FAIL_AUDIT | VALIDATION FAILURE | Request: %s %s | Errors: %s",
+        request.method,
+        request.url.path,
+        json.dumps(exc.errors())
+    )
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors(), "body": exc.body}
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.warning(
+        "⚠️ SUCCESS_FAIL_AUDIT | HTTP FAILURE | Request: %s %s | Status: %s | Detail: %s",
+        request.method,
+        request.url.path,
+        exc.status_code,
+        exc.detail
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.critical(
+        "🔥 SUCCESS_FAIL_AUDIT | GLOBAL EXCEPTION | Request: %s %s | Error: %s",
+        request.method,
+        request.url.path,
+        str(exc),
+        exc_info=True
+    )
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "An unexpected server error occurred."}
+    )
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    response = await call_next(request)
-    duration = time.time() - start_time
-    logger.info(
-        "Request: %s %s | Status: %s | Duration: %.4fs",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration
-    )
-    return response
+    try:
+        response = await call_next(request)
+        duration = time.time() - start_time
+        status_code = response.status_code
+        
+        if status_code >= 500:
+            logger.error(
+                "❌ SUCCESS_FAIL_AUDIT | FAILURE (5xx) | Request: %s %s | Status: %s | Duration: %.4fs",
+                request.method,
+                request.url.path,
+                status_code,
+                duration
+            )
+        elif status_code >= 400:
+            logger.warning(
+                "⚠️ SUCCESS_FAIL_AUDIT | FAILURE (4xx) | Request: %s %s | Status: %s | Duration: %.4fs",
+                request.method,
+                request.url.path,
+                status_code,
+                duration
+            )
+        else:
+            logger.info(
+                "✅ SUCCESS_FAIL_AUDIT | SUCCESS | Request: %s %s | Status: %s | Duration: %.4fs",
+                request.method,
+                request.url.path,
+                status_code,
+                duration
+            )
+        return response
+    except Exception as exc:
+        duration = time.time() - start_time
+        logger.error(
+            "🔥 SUCCESS_FAIL_AUDIT | UNHANDLED FAILURE | Request: %s %s | Error: %s | Duration: %.4fs",
+            request.method,
+            request.url.path,
+            str(exc),
+            duration,
+            exc_info=True
+        )
+        raise exc
 
 
 

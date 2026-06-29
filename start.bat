@@ -84,7 +84,7 @@ if not exist "node_modules" (
 REM --- Start backend ---
 echo.
 echo Starting FastAPI backend on http://127.0.0.1:8081 ...
-start "SupplyMind Backend" cmd /k "cd /d "%~dp0" && .venv\Scripts\python.exe -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8081"
+start "SupplyMind Backend" cmd /k "cd /d "%~dp0" && .venv\Scripts\python.exe -m uvicorn backend.main:app --reload --reload-dir backend --host 0.0.0.0 --port 8081"
 
 REM --- Wait for backend health ---
 echo Waiting for backend to become ready...
