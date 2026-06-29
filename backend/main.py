@@ -437,6 +437,8 @@ def _startup() -> None:
     try:
         _run_migrations()
         create_tables()
+        from backend.db import seed_database
+        seed_database()
     except Exception as exc:
         logger.error("Database connection or migration failed on startup: %s. Continuing without DB.", exc)
 

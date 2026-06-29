@@ -7,6 +7,9 @@ from pathlib import Path
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from dotenv import load_dotenv
+import logging
+
+LOGGER = logging.getLogger("backend.db")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
@@ -204,3 +207,84 @@ def seed_users() -> None:
                 )
                 db.add(user)
         db.commit()
+
+
+def seed_demo_data() -> None:
+    import uuid
+    from datetime import datetime, timezone
+    
+    with SessionLocal() as db:
+        # 1. Seed ForecastResult
+        if db.query(ForecastResult).count() == 0:
+            LOGGER.info("Seeding ForecastResult table with mock predictions...")
+            mock_predictions = [
+                # FAN_STD
+                {"product_id": "FAN_STD", "period": "2026-06", "predicted_demand": 1200, "confidence_level": 88.0, "demand_trend": "increasing", "current_stock": 850, "stock_risk_level": "low", "recommended_order_qty": 600, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 42000.0},
+                {"product_id": "FAN_STD", "period": "2026-07", "predicted_demand": 1450, "confidence_level": 91.0, "demand_trend": "increasing", "current_stock": 850, "stock_risk_level": "medium", "recommended_order_qty": 900, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 50750.0},
+                {"product_id": "FAN_STD", "period": "2026-08", "predicted_demand": 1300, "confidence_level": 89.0, "demand_trend": "decreasing", "current_stock": 850, "stock_risk_level": "low", "recommended_order_qty": 500, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 45500.0},
+                # BL_KIT
+                {"product_id": "BL_KIT", "period": "2026-06", "predicted_demand": 850, "confidence_level": 82.0, "demand_trend": "stable", "current_stock": 450, "stock_risk_level": "medium", "recommended_order_qty": 500, "supplier_score": 81.0, "best_supplier": "Global Logistics", "lead_time_days": 14.0, "delay_risk": "medium", "avg_delay": 1.8, "profit_margin": 0.40, "revenue_forecast": 34000.0},
+                {"product_id": "BL_KIT", "period": "2026-07", "predicted_demand": 950, "confidence_level": 85.0, "demand_trend": "increasing", "current_stock": 450, "stock_risk_level": "high", "recommended_order_qty": 700, "supplier_score": 81.0, "best_supplier": "Global Logistics", "lead_time_days": 14.0, "delay_risk": "medium", "avg_delay": 1.8, "profit_margin": 0.40, "revenue_forecast": 38000.0},
+                {"product_id": "BL_KIT", "period": "2026-08", "predicted_demand": 900, "confidence_level": 83.0, "demand_trend": "stable", "current_stock": 450, "stock_risk_level": "high", "recommended_order_qty": 600, "supplier_score": 81.0, "best_supplier": "Global Logistics", "lead_time_days": 14.0, "delay_risk": "medium", "avg_delay": 1.8, "profit_margin": 0.40, "revenue_forecast": 36000.0},
+                # AF_5
+                {"product_id": "AF_5", "period": "2026-06", "predicted_demand": 600, "confidence_level": 94.0, "demand_trend": "stable", "current_stock": 650, "stock_risk_level": "low", "recommended_order_qty": 100, "supplier_score": 95.0, "best_supplier": "Swift Delivery", "lead_time_days": 5.0, "delay_risk": "low", "avg_delay": 0.1, "profit_margin": 0.28, "revenue_forecast": 16800.0},
+                {"product_id": "AF_5", "period": "2026-07", "predicted_demand": 620, "confidence_level": 93.0, "demand_trend": "increasing", "current_stock": 650, "stock_risk_level": "low", "recommended_order_qty": 150, "supplier_score": 95.0, "best_supplier": "Swift Delivery", "lead_time_days": 5.0, "delay_risk": "low", "avg_delay": 0.1, "profit_margin": 0.28, "revenue_forecast": 17360.0},
+                {"product_id": "AF_5", "period": "2026-08", "predicted_demand": 580, "confidence_level": 95.0, "demand_trend": "decreasing", "current_stock": 650, "stock_risk_level": "low", "recommended_order_qty": 50, "supplier_score": 95.0, "best_supplier": "Swift Delivery", "lead_time_days": 5.0, "delay_risk": "low", "avg_delay": 0.1, "profit_margin": 0.28, "revenue_forecast": 16240.0},
+            ]
+            for p in mock_predictions:
+                db.add(ForecastResult(
+                    id=str(uuid.uuid4()),
+                    product_id=p["product_id"],
+                    period=p["period"],
+                    predicted_demand=p["predicted_demand"],
+                    confidence_level=p["confidence_level"],
+                    demand_trend=p["demand_trend"],
+                    current_stock=p["current_stock"],
+                    stock_risk_level=p["stock_risk_level"],
+                    recommended_order_qty=p["recommended_order_qty"],
+                    supplier_score=p["supplier_score"],
+                    best_supplier=p["best_supplier"],
+                    lead_time_days=p["lead_time_days"],
+                    delay_risk=p["delay_risk"],
+                    avg_delay=p["avg_delay"],
+                    profit_margin=p["profit_margin"],
+                    revenue_forecast=p["revenue_forecast"],
+                    created_at=datetime.now(timezone.utc)
+                ))
+            db.commit()
+            LOGGER.info("ForecastResult table seeded successfully.")
+
+        # 2. Seed KnowledgeDocuments if empty
+        if db.query(KnowledgeDocument).count() == 0:
+            LOGGER.info("Seeding KnowledgeDocument table...")
+            try:
+                from backend.knowledge.ingestion import ingest_document
+                ingest_document(
+                    title="Supplier Apex Logistics Profile",
+                    content="Apex Logistics is our primary partner for FAN_STD. They maintain an outstanding reliability score of 89.2%. The standard lead time is 10 days, and the average delivery delay is 0.5 days. Delay risk is historically low. Their hub is located close to our primary warehouse, which minimizes transit overhead.",
+                    source_type="supplier",
+                    source_id="apex_logistics"
+                )
+                ingest_document(
+                    title="Supplier Global Logistics Profile",
+                    content="Global Logistics handles shipments for BL_KIT. They have a supplier reliability score of 81.0%. The standard lead time is 14 days, and the average delay is 1.8 days. Delay risk is medium. Stockouts have occurred twice in the past year due to customs processing delays.",
+                    source_type="supplier",
+                    source_id="global_logistics"
+                )
+                ingest_document(
+                    title="Inventory Safety Stock Policy",
+                    content="The default safety stock levels are set as follows: FAN_STD is kept at 200 units. BL_KIT is kept at 150 units. AF_5 is kept at 80 units. These buffers ensure we maintain a service level above 95% across all regional stores. Safety stock is reviewed at the end of each fiscal quarter.",
+                    source_type="inventory",
+                    source_id="safety_stock_policy"
+                )
+                LOGGER.info("KnowledgeDocument seeded successfully.")
+            except Exception as exc:
+                LOGGER.error("Failed to seed RAG KnowledgeDocuments: %s", exc)
+
+
+def seed_database() -> None:
+    try:
+        seed_users()
+        seed_demo_data()
+    except Exception as exc:
+        LOGGER.exception("Failed to seed database: %s", exc)
