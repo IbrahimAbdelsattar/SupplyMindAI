@@ -18,11 +18,6 @@ export function getApiBaseUrl(): string {
    */
   const envApiUrl = import.meta.env.VITE_API_URL as string | undefined;
 
-  // If the env points to a local fixed port (common misconfig), ignore it.
-  if (envApiUrl && /^https?:\/\/localhost:\d+\//i.test(envApiUrl)) {
-    return '/api/v1';
-  }
-
   const apiBase = envApiUrl ?? '/api/v1';
   return apiBase.replace(/\/$/, '');
 }
