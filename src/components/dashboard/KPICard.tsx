@@ -1,8 +1,6 @@
-import { motion } from 'framer-motion';
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
-import { SPRING_NORMAL } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 interface KPICardProps {
   title: string;
@@ -13,15 +11,14 @@ interface KPICardProps {
   changeLabel?: string;
   icon: LucideIcon;
   color?: 'primary' | 'accent' | 'success' | 'warning' | 'destructive';
-  delay?: number;
 }
 
-const colorClasses = {
-  primary: 'bg-primary/10 text-primary',
-  accent: 'bg-accent/10 text-accent',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  destructive: 'bg-destructive/10 text-destructive',
+const colorMap: Record<string, string> = {
+  primary: '#2563EB',
+  accent: '#10B981',
+  success: '#10B981',
+  warning: '#F97316',
+  destructive: '#EF4444',
 };
 
 export const KPICard = ({
@@ -33,63 +30,54 @@ export const KPICard = ({
   changeLabel,
   icon: Icon,
   color = 'primary',
-  delay = 0,
 }: KPICardProps) => {
   const isPositive = change !== undefined && change >= 0;
-
+  const changeColor = isPositive ? '#10B981' : '#EF4444';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.23, 1, 0.32, 1] }}
-    >
-      <div
-        className="bg-card border border-border rounded-2xl p-3 sm:p-6 hover:border-primary/30 transition-[border-color] duration-200 relative overflow-hidden cursor-default"
-      >
+    <div className="neu-panel rounded-3xl p-5 sm:p-7 flex flex-col justify-between h-full group hover:scale-[1.02] transition-transform duration-300 ease-out cursor-default relative overflow-hidden">
+      {/* Decorative background glow based on the KPI color */}
+      <div 
+        className="absolute -right-6 -top-6 w-32 h-32 rounded-full blur-[40px] opacity-10 transition-opacity duration-300 group-hover:opacity-20 pointer-events-none"
+        style={{ backgroundColor: colorMap[color] }}
+      />
 
-
-        <div className="flex items-start justify-between mb-3 sm:mb-4 relative" style={{ transform: 'translateZ(8px)' }}>
-          <motion.div
-            className={cn('w-9 h-9 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center', colorClasses[color])}
-            whileHover={{ rotateY: 180, scale: 1.1 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            style={{ transformStyle: 'preserve-3d' }}
+      <div className="flex items-start justify-between mb-4 sm:mb-6 relative z-10">
+        <div 
+          className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl neu-panel-inset flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+        >
+          <Icon className="w-5 h-5 sm:w-7 sm:h-7 drop-shadow-sm" style={{ color: colorMap[color] }} />
+        </div>
+        
+        {change !== undefined && (
+          <div
+            className="flex items-center gap-1.5 text-[11px] sm:text-sm font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl neu-panel-inset drop-shadow-sm"
+            style={{ color: changeColor }}
           >
-            <Icon className="w-4 h-4 sm:w-6 sm:h-6" />
-          </motion.div>
-          {change !== undefined && (
-            <div
-              className={cn(
-                'flex items-center gap-1 text-[10px] sm:text-sm font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg',
-                isPositive ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-              )}
-            >
-              {isPositive ? (
-                <TrendingUp className="w-3 h-3" />
-              ) : (
-                <TrendingDown className="w-3 h-3" />
-              )}
-              {Math.abs(change)}%
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-1 relative" style={{ transform: 'translateZ(4px)' }}>
-          <p className="text-xs sm:text-sm text-muted-foreground truncate">{title}</p>
-          <p className="text-xl sm:text-3xl font-bold">
-            <AnimatedCounter
-              value={value}
-              prefix={prefix}
-              suffix={suffix}
-              duration={1.5}
-            />
-          </p>
-          {changeLabel && (
-            <p className="text-xs text-muted-foreground">{changeLabel}</p>
-          )}
-        </div>
+            {isPositive ? (
+              <TrendingUp className="w-3.5 h-3.5" strokeWidth={3} />
+            ) : (
+              <TrendingDown className="w-3.5 h-3.5" strokeWidth={3} />
+            )}
+            {Math.abs(change)}%
+          </div>
+        )}
       </div>
-    </motion.div>
+
+      <div className="space-y-1.5 relative z-10">
+        <p className="text-sm font-semibold text-muted-foreground tracking-tight">{title}</p>
+        <div className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight flex items-baseline">
+          <AnimatedCounter
+            value={value}
+            prefix={prefix}
+            suffix={suffix}
+            duration={1.5}
+          />
+        </div>
+        {changeLabel && (
+          <p className="text-[13px] font-medium text-muted-foreground/80 mt-1">{changeLabel}</p>
+        )}
+      </div>
+    </div>
   );
 };

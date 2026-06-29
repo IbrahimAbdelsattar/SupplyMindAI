@@ -97,7 +97,7 @@ export const SupplyMindLogo: React.FC<SupplyMindLogoProps> = ({
           )}
         >
           SupplyMind
-          <span className="text-primary ml-0.5">AI</span>
+          <span className="ml-0.5 text-primary">AI</span>
         </span>
       )}
     </span>

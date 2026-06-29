@@ -64,9 +64,10 @@ const AppRoutes = () => (
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Index />} />
-      <Route path="/login" element={<PublicOnlyRoute><ClerkLoginCatchAll /></PublicOnlyRoute>} />
-      <Route path="/login/*" element={<PublicOnlyRoute><ClerkLoginCatchAll /></PublicOnlyRoute>} />
-      <Route path="/sign-up" element={<PublicOnlyRoute><ClerkLoginCatchAll /></PublicOnlyRoute>} />
+      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/login/*" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/sign-up" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/sign-up/*" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
 
 
       {/* Protected routes — require authentication */}

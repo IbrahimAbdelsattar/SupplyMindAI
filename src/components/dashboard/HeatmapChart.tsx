@@ -76,27 +76,24 @@ export const HeatmapChart = () => {
     };
   }, [getToken]);
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.3 }}
-      className="bg-card border border-border rounded-2xl p-6"
-    >
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold">Demand Heatmap</h3>
-        <p className="text-sm text-muted-foreground">Product demand intensity by store</p>
+    <div className="neu-panel rounded-3xl p-6 lg:p-8 overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none" />
+      
+      <div className="mb-8 relative z-10">
+        <h3 className="text-xl font-bold text-foreground tracking-tight">Demand Heatmap</h3>
+        <p className="text-[15px] font-medium text-muted-foreground mt-1">Product demand intensity by store</p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto pb-4 scrollbar-none relative z-10">
         <div className="min-w-[500px]">
           {/* Header */}
           <div
-            className="grid gap-2 mb-2"
+            className="grid gap-3 mb-4"
             style={{ gridTemplateColumns: `minmax(140px, 1fr) repeat(${apiStores.length}, minmax(90px, 1fr))` }}
           >
-            <div className="text-xs text-muted-foreground font-medium"></div>
+            <div className="text-[13px] text-muted-foreground font-bold tracking-wider uppercase"></div>
             {apiStores.map((store) => (
-              <div key={store.id} className="text-xs text-muted-foreground font-medium text-center truncate">
+              <div key={store.id} className="text-[13px] text-muted-foreground font-bold tracking-wider uppercase text-center truncate">
                 {store.name.replace(' Store', '')}
               </div>
             ))}
@@ -106,13 +103,13 @@ export const HeatmapChart = () => {
           {apiProducts.map((product, productIndex) => (
             <motion.div
               key={product.product_id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: productIndex * 0.05 }}
-              className="grid gap-2 mb-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: productIndex * 0.05, ease: [0.23, 1, 0.32, 1] }}
+              className="grid gap-3 mb-3"
               style={{ gridTemplateColumns: `minmax(140px, 1fr) repeat(${apiStores.length}, minmax(90px, 1fr))` }}
             >
-              <div className="text-xs text-muted-foreground font-medium flex items-center truncate pr-2 rtl:pl-2 rtl:pr-0">
+              <div className="text-[14px] text-foreground font-bold flex items-center truncate pr-2 rtl:pl-2 rtl:pr-0">
                 {product.product_name}
               </div>
               {apiStores.map((store) => {
@@ -123,15 +120,16 @@ export const HeatmapChart = () => {
                 return (
                   <motion.div
                     key={store.id}
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{ scale: 1.15, zIndex: 10, rotate: value % 2 === 0 ? 1 : -1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     className={cn(
-                      'h-10 rounded-lg flex items-center justify-center text-xs font-medium cursor-pointer transition-colors',
+                      'h-12 rounded-2xl flex items-center justify-center text-[13px] font-bold cursor-pointer relative shadow-sm',
                       getHeatmapColor(value),
                       'text-primary-foreground'
                     )}
                     title={`${product.product_name} at ${store.name}: ${value} units`}
                   >
-                    {value}
+                    <span className="drop-shadow-md">{value}</span>
                   </motion.div>
                 );
               })}
@@ -141,16 +139,16 @@ export const HeatmapChart = () => {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-border">
-        <span className="text-xs text-muted-foreground">Low</span>
-        <div className="flex gap-1">
-          <div className="w-6 h-4 rounded bg-primary/20"></div>
-          <div className="w-6 h-4 rounded bg-primary/40"></div>
-          <div className="w-6 h-4 rounded bg-primary/60"></div>
-          <div className="w-6 h-4 rounded bg-primary/80"></div>
+      <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-border/40 relative z-10">
+        <span className="text-[13px] font-bold text-muted-foreground uppercase tracking-widest">Low</span>
+        <div className="flex gap-2">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 shadow-sm"></div>
+          <div className="w-8 h-8 rounded-xl bg-primary/40 shadow-sm"></div>
+          <div className="w-8 h-8 rounded-xl bg-primary/60 shadow-sm"></div>
+          <div className="w-8 h-8 rounded-xl bg-primary/80 shadow-sm"></div>
         </div>
-        <span className="text-xs text-muted-foreground">High</span>
+        <span className="text-[13px] font-bold text-muted-foreground uppercase tracking-widest">High</span>
       </div>
-    </motion.div>
+    </div>
   );
 };

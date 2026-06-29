@@ -69,74 +69,81 @@ export const DemandChart = () => {
   }, [selectedRange, selectedProduct, products?.length]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.2 }}
-      className="bg-card border border-border rounded-2xl p-6"
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="neu-panel rounded-3xl p-6 h-full flex flex-col">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 relative z-10">
         <div>
-          <h3 className="text-lg font-semibold">Demand Forecast</h3>
-          <p className="text-sm text-muted-foreground">Actual vs Predicted demand</p>
+          <h3 className="text-xl font-bold text-foreground tracking-tight">Demand Forecast</h3>
+          <p className="text-[15px] font-medium text-muted-foreground mt-1">Actual vs Predicted demand</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-            <SelectTrigger className="w-40 bg-background">
+            <SelectTrigger className="w-[180px] h-11 neu-panel-inset border-none rounded-xl text-[15px] font-medium text-foreground focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="Select product" />
             </SelectTrigger>
-            <SelectContent className="bg-popover">
-              <SelectItem value="all">All Products</SelectItem>
+            <SelectContent className="neu-panel border-none rounded-xl">
+              <SelectItem value="all" className="focus:bg-background rounded-lg font-medium cursor-pointer">All Products</SelectItem>
               {(products ?? []).map((product) => (
-                <SelectItem key={product.product_id} value={product.product_id}>
+                <SelectItem key={product.product_id} value={product.product_id} className="focus:bg-background rounded-lg font-medium cursor-pointer">
                   {product.product_name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <div className="flex rounded-lg border border-border p-1">
+          <div className="flex rounded-xl p-1.5 neu-panel-inset gap-1">
             {timeRanges.map((range) => (
-              <Button
+              <button
                 key={range.value}
-                variant={selectedRange === range.value ? 'default' : 'ghost'}
-                size="sm"
                 onClick={() => setSelectedRange(range.value)}
-                className="px-3"
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
+                  selectedRange === range.value 
+                    ? 'neu-panel text-primary' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
               >
                 {range.label}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="h-80">
+      <div className="flex-1 min-h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 500 }}
               tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              dy={10}
             />
-            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+            <YAxis 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 500 }} 
+            />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
+                backgroundColor: 'var(--neu-bg)',
+                border: 'none',
+                boxShadow: '8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light)',
+                borderRadius: '16px',
+                fontWeight: 600,
+                color: 'var(--neu-text)'
               }}
               labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
             />
-            <Legend />
+            <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: 600 }} iconType="circle" />
             <Area
               type="monotone"
               dataKey="upper"
@@ -149,15 +156,16 @@ export const DemandChart = () => {
               type="monotone"
               dataKey="lower"
               stroke="none"
-              fill="hsl(var(--background))"
+              fill="var(--neu-bg)"
               name=""
             />
             <Line
               type="monotone"
               dataKey="actual"
               stroke="hsl(var(--accent))"
-              strokeWidth={2}
-              dot={{ fill: 'hsl(var(--accent))', strokeWidth: 0, r: 3 }}
+              strokeWidth={3}
+              dot={{ fill: 'hsl(var(--accent))', strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 6, strokeWidth: 0 }}
               name="Actual"
               connectNulls={false}
             />
@@ -165,14 +173,16 @@ export const DemandChart = () => {
               type="monotone"
               dataKey="forecast"
               stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
+              strokeWidth={3}
+              strokeDasharray="6 6"
+              dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 6, strokeWidth: 0 }}
               name="Forecast"
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-    </motion.div>
+    </div>
   );
 };
+

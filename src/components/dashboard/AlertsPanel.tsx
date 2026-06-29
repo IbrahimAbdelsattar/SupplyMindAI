@@ -91,71 +91,77 @@ export const AlertsPanel = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.4 }}
-      className="bg-card border border-border rounded-2xl p-6"
-    >
-      <div className="flex items-center justify-between mb-4">
+    <div className="neu-panel rounded-3xl p-6 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold">Active Alerts</h3>
-          <p className="text-sm text-muted-foreground">{visibleAlerts.length} alerts requiring attention</p>
+          <h3 className="text-xl font-bold text-foreground tracking-tight">Active Alerts</h3>
+          <p className="text-[15px] font-medium text-muted-foreground mt-1">{visibleAlerts.length} alerts requiring attention</p>
         </div>
-        <Button variant="outline" size="sm">
+        <button className="h-9 px-4 rounded-xl neu-panel active:neu-button-active text-sm font-bold text-muted-foreground hover:text-foreground transition-all duration-200">
           View All
-        </Button>
+        </button>
       </div>
 
-      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 rtl:pl-2 rtl:pr-0">
+      <div className="flex-1 space-y-4 overflow-y-auto pr-2 rtl:pl-2 rtl:pr-0 scrollbar-none pb-2">
         {visibleAlerts.map((alert, index) => {
           const Icon = alertIcons[alert.type];
           return (
             <motion.div
+              layout
               key={alert.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+              transition={{ duration: 0.4, delay: index * 0.1, ease: [0.23, 1, 0.32, 1] }}
               className={cn(
-                'flex items-start gap-3 p-4 rounded-xl border',
-                alertStyles[alert.type]
+                'flex items-start gap-4 p-5 rounded-2xl neu-panel-inset relative overflow-hidden group',
               )}
             >
-              <Icon
-                className={cn(
-                  'w-5 h-5 flex-shrink-0 mt-0.5',
-                  iconStyles[alert.type]
-                )}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-1.5 opacity-80"
+                style={{ backgroundColor: `var(--${alert.type === 'error' ? 'destructive' : alert.type === 'warning' ? 'warning' : 'primary'})` }}
               />
+              <div className="w-10 h-10 rounded-xl neu-panel flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Icon
+                  className={cn(
+                    'w-5 h-5 drop-shadow-sm',
+                    iconStyles[alert.type]
+                  )}
+                />
+              </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-medium">{alert.title}</h4>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">{alert.time}</span>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h4 className="text-[15px] font-bold text-foreground tracking-tight">{alert.title}</h4>
+                  <span className="text-xs font-semibold text-muted-foreground flex-shrink-0 bg-background/50 px-2 py-1 rounded-lg">{alert.time}</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{alert.message}</p>
-                <span className="inline-block mt-2 px-2 py-0.5 text-xs rounded-full bg-secondary text-secondary-foreground">
+                <p className="text-sm font-medium text-muted-foreground leading-relaxed">{alert.message}</p>
+                <span className="inline-block mt-3 px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase rounded-md bg-background text-foreground shadow-sm">
                   {alert.product}
                 </span>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 flex-shrink-0"
+              <button
+                className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                 onClick={() => dismissAlert(alert.id)}
               >
                 <X className="w-4 h-4" />
-              </Button>
+              </button>
             </motion.div>
           );
         })}
 
         {visibleAlerts.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-success" />
-            <p>All alerts have been addressed!</p>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-12 text-muted-foreground neu-panel-inset rounded-2xl mx-1"
+          >
+            <div className="w-16 h-16 rounded-full neu-panel flex items-center justify-center mx-auto mb-4 text-success">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <p className="text-[15px] font-bold">All alerts have been addressed!</p>
+          </motion.div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };

@@ -96,63 +96,67 @@ export function AISummaryCard({
     : '';
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
+    <div className={cn("neu-panel rounded-3xl p-6", className)}>
+      <div className="flex items-center gap-2 mb-4 pb-4 border-b border-border/40">
+        <div className="w-8 h-8 rounded-xl neu-panel-inset flex items-center justify-center">
           <Sparkles className="w-4 h-4 text-primary" />
+        </div>
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
           {title}
           {grounded && (
-            <span className="text-xs font-normal text-muted-foreground">(grounded)</span>
+            <span className="text-xs font-semibold text-primary/80 bg-primary/10 px-2 py-0.5 rounded-md">Grounded</span>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </h3>
+      </div>
+      
+      <div className="pt-2">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            Generating summary…
+          <div className="flex items-center justify-center gap-3 text-sm font-semibold text-muted-foreground py-12 neu-panel-inset rounded-2xl">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            Synthesizing Insights…
           </div>
         ) : hasCachedValue && summary ? (
-          <div className="space-y-4">
-            <FormattedMessage content={summary} className="text-sm text-muted-foreground" />
-            <div className="pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <div className="space-y-6">
+            <div className="p-5 rounded-2xl neu-panel-inset">
+              <FormattedMessage content={summary} className="text-[15px] leading-relaxed text-foreground" />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-medium text-muted-foreground px-2">
               {formattedTime && (
-                <span>
+                <span className="opacity-80">
                   {t('ai:lastGenerated')}: {formattedTime}
                 </span>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={handleGenerate}
-                className="h-8 px-2 flex items-center gap-1.5 hover:text-foreground text-primary/80 transition-colors"
+                className="h-9 px-4 rounded-xl neu-panel active:neu-button-active flex items-center gap-2 hover:text-primary transition-all duration-200"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 {t('ai:regenerate')}
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-6 px-4 text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary animate-pulse">
-              <Sparkles className="w-6 h-6" />
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center space-y-6 neu-panel-inset rounded-2xl">
+            <div className="w-16 h-16 rounded-3xl neu-panel flex items-center justify-center text-primary relative">
+              <div className="absolute inset-0 rounded-3xl animate-ping opacity-20 bg-primary" />
+              <Sparkles className="w-8 h-8 animate-pulse" />
             </div>
             <div className="max-w-md">
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-[15px] font-medium text-muted-foreground leading-relaxed">
                 {t('ai:notGenerated')}
               </p>
             </div>
-            <Button
+            <button
               onClick={handleGenerate}
-              className="relative group bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl px-5 py-2.5 flex items-center gap-2 transition-all duration-300"
+              className="group neu-panel active:neu-button-active text-primary font-bold rounded-xl px-6 py-3 flex items-center gap-2 transition-all duration-300 hover:scale-105"
             >
               <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-12" />
               {t('ai:generate')}
-            </Button>
+            </button>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

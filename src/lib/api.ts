@@ -11,8 +11,18 @@ export function setAuthTokenProvider(provider: AuthTokenProvider | null) {
 }
 
 export function getApiBaseUrl(): string {
-  // Default to relative API base so local dev hits the backend via Vite (or same-origin nginx) instead of hardcoding the wrong port.
-  const apiBase = import.meta.env.VITE_API_URL ?? '/api/v1';
+  /**
+   * Prefer relative API base for dev to avoid hardcoding an unreachable backend port.
+   * If you truly want to force a full URL, set VITE_API_URL to the desired value.
+   */
+  const envApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+
+  // If the env points to a local fixed port (common misconfig), ignore it.
+  if (envApiUrl && /^https?:\/\/localhost:\d+\//i.test(envApiUrl)) {
+    return '/api/v1';
+  }
+
+  const apiBase = envApiUrl ?? '/api/v1';
   return apiBase.replace(/\/$/, '');
 }
 

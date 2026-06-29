@@ -23,7 +23,6 @@ import {
   ChevronRight,
   Menu,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import React, { useState } from 'react';
 
@@ -53,36 +52,31 @@ const SidebarContent = ({
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+    <div className="h-full flex flex-col bg-background">
+      {/* Logo Area */}
+      <div className="h-[72px] flex items-center justify-between px-6 mb-4">
         <Link to="/dashboard" className="flex items-center gap-2" onClick={onNavigate}>
           <SupplyMindLogo iconOnly={isCollapsed} iconClassName="w-8 h-8" />
         </Link>
-        {!isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
+        {!isCollapsed ? (
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 hidden lg:flex"
+            className="h-8 w-8 hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-transform"
           >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-        )}
-        {isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        ) : (
+          <button
             onClick={() => setIsCollapsed(false)}
-            className="h-8 w-8 hidden lg:flex"
+            className="h-8 w-8 hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-transform"
           >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+            <ChevronRight className="w-5 h-5" />
+          </button>
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 py-4 px-3 space-y-1">
+      {/* Navigation — Neumorphic items */}
+      <nav className="flex-1 px-4 space-y-2 overflow-y-auto pb-4 scrollbar-none">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -91,10 +85,11 @@ const SidebarContent = ({
               to={item.path}
               onClick={onNavigate}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  ? 'neu-panel-inset text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:neu-panel active:neu-button-active',
+                isCollapsed && 'justify-center px-0'
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -104,51 +99,49 @@ const SidebarContent = ({
         })}
       </nav>
 
-      {/* Bottom Section */}
-      <div className="p-3 border-t border-border space-y-2">
-        <Button
-          variant="ghost"
+      {/* Footer Area */}
+      <div className="p-4 space-y-2 pb-6">
+        <button
           onClick={toggleTheme}
           className={cn(
-            'w-full justify-start gap-3',
+            'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium w-full transition-all duration-200 text-muted-foreground hover:text-foreground hover:neu-panel active:neu-button-active',
             isCollapsed && 'justify-center px-0'
           )}
         >
           {theme === 'dark' ? (
-            <Sun className="w-5 h-5 flex-shrink-0" />
+            <Sun className="w-5 h-5 flex-shrink-0 text-amber-500" />
           ) : (
-            <Moon className="w-5 h-5 flex-shrink-0" />
+            <Moon className="w-5 h-5 flex-shrink-0 text-indigo-500" />
           )}
           {!isCollapsed && <span>{theme === 'dark' ? t('common:theme.light') : t('common:theme.dark')}</span>}
-        </Button>
+        </button>
 
         <LanguageSwitcher collapsed={isCollapsed} />
 
         {!isCollapsed && user && (
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-sm font-medium text-primary">
-                {(user?.name ?? '?').charAt(0)}
+          <div className="mt-4 mx-0 p-4 neu-panel-inset rounded-2xl flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-primary neu-panel flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-primary-foreground">
+                {(user?.name ?? '?').charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name ?? ''}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role ?? 'analyst'}</p>
+              <p className="text-sm font-bold text-foreground truncate">{user?.name ?? ''}</p>
+              <p className="text-xs text-muted-foreground font-medium capitalize">{user?.role ?? 'analyst'}</p>
             </div>
           </div>
         )}
 
-        <Button
-          variant="ghost"
+        <button
           onClick={logout}
           className={cn(
-            'w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10',
+            'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium w-full transition-all duration-200 text-muted-foreground hover:text-destructive hover:neu-panel active:neu-button-active mt-2',
             isCollapsed && 'justify-center px-0'
           )}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!isCollapsed && <span>{t('common:auth.signOut')}</span>}
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -164,15 +157,14 @@ export const DashboardSidebar = () => {
     return (
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="fixed top-3 left-3 rtl:left-auto rtl:right-3 z-50 h-10 w-10 rounded-xl bg-card border border-border"
+          <button
+            className="fixed top-4 left-4 rtl:left-auto rtl:right-4 z-50 h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground neu-panel rounded-xl active:neu-button-active transition-all"
+            aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
-          </Button>
+          </button>
         </SheetTrigger>
-        <SheetContent side={i18n.dir() === "rtl" ? "right" : "left"} className="w-72 p-0">
+        <SheetContent side={i18n.dir() === "rtl" ? "right" : "left"} className="w-[280px] p-0 border-0 neu-panel">
           <SheetTitle className="sr-only">{t('common:nav.navigation')}</SheetTitle>
           <SidebarContent
             isCollapsed={false}
@@ -188,10 +180,12 @@ export const DashboardSidebar = () => {
     <motion.aside
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
       className={cn(
-        'h-screen sticky top-0 border-r border-border bg-card flex flex-col transition-all duration-300',
-        isCollapsed ? 'w-20' : 'w-64'
+        'h-screen sticky top-0 flex flex-col transition-all duration-300 bg-background',
+        // In Neumorphism, we remove the hard border and rely on shadows or background blending
+        'border-r-0',
+        isCollapsed ? 'w-[88px]' : 'w-[280px]'
       )}
     >
       <SidebarContent isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />

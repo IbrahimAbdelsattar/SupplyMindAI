@@ -48,18 +48,28 @@ const FactorOne = () => {
               signUpUrl="/sign-up"
               afterSignInUrl="/dashboard"
               appearance={{
+                variables: {
+                  colorPrimary: '#2563EB',
+                  colorBackground: '#14141f',
+                  colorText: '#f8fafc',
+                  colorTextSecondary: '#94a3b8',
+                  colorInputBackground: '#0f172a',
+                  colorInputText: '#f8fafc',
+                  colorBorder: '#1e293b',
+                },
                 elements: {
-                  headerTitle: "text-h2 text-foreground",
-                  headerDescription: "text-muted-foreground text-body",
-                  form: "space-y-4",
-                  formField: "space-y-2",
-                  label: "text-sm font-semibold text-foreground",
-                  input: "h-11 bg-background border-border focus:border-primary focus:ring-2 focus:ring-primary/20",
-                  formButton:
-                    "w-full h-11 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors",
-                  socialButtons: "hidden",
-                  dividerLine: "border-border",
-                  footer: "text-caption text-muted-foreground text-center",
+                  rootBox: 'w-full',
+                  cardBox: 'w-full shadow-none border-0 bg-transparent',
+                  card: 'w-full shadow-none border-0 bg-transparent p-0',
+                  header: 'hidden',
+                  footer: 'bg-transparent text-muted-foreground',
+                  formButtonPrimary: 'w-full h-11 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors',
+                  formFieldInput: 'h-11 bg-background border-border text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20',
+                  footerActionLink: 'text-primary hover:text-primary/80',
+                  identityPreviewText: 'text-foreground',
+                  identityPreviewEditButtonIcon: 'stroke-foreground',
+                  dividerLine: 'bg-border',
+                  dividerText: 'text-muted-foreground',
                 },
               }}
             />
