@@ -18,7 +18,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/00-init-db.sql:ro
-      - ./backend/migrations/forecast_results.sql:/docker-entrypoint-initdb.d/01-forecast-results.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U supplymind -d supplymind"]
       interval: 10s

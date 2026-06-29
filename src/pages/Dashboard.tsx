@@ -86,8 +86,6 @@ const Dashboard = () => {
                 title={t('dashboard:kpi.totalDemand')}
                 value={kpiData?.totalDemand ?? 0}
                 suffix={t('dashboard:kpi.unitsSuffix')}
-                change={12}
-                changeLabel={t('dashboard:kpi.vsLastPeriod')}
                 icon={TrendingUp}
                 color="primary"
               />
@@ -97,8 +95,6 @@ const Dashboard = () => {
                 title={t('dashboard:kpi.inventoryCost')}
                 value={convertCurrency(kpiData?.inventoryCost ?? 0)}
                 prefix={currencySymbol}
-                change={-8}
-                changeLabel={t('dashboard:kpi.vsLastPeriod')}
                 icon={DollarSign}
                 color="success"
               />
@@ -108,8 +104,6 @@ const Dashboard = () => {
                 title={t('dashboard:kpi.stockoutRisk')}
                 value={kpiData?.stockoutRisk ?? 0}
                 suffix={t('dashboard:kpi.percentSuffix')}
-                change={-15}
-                changeLabel={t('dashboard:kpi.lowerThanLastMonth')}
                 icon={AlertTriangle}
                 color="warning"
               />
@@ -119,8 +113,6 @@ const Dashboard = () => {
                 title={t('dashboard:kpi.overstockRisk')}
                 value={kpiData?.overstockRisk ?? 0}
                 suffix={t('dashboard:kpi.percentSuffix')}
-                change={-5}
-                changeLabel={t('dashboard:kpi.improvement')}
                 icon={Package}
                 color="accent"
               />

@@ -31,3 +31,10 @@ alembic>=1.13.0
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 httpx>=0.24.0
+celery[redis]
+opentelemetry-distro[otlp]
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-sqlalchemy
+opentelemetry-instrumentation-redis
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-logging

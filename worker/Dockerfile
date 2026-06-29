@@ -1,20 +1,18 @@
 # ============================================================================
-# Backend Dockerfile - Production-Ready
+# Worker Dockerfile - Production-Ready (Celery Workers & Beat)
 # ============================================================================
-# Multi-stage build for optimized production image
+# Multi-stage build sharing the same Python base as backend
 
 # ── Stage 1: Builder ─────────────────────────────────────────────────────
 FROM python:3.12-slim as builder
 
 WORKDIR /build
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install in venv
 COPY requirements.txt .
 RUN python -m venv /opt/venv && \
     /opt/venv/bin/pip install --upgrade pip setuptools wheel && \
@@ -24,53 +22,38 @@ RUN python -m venv /opt/venv && \
 # ── Stage 2: Runtime ────────────────────────────────────────────────────
 FROM python:3.12-slim
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONHASHSEED=random \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PATH="/opt/venv/bin:$PATH" \
-    OTEL_SERVICE_NAME=supplymind-backend \
+    OTEL_SERVICE_NAME=supplymind-worker \
     OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
     OTEL_TRACES_SAMPLER=parentbased_traceidratio \
     OTEL_TRACES_SAMPLER_ARG=0.1 \
     OTEL_RESOURCE_ATTRIBUTES=service.version=1.0.0,environment=production
 
-# Create non-root user for security
 RUN groupadd -r app && useradd -r -g app app
 
 WORKDIR /app
 
-# Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy venv from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy application code
 COPY --chown=app:app backend/ ./backend/
-COPY --chown=app:app data/ ./data/
+COPY --chown=app:app worker/ ./worker/
 COPY --chown=app:app Modeling/ ./Modeling/
-COPY --chown=app:app scripts/ ./scripts/
+COPY --chown=app:app data/ ./data/
+COPY --chown=app:app requirements.txt .
 
-# Switch to non-root user
 USER app
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import celery; print('celery ok')" || exit 1
 
-# Start the application with production settings
-CMD ["opentelemetry-instrument", \
-     "uvicorn", \
-     "backend.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "1", \
-     "--loop", "uvloop", \
-     "--access-log", \
-     "--use-colors"]
+CMD ["celery", "-A", "worker.celery_app", "worker", "-Q", "default", "--loglevel=info", "--concurrency=4"]

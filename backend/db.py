@@ -18,14 +18,11 @@ if not DATABASE_URL:
         "Set it in .env (e.g., postgresql://user:pass@host:port/dbname)."
     )
 
-engine_options: dict = {"pool_pre_ping": True}
-if DATABASE_URL.startswith("sqlite"):
-    engine_options["connect_args"] = {"check_same_thread": False}
-else:
-    engine_options.update(
-        pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
-        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
-    )
+engine_options: dict = {
+    "pool_pre_ping": True,
+    "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
+    "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
+}
 
 engine = create_engine(DATABASE_URL, **engine_options)
 

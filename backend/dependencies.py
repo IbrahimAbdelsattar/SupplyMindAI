@@ -1,8 +1,10 @@
-﻿from __future__ import annotations
-
+import logging
+from datetime import datetime, timezone
 from fastapi import HTTPException, Request, status
 
 from backend.knowledge.auth import AuthUser, get_user_from_token
+
+logger = logging.getLogger("backend.auth")
 
 
 def _auth_error(detail: str = "Invalid or expired token") -> HTTPException:
@@ -27,4 +29,5 @@ async def _get_current_user(request: Request) -> AuthUser:
     try:
         return await get_user_from_token(token)
     except ValueError as exc:
-        raise _auth_error() from exc
+        logger.warning("Authentication failed: %s", exc)
+        raise _auth_error(f"Authentication failed: {exc}") from exc

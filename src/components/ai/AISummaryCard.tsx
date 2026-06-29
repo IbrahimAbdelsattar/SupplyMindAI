@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ragQuery } from '@/lib/knowledgeApi';
 import { FormattedMessage } from './FormattedMessage';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 type Props = {
   title?: string;
@@ -98,9 +100,14 @@ export function AISummaryCard({
   return (
     <div className={cn("neu-panel rounded-3xl p-6", className)}>
       <div className="flex items-center gap-2 mb-4 pb-4 border-b border-border/40">
-        <div className="w-8 h-8 rounded-xl neu-panel-inset flex items-center justify-center">
+        <motion.div 
+          className="w-8 h-8 rounded-xl neu-panel-inset flex items-center justify-center"
+          whileHover={{ scale: 1.15, rotate: 10 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+        >
           <Sparkles className="w-4 h-4 text-primary" />
-        </div>
+        </motion.div>
         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
           {title}
           {grounded && (
@@ -112,7 +119,12 @@ export function AISummaryCard({
       <div className="pt-2">
         {loading ? (
           <div className="flex items-center justify-center gap-3 text-sm font-semibold text-muted-foreground py-12 neu-panel-inset rounded-2xl">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            >
+              <Loader2 className="w-5 h-5 text-primary" />
+            </motion.div>
             Synthesizing Insights…
           </div>
         ) : hasCachedValue && summary ? (
@@ -126,37 +138,54 @@ export function AISummaryCard({
                   {t('ai:lastGenerated')}: {formattedTime}
                 </span>
               )}
-              <button
+              <motion.button
                 onClick={handleGenerate}
                 className="h-9 px-4 rounded-xl neu-panel active:neu-button-active flex items-center gap-2 hover:text-primary transition-all duration-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 {t('ai:regenerate')}
-              </button>
+              </motion.button>
             </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center space-y-6 neu-panel-inset rounded-2xl">
-            <div className="w-16 h-16 rounded-3xl neu-panel flex items-center justify-center text-primary relative">
+            <motion.div 
+              className="w-16 h-16 rounded-3xl neu-panel flex items-center justify-center text-primary relative"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <div className="absolute inset-0 rounded-3xl animate-ping opacity-20 bg-primary" />
-              <Sparkles className="w-8 h-8 animate-pulse" />
-            </div>
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <Sparkles className="w-8 h-8" />
+              </motion.div>
+            </motion.div>
             <div className="max-w-md">
               <p className="text-[15px] font-medium text-muted-foreground leading-relaxed">
                 {t('ai:notGenerated')}
               </p>
             </div>
-            <button
+            <motion.button
               onClick={handleGenerate}
-              className="group neu-panel active:neu-button-active text-primary font-bold rounded-xl px-6 py-3 flex items-center gap-2 transition-all duration-300 hover:scale-105"
+              className="group neu-panel active:neu-button-active text-primary font-bold rounded-xl px-6 py-3 flex items-center gap-2 transition-all duration-300"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-12" />
+              <motion.div
+                whileHover={{ rotate: 12, scale: 1.2 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              >
+                <Sparkles className="w-4 h-4" />
+              </motion.div>
               {t('ai:generate')}
-            </button>
+            </motion.button>
           </div>
         )}
       </div>
     </div>
   );
 }
-

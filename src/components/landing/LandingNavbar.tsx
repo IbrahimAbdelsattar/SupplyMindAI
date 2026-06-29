@@ -108,7 +108,7 @@ export const LandingNavbar = () => {
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
             <Link
-              to="/dashboard"
+              to="/sign-up"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_4px_14px_rgba(37,99,235,0.4)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.5)] transition-shadow"
             >
               {t('navbar.getStarted')}
@@ -119,12 +119,22 @@ export const LandingNavbar = () => {
 
         {/* Mobile buttons */}
         <div className="flex md:hidden items-center gap-1">
-          <button onClick={toggleTheme} className="p-2.5 rounded-xl text-muted-foreground">
+          <motion.button
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2.5 rounded-xl text-muted-foreground"
+          >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-          <button onClick={toggleLanguage} className="p-2.5 rounded-xl text-muted-foreground">
+          </motion.button>
+          <motion.button
+            onClick={toggleLanguage}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2.5 rounded-xl text-muted-foreground"
+          >
             <Languages className="h-4 w-4" />
-          </button>
+          </motion.button>
           <motion.button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="p-2.5 rounded-xl text-muted-foreground"
@@ -166,7 +176,14 @@ export const LandingNavbar = () => {
               ))}
               <div className="pt-3 border-t border-border mt-2">
                 <Link
-                  to="/dashboard"
+                  to="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border text-foreground text-sm font-bold mb-2"
+                >
+                  {t('common:signIn', 'Sign In')}
+                </Link>
+                <Link
+                  to="/sign-up"
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-white text-sm font-bold"
                 >

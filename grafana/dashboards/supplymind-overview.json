@@ -1,0 +1,65 @@
+{
+  "title": "SupplyMind AI - System Overview",
+  "version": 1,
+  "panels": [
+    {
+      "title": "Request Latency (p95)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(supplymind_http_request_duration_seconds_bucket[5m])) by (le))"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Active Celery Tasks",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(celery_task_received_total) - sum(celery_task_succeeded_total) - sum(celery_task_failed_total)"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 8 }
+    },
+    {
+      "title": "Task Success Rate",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(celery_task_succeeded_total[1h])) / sum(rate(celery_task_received_total[1h])) * 100"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 8 }
+    },
+    {
+      "title": "Queue Depth (Redis)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "redis_db_keys{db=\"default\"}",
+          "legendFormat": "celery"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "title": "Database Connections",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_stat_database_numbackends"
+        }
+      ],
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 8 }
+    }
+  ],
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser"
+}

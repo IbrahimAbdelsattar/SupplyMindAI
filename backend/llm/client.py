@@ -115,7 +115,7 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     from dotenv import load_dotenv
     from pathlib import Path
     project_root = Path(__file__).resolve().parents[2]
-    load_dotenv(project_root / ".env")
+    load_dotenv(project_root / ".env", override=True)
     
     # Audit log print diagnostics as required by Phase 2
     LOGGER.info("LLM_MODEL=%s", os.getenv("LLM_MODEL"))
@@ -131,11 +131,11 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     base_url = os.getenv("LLM_BASE_URL") or detected_url
     model = os.getenv("LLM_MODEL") or detected_model
     
-    extra_headers = {}
+    extra_headers = {
+        "Authorization": f"Bearer {key}"
+    }
     if base_url and "openrouter.ai" in base_url:
         extra_headers.update(_openrouter_headers())
-    if key:
-        extra_headers["Authorization"] = f"Bearer {key}"
     
     timeout = float(os.getenv("LLM_TIMEOUT", "30.0"))
     max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))

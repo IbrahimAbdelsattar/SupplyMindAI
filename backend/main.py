@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 import sys
@@ -133,29 +133,29 @@ try:
 except Exception as exc:
     logger.warning("Security router not loaded: %s", exc)
 
-from backend.routers.data import router as data_router
-from backend.routers.forecast import router as forecast_router
-from backend.routers.inventory import router as inventory_router
-from backend.routers.reports import router as reports_router
-from backend.routers.alerts import router as alerts_router
-from backend.routers.mlops import router as mlops_router
-from backend.routers.insights import router as insights_router
-from backend.routers.chat import router as chat_router
-from backend.routers.settings import router as settings_router
-from backend.routers.copilot import router as copilot_router
-from backend.routers.inventory_rag import router as inventory_rag_router
+_ROUTERS_TO_LOAD = [
+    ("backend.routers.data", "router"),
+    ("backend.routers.forecast", "router"),
+    ("backend.routers.inventory", "router"),
+    ("backend.routers.reports", "router"),
+    ("backend.routers.alerts", "router"),
+    ("backend.routers.mlops", "router"),
+    ("backend.routers.insights", "router"),
+    ("backend.routers.chat", "router"),
+    ("backend.routers.settings", "router"),
+    ("backend.routers.copilot", "router"),
+    ("backend.routers.inventory_rag", "router"),
+]
 
-app.include_router(data_router)
-app.include_router(forecast_router)
-app.include_router(inventory_router)
-app.include_router(reports_router)
-app.include_router(alerts_router)
-app.include_router(mlops_router)
-app.include_router(insights_router)
-app.include_router(chat_router)
-app.include_router(settings_router)
-app.include_router(copilot_router)
-app.include_router(inventory_rag_router)
+import importlib
+for module_name, router_attr in _ROUTERS_TO_LOAD:
+    try:
+        mod = importlib.import_module(module_name)
+        router_obj = getattr(mod, router_attr)
+        app.include_router(router_obj)
+        logger.info("Mounted router %s", module_name)
+    except Exception as exc:
+        logger.warning("Failed to load router %s: %s", module_name, exc)
 
 from fastapi.responses import HTMLResponse
 
@@ -319,7 +319,7 @@ def health() -> dict[str, Any]:
         "rag": is_rag_enabled(),
         "forecast_insights": is_forecast_insights_enabled(),
         "copilot": is_copilot_enabled(),
-        "time": _utc_now().isoformat(),
+        "time": datetime.now(timezone.utc).isoformat(),
         "components": {
             "data_csv": data_ok,
             "ml_model": ML_MODEL is not None,
@@ -359,19 +359,30 @@ def _startup() -> None:
 
     load_environment()
 
-    _run_migrations()
-    create_tables()
+    try:
+        _run_migrations()
+        create_tables()
+    except Exception as exc:
+        logger.error("Database connection or migration failed on startup: %s. Continuing without DB.", exc)
 
-    ML_MODEL = init_ml_model(STORE)
-    bg.ML_MODEL = ML_MODEL
+    try:
+        ML_MODEL = init_ml_model(STORE)
+        bg.ML_MODEL = ML_MODEL
+    except Exception as exc:
+        logger.error("ML_MODEL initialization failed: %s", exc)
 
-    RAG_SERVICE = init_rag_service()
-    bg.RAG_SERVICE = RAG_SERVICE
+    try:
+        RAG_SERVICE = init_rag_service()
+        bg.RAG_SERVICE = RAG_SERVICE
+    except Exception as exc:
+        logger.error("RAG_SERVICE initialization failed: %s", exc)
 
-    # Initialize forecast intelligence service
-    from pathlib import Path
-    from backend.services.forecast_intelligence_service import ForecastIntelligenceService
+    try:
+        from pathlib import Path
+        from backend.services.forecast_intelligence_service import ForecastIntelligenceService
 
-    csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "Modeling" / "future_forecast.csv")))
-    FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
-    bg.FORECAST_INTELLIGENCE = FORECAST_INTELLIGENCE
+        csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "Modeling" / "future_forecast.csv")))
+        FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
+        bg.FORECAST_INTELLIGENCE = FORECAST_INTELLIGENCE
+    except Exception as exc:
+        logger.error("FORECAST_INTELLIGENCE initialization failed: %s", exc)

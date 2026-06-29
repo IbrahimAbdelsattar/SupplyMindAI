@@ -59,19 +59,23 @@ const SidebarContent = ({
           <SupplyMindLogo iconOnly={isCollapsed} iconClassName="w-8 h-8" />
         </Link>
         {!isCollapsed ? (
-          <button
+          <motion.button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-transform"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="h-8 w-8 hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground transition-transform"
           >
             <ChevronLeft className="w-5 h-5" />
-          </button>
+          </motion.button>
         ) : (
-          <button
+          <motion.button
             onClick={() => setIsCollapsed(false)}
-            className="h-8 w-8 hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-transform"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="h-8 w-8 hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground transition-transform"
           >
             <ChevronRight className="w-5 h-5" />
-          </button>
+          </motion.button>
         )}
       </div>
 
@@ -85,14 +89,20 @@ const SidebarContent = ({
               to={item.path}
               onClick={onNavigate}
               className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ease-out',
+                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ease-out group',
                 isActive
                   ? 'neu-panel-inset text-primary'
                   : 'text-muted-foreground hover:text-foreground hover:neu-panel active:neu-button-active',
                 isCollapsed && 'justify-center px-0'
               )}
             >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <motion.div
+                whileHover={{ scale: 1.15, rotate: 6 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              >
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+              </motion.div>
               {!isCollapsed && <span>{t(item.labelKey)}</span>}
             </Link>
           );
@@ -101,47 +111,69 @@ const SidebarContent = ({
 
       {/* Footer Area */}
       <div className="p-4 space-y-2 pb-6">
-        <button
+        <motion.button
           onClick={toggleTheme}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           className={cn(
-            'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium w-full transition-all duration-200 text-muted-foreground hover:text-foreground hover:neu-panel active:neu-button-active',
+            'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium w-full text-muted-foreground hover:text-foreground hover:neu-panel active:neu-button-active',
             isCollapsed && 'justify-center px-0'
           )}
         >
-          {theme === 'dark' ? (
-            <Sun className="w-5 h-5 flex-shrink-0 text-amber-500" />
-          ) : (
-            <Moon className="w-5 h-5 flex-shrink-0 text-indigo-500" />
-          )}
+          <motion.div
+            whileHover={{ rotate: 90 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 flex-shrink-0 text-amber-500" />
+            ) : (
+              <Moon className="w-5 h-5 flex-shrink-0 text-indigo-500" />
+            )}
+          </motion.div>
           {!isCollapsed && <span>{theme === 'dark' ? t('common:theme.light') : t('common:theme.dark')}</span>}
-        </button>
+        </motion.button>
 
         <LanguageSwitcher collapsed={isCollapsed} />
 
         {!isCollapsed && user && (
-          <div className="mt-4 mx-0 p-4 neu-panel-inset rounded-2xl flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary neu-panel flex items-center justify-center flex-shrink-0">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-4 mx-0 p-4 neu-panel-inset rounded-2xl flex items-center gap-3"
+          >
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              className="w-9 h-9 rounded-full bg-primary neu-panel flex items-center justify-center flex-shrink-0"
+            >
               <span className="text-sm font-bold text-primary-foreground">
                 {(user?.name ?? '?').charAt(0).toUpperCase()}
               </span>
-            </div>
+            </motion.div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-foreground truncate">{user?.name ?? ''}</p>
               <p className="text-xs text-muted-foreground font-medium capitalize">{user?.role ?? 'analyst'}</p>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        <button
+        <motion.button
           onClick={logout}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           className={cn(
-            'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium w-full transition-all duration-200 text-muted-foreground hover:text-destructive hover:neu-panel active:neu-button-active mt-2',
+            'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium w-full text-muted-foreground hover:text-destructive hover:neu-panel active:neu-button-active mt-2',
             isCollapsed && 'justify-center px-0'
           )}
         >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
+          <motion.div
+            whileHover={{ scale: 1.1, x: [0, -3, 0] }}
+            transition={{ duration: 0.3 }}
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+          </motion.div>
           {!isCollapsed && <span>{t('common:auth.signOut')}</span>}
-        </button>
+        </motion.button>
       </div>
     </div>
   );
@@ -157,12 +189,14 @@ export const DashboardSidebar = () => {
     return (
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetTrigger asChild>
-          <button
-            className="fixed top-4 left-4 rtl:left-auto rtl:right-4 z-50 h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground neu-panel rounded-xl active:neu-button-active transition-all"
+          <motion.button
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            className="fixed top-4 left-4 rtl:left-auto rtl:right-4 z-50 h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground neu-panel rounded-xl active:neu-button-active"
             aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
-          </button>
+          </motion.button>
         </SheetTrigger>
         <SheetContent side={i18n.dir() === "rtl" ? "right" : "left"} className="w-[280px] p-0 border-0 neu-panel">
           <SheetTitle className="sr-only">{t('common:nav.navigation')}</SheetTitle>

@@ -127,6 +127,233 @@ services:
       - no-new-privileges:true
 
   # ─────────────────────────────────────────────────────────────────────────
+  # Default Celery Worker - Production Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+  celery-worker:
+    image: ${WORKER_IMAGE:-supplymind-worker:latest}
+    container_name: supplymind-celery-worker-prod
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    command: ["celery", "-A", "worker.celery_app", "worker", "-Q", "default", "--loglevel=info", "--concurrency=4"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=supplymind-celery-worker
+      - ML_MODEL_PATH=${ML_MODEL_PATH:-/app/data/models}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data/storage
+      - reports_data:/app/reports
+      - models_data:/app/models
+    networks:
+      - supplymind_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ML Worker - Production Configuration (Queue: ml)
+  # ─────────────────────────────────────────────────────────────────────────
+  ml-worker:
+    image: ${WORKER_IMAGE:-supplymind-worker:latest}
+    container_name: supplymind-ml-worker-prod
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    command: ["celery", "-A", "worker.celery_app", "worker", "-Q", "ml", "--loglevel=info", "--concurrency=2"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=supplymind-ml-worker
+      - ML_MODEL_PATH=${ML_MODEL_PATH:-/app/data/models}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data/storage
+      - models_data:/app/models
+    networks:
+      - supplymind_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RAG Worker - Production Configuration (Queue: rag)
+  # ─────────────────────────────────────────────────────────────────────────
+  rag-worker:
+    image: ${WORKER_IMAGE:-supplymind-worker:latest}
+    container_name: supplymind-rag-worker-prod
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    command: ["celery", "-A", "worker.celery_app", "worker", "-Q", "rag", "--loglevel=info", "--concurrency=1"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=supplymind-rag-worker
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data/storage
+    networks:
+      - supplymind_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Celery Beat Scheduler - Production Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+  celery-beat:
+    image: ${WORKER_IMAGE:-supplymind-worker:latest}
+    container_name: supplymind-celery-beat-prod
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    command: ["celery", "-A", "worker.celery_app", "beat", "--loglevel=info"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=supplymind-celery-beat
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data/storage
+      - reports_data:/app/reports
+    networks:
+      - supplymind_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # OpenTelemetry Collector - Production Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: supplymind-otel-collector-prod
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    expose:
+      - "4317"
+      - "4318"
+      - "8889"
+    ports:
+      - "8889:8889"
+    networks:
+      - supplymind_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Prometheus - Production Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: supplymind-prometheus-prod
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    expose:
+      - "9090"
+    networks:
+      - supplymind_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Grafana - Production Configuration
+  # ─────────────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: supplymind-grafana-prod
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    expose:
+      - "3000"
+    networks:
+      - supplymind_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────────────────────────────────
   # Reverse Proxy (Nginx) - Production Configuration
   # ─────────────────────────────────────────────────────────────────────────
   nginx:
@@ -158,6 +385,14 @@ volumes:
   redis_data:
     driver: local
   app_data:
+    driver: local
+  reports_data:
+    driver: local
+  models_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:

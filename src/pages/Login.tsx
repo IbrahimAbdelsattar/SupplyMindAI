@@ -88,25 +88,6 @@ const neuStyles = `
     transition: background-color 300ms ease;
   }
 
-  /* Card */
-  .neu-card {
-    background: var(--neu-bg);
-    box-shadow:
-      12px 12px 28px var(--neu-shadow-dark),
-      -12px -12px 28px var(--neu-shadow-light);
-    border-radius: 28px;
-    padding: 2rem;
-  }
-
-  /* Inset (sunken) element */
-  .neu-inset {
-    background: var(--neu-bg);
-    box-shadow:
-      inset 5px 5px 10px var(--neu-shadow-dark),
-      inset -5px -5px 10px var(--neu-shadow-light);
-    border-radius: 16px;
-  }
-
   /* Pill toggle track */
   .neu-segmented {
     background: var(--neu-bg);
@@ -171,7 +152,6 @@ const neuStyles = `
     border: 0 !important;
   }
   .cl-header { display: none !important; }
-  .cl-footer { display: none !important; }
   .cl-headerTitle { display: none !important; }
   .cl-headerSubtitle { display: none !important; }
   
