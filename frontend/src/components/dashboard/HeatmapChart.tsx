@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@clerk/clerk-react';
 
 type Product = {
   product_id: string;
@@ -33,7 +32,6 @@ const getHeatmapColor = (value: number) => {
 };
 
 export const HeatmapChart = () => {
-  const { getToken } = useAuth();
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [apiStores, setApiStores] = useState<Store[]>([{ id: 's1', name: 'Store 1' }]);
   const [apiData, setApiData] = useState<HeatmapCell[]>([]);
@@ -41,21 +39,8 @@ export const HeatmapChart = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const waitForToken = async (timeoutMs: number) => {
-      const start = Date.now();
-      while (!cancelled && Date.now() - start < timeoutMs) {
-        const token = await getToken();
-        if (token) return token;
-        await new Promise((r) => setTimeout(r, 250));
-      }
-      return null;
-    };
-
     const loadData = async () => {
       try {
-        const token = await waitForToken(2000);
-        if (!token) return;
-
         const prods = await fetchApi('/data/products') as Product[];
         if (prods && !cancelled) setApiProducts(prods);
 
@@ -74,7 +59,7 @@ export const HeatmapChart = () => {
     return () => {
       cancelled = true;
     };
-  }, [getToken]);
+  }, []);
   return (
     <div className="neu-panel rounded-3xl p-6 lg:p-8 overflow-hidden relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none" />

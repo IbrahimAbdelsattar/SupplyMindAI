@@ -43,30 +43,24 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
+    """Lightweight local user record keyed by Clerk user ID.
+
+    Clerk is the source of truth for authentication and user profile data.
+    This table exists so that app-specific relations (e.g. UserSettings) can
+    reference a stable user_id via FK.
+    """
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="analyst")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class AuthSession(Base):
-    __tablename__ = "auth_sessions"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    refresh_token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class ForecastResult(Base):
@@ -170,43 +164,7 @@ def get_db() -> Session:
         db.close()
 
 
-def seed_users() -> None:
-    from passlib.context import CryptContext
-    import uuid
-    from datetime import datetime, timezone
 
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-    seed_users_list = [
-        {
-            "email": os.getenv("ADMIN_EMAIL", "admin@supplymind.ai"),
-            "password": os.getenv("ADMIN_PASSWORD", "Admin@123!"),
-            "role": "admin",
-        },
-        {
-            "email": os.getenv("DEMO_EMAIL", "demo@supplymind.ai"),
-            "password": os.getenv("DEMO_PASSWORD", "demo"),
-            "role": "manager",
-        },
-    ]
-
-    with SessionLocal() as db:
-        for user_data in seed_users_list:
-            email = user_data["email"]
-            existing = db.query(User).filter(User.email == email).first()
-            if not existing:
-                user = User(
-                    id=str(uuid.uuid4()),
-                    name=email.split("@")[0],
-                    email=email,
-                    password_hash=pwd_context.hash(user_data["password"]),
-                    role=user_data["role"],
-                    is_active=True,
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                )
-                db.add(user)
-        db.commit()
 
 
 def seed_demo_data() -> None:
@@ -284,7 +242,6 @@ def seed_demo_data() -> None:
 
 def seed_database() -> None:
     try:
-        seed_users()
         seed_demo_data()
     except Exception as exc:
         LOGGER.exception("Failed to seed database: %s", exc)

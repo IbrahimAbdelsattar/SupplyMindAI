@@ -1,77 +1,92 @@
-from __future__ import annotations
+"""Tests for Clerk JWT authentication flow.
 
-import uuid
-from datetime import datetime, timezone
+These tests verify that the backend correctly validates Clerk JWTs
+and rejects invalid/missing tokens.
+"""
+
+from __future__ import annotations
 
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, patch
 
-from backend.db import Base, SessionLocal, User, engine
 from backend.dependencies import _get_current_user
-from backend.knowledge.auth import PASSWORD_CONTEXT
-from backend.routers.auth import router as auth_router
-
-
-@pytest.fixture(autouse=True)
-def clean_database():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
+from backend.knowledge.auth import AuthUser
 
 
 @pytest.fixture()
 def client() -> TestClient:
     app = FastAPI()
-    app.include_router(auth_router)
 
     @app.get("/protected")
     async def protected(user=Depends(_get_current_user)):
-        return {"id": user.id, "email": user.email}
+        return {"id": user.id, "email": user.email, "role": user.role}
 
     return TestClient(app)
 
 
-def test_signup_signin_and_protected_route(client: TestClient):
-    email = f"{uuid.uuid4()}@example.com"
-    now = datetime.now(timezone.utc)
-    with SessionLocal() as db:
-        db.add(
-            User(
-                id=str(uuid.uuid4()),
-                name="Production User",
-                email=email,
-                password_hash=PASSWORD_CONTEXT.hash("correct-horse-123"),
-                role="analyst",
-                is_active=True,
-                created_at=now,
-                updated_at=now,
-            )
-        )
-        db.commit()
+def test_protected_route_rejects_missing_auth_header(client: TestClient):
+    """Requests without an Authorization header should be rejected."""
+    response = client.get("/protected")
+    assert response.status_code == 401
+    assert "Missing authentication header" in response.json()["detail"]
 
-    signin = client.post(
-        "/api/v1/auth/signin",
-        json={"email": email, "password": "correct-horse-123"},
+
+def test_protected_route_rejects_invalid_scheme(client: TestClient):
+    """Requests with a non-Bearer scheme should be rejected."""
+    response = client.get("/protected", headers={"Authorization": "Basic abc123"})
+    assert response.status_code == 401
+    assert "Invalid authorization scheme" in response.json()["detail"]
+
+
+def test_protected_route_rejects_invalid_token(client: TestClient):
+    """Requests with a malformed Bearer token should be rejected."""
+    response = client.get("/protected", headers={"Authorization": "Bearer invalid-token"})
+    assert response.status_code == 401
+    assert "Authentication failed" in response.json()["detail"]
+
+
+@patch("backend.dependencies.get_user_from_token")
+def test_protected_route_accepts_valid_clerk_token(mock_get_user, client: TestClient):
+    """A valid Clerk JWT should grant access to protected routes."""
+    mock_user = AuthUser(
+        id="user_clerk_abc123",
+        email="test@example.com",
+        user_metadata={"name": "Test User"},
+        app_metadata={"role": "admin"},
+        created_at="2025-01-01T00:00:00+00:00",
+        updated_at="2025-01-01T00:00:00+00:00",
     )
-    assert signin.status_code == 200, signin.text
-    token = signin.json()["access_token"]
+    mock_get_user.return_value = mock_user
 
-    protected = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
-    assert protected.status_code == 200
-    assert protected.json()["email"] == email
-
-
-def test_protected_route_rejects_missing_and_invalid_tokens(client: TestClient):
-    assert client.get("/protected").status_code == 401
-    assert client.get("/protected", headers={"Authorization": "Bearer invalid"}).status_code == 401
-
-
-def test_public_signup_is_disabled(client: TestClient):
-    response = client.post(
-        "/api/v1/auth/signup",
-        json={"name": "User", "email": "user@example.com", "password": "valid-password-123"},
+    response = client.get(
+        "/protected",
+        headers={"Authorization": "Bearer valid-clerk-jwt-token"},
     )
-    assert response.status_code == 400
-    assert "disabled" in response.json()["detail"].lower()
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == "user_clerk_abc123"
+    assert data["email"] == "test@example.com"
+    assert data["role"] == "admin"
+
+
+@patch("backend.dependencies.get_user_from_token")
+def test_default_role_is_analyst(mock_get_user, client: TestClient):
+    """Users without a role in Clerk metadata should default to 'analyst'."""
+    mock_user = AuthUser(
+        id="user_no_role",
+        email="norole@example.com",
+        user_metadata={"name": "No Role User"},
+        app_metadata={},
+        created_at="2025-01-01T00:00:00+00:00",
+        updated_at="2025-01-01T00:00:00+00:00",
+    )
+    mock_get_user.return_value = mock_user
+
+    response = client.get(
+        "/protected",
+        headers={"Authorization": "Bearer valid-clerk-jwt-token"},
+    )
+    assert response.status_code == 200
+    assert response.json()["role"] == "analyst"

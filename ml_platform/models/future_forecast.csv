@@ -1,0 +1,2 @@
+product_id,period,predicted_demand,confidence_level,demand_trend,current_stock,stock_risk_level,recommended_order_qty,supplier_score,best_supplier,lead_time_days,delay_risk,avg_delay,profit_margin,revenue_forecast
+FAN_STD,2025-01,2086,95.0,decreasing,365,medium,2096,80.1,Industrial_Client_6,29.3,high,22.26,96.31,5068980.0

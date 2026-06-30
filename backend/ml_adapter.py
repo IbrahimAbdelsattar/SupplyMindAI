@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 
-# Ensure Modeling/ is importable
+# Ensure ml_platform/models/ is importable
 _proj_root = Path(__file__).resolve().parents[1]
 _modeling = str(_proj_root)
 if _modeling not in sys.path:
@@ -38,7 +38,7 @@ class DemandForecastService:
             return
 
         try:
-            from Modeling.demand_forecasting_pipeline import ForecastModel
+            from ml_platform.models.demand_forecasting_pipeline import ForecastModel
 
             self._forecast_model = ForecastModel.load()
             LOGGER.info(
@@ -64,7 +64,7 @@ class DemandForecastService:
         project_root = Path(__file__).resolve().parents[1]
         candidates.extend(
             [
-                project_root / "Modeling" / "demand_model_pipeline.pkl",
+                project_root / "ml_platform" / "models" / "demand_model_pipeline.pkl",
                 project_root / "demand_model_pipeline.pkl",
             ]
         )

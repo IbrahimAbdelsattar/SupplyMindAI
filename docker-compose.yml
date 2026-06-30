@@ -40,7 +40,6 @@ services:
     environment:
       ENVIRONMENT: development
       DATABASE_URL: postgresql://supplymind:password@postgres:5432/supplymind
-      JWT_SECRET: ${JWT_SECRET:-change-me}
       RAG_API_KEY: ${RAG_API_KEY:-}
       LLM_REASONING_API_KEY: ${LLM_REASONING_API_KEY:-}
       CHATBOT_API_KEY: ${CHATBOT_API_KEY:-}
@@ -50,14 +49,14 @@ services:
       LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
       LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
       LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT:-supplymind-ai}
-      MODEL_PATH: /app/Modeling/demand_model_pipeline.pkl
-      FORECAST_CSV_PATH: /app/Modeling/future_forecast.csv
+      MODEL_PATH: /app/ml_platform/models/demand_model_pipeline.pkl
+      FORECAST_CSV_PATH: /app/ml_platform/models/future_forecast.csv
       LOG_LEVEL: DEBUG
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend:/app/backend
       - ./data:/app/data
-      - ./Modeling:/app/Modeling
+      - ./ml_platform/models:/app/ml_platform/models
       - modeling_data:/app/Modeling/persistent
       - data_data:/app/data/persistent
     healthcheck:
@@ -70,8 +69,8 @@ services:
   # ── Frontend (nginx) ─────────────────────────────────────────────────────
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
       args:
         VITE_API_URL: /api/v1
     container_name: supplymind-frontend

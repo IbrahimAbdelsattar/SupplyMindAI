@@ -10,8 +10,8 @@ if [ ! -f .env ] && [ -f .env.example ]; then
   cp .env.example .env
 fi
 
-if [ ! -f .env.local ]; then
-  echo "VITE_API_URL=http://localhost:8000/api/v1" > .env.local
+if [ ! -f frontend/.env.local ]; then
+  echo "VITE_API_URL=http://localhost:8000/api/v1" > frontend/.env.local
 fi
 
 if [ ! -d .venv ]; then
@@ -23,8 +23,8 @@ source .venv/bin/activate
 pip install -q --upgrade pip
 pip install -q -r requirements.txt
 
-if [ ! -d node_modules ]; then
-  npm install
+if [ ! -d frontend/node_modules ]; then
+  cd frontend && npm install && cd "$ROOT"
 fi
 
 echo "Starting FastAPI Backend..."
@@ -40,7 +40,7 @@ for i in $(seq 1 30); do
 done
 
 echo "Starting React/Vite Frontend..."
-npm run dev &
+cd frontend && npm run dev &
 FRONTEND_PID=$!
 
 echo "SupplyMind AI is running."

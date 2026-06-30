@@ -3,7 +3,6 @@ import { AlertTriangle, AlertCircle, Info, CheckCircle2, X } from 'lucide-react'
 import { cn } from '@/lib/utils';
 import { fetchApi } from '@/lib/api';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@clerk/clerk-react';
 
 const alertIcons = {
   warning: AlertTriangle,
@@ -42,26 +41,11 @@ export const AlertsPanel = () => {
   const [apiAlerts, setApiAlerts] = useState<AlertItem[]>([]);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
-  const { getToken } = useAuth();
-
   useEffect(() => {
     let cancelled = false;
 
-    const waitForToken = async (timeoutMs: number) => {
-      const start = Date.now();
-      while (!cancelled && Date.now() - start < timeoutMs) {
-        const token = await getToken();
-        if (token) return token;
-        await new Promise((r) => setTimeout(r, 250));
-      }
-      return null;
-    };
-
     const loadAlerts = async () => {
       try {
-        const token = await waitForToken(2000);
-        if (!token) return;
-
         const data = await fetchApi('/alerts/active') as unknown;
         const alerts = Array.isArray(data)
           ? (data as AlertItem[])
@@ -80,7 +64,7 @@ export const AlertsPanel = () => {
     return () => {
       cancelled = true;
     };
-  }, [getToken]);
+  }, []);
 
   const visibleAlerts = (Array.isArray(apiAlerts) ? apiAlerts : []).filter(
     (alert) => !dismissedAlerts.includes(alert.id)

@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     void clerk.signOut().catch(() => undefined);
   }, [clerk]);
 
-  useMemo(() => {
+  useEffect(() => {
     setAuthTokenProvider(() => getToken());
   }, [getToken]);
 

@@ -15,6 +15,7 @@ class KPIResponse(BaseModel):
 class ForecastPredictRequest(BaseModel):
     product_id: str
     periods: int = 13
+    confidence: Optional[float] = None
 
 
 class ForecastPoint(BaseModel):

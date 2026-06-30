@@ -1,8 +1,9 @@
 import logging
+
 from fastapi import APIRouter, Request, Query
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/security", tags=["security"])
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 @router.get("/stats")
