@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy application code
 COPY backend/ ./backend/
 COPY data/ ./data/
-COPY Modeling/ ./Modeling/
+COPY ml_platform/ ./ml_platform/
 COPY scripts/ ./scripts/
 
 # Start the application

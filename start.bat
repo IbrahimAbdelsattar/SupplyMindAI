@@ -48,7 +48,7 @@ if not exist "node_modules" (
 popd
 
 echo Starting Backend...
-start "SupplyMind Backend" cmd /k "cd /d %~dp0 && call .venv\Scripts\activate.bat && uvicorn backend.main:app --reload --host 127.0.0.1 --port 8081"
+start "SupplyMind Backend" cmd /k "cd /d %~dp0 && call .venv\Scripts\activate.bat && uvicorn backend.main:app --reload --host 0.0.0.0 --port 8081"
 
 echo Starting Frontend...
 start "SupplyMind Frontend" cmd /c "cd /d %~dp0frontend && npm run dev"
@@ -57,9 +57,9 @@ echo.
 echo ==============================================
 echo   SupplyMind AI is starting up natively!
 echo ==============================================
-echo   Frontend: http://127.0.0.1:5173
-echo   Backend:  http://127.0.0.1:8081
-echo   API docs: http://127.0.0.1:8081/docs
+echo   Frontend: http://localhost:5173
+echo   Backend:  http://localhost:8081
+echo   API docs: http://localhost:8081/docs
 echo ==============================================
 echo.
 pause

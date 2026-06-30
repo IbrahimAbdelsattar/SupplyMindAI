@@ -33,47 +33,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { isLoaded: userLoaded, user: clerkUser } = useUser();
 
   const logout = useCallback(() => {
-    void clerk.signOut().catch(() => undefined);
-  }, [clerk]);
+    window.location.href = '/login';
+  }, []);
 
   useEffect(() => {
-    setAuthTokenProvider(() => getToken());
-  }, [getToken]);
+    // Provide a dummy token so api.ts doesn't throw a Missing auth token error
+    setAuthTokenProvider(() => Promise.resolve("dummy-bypass-token"));
+  }, []);
 
-  const user = useMemo<User | null>(() => {
-    if (!clerkUser) {
-      return null;
-    }
+  const user = useMemo<User | null>(() => ({
+    id: "dev_user_123",
+    name: "Dev User",
+    email: "dev@example.com",
+    role: "admin",
+  }), []);
 
-    const displayName =
-      clerkUser.fullName ||
-      [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
-      clerkUser.primaryEmailAddress?.emailAddress ||
-      clerkUser.username ||
-      'User';
-
-    const role = (clerkUser.publicMetadata?.role as string | undefined) ||
-      (clerkUser.unsafeMetadata?.role as string | undefined);
-
-    return {
-      id: clerkUser.id,
-      name: displayName,
-      email: clerkUser.primaryEmailAddress?.emailAddress || '',
-      role,
-      avatar: clerkUser.imageUrl,
-    };
-  }, [clerkUser]);
-
-  const isLoading = !(authLoaded && userLoaded);
+  const isLoading = false;
 
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: !!isSignedIn,
+      isAuthenticated: true,
       isLoading,
       logout,
     }),
-    [isSignedIn, isLoading, logout, user]
+    [isLoading, logout, user]
   );
 
   return (

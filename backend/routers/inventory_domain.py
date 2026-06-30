@@ -117,9 +117,12 @@ def inventory_historical_download(
 def inventory_rag_query(payload: dict, user: AuthUser = Depends(_get_current_user)):
     try:
         question = payload.get("question", "")
-        from backend.services.inventory_rag_service import query_inventory_rag
-
-        result = query_inventory_rag(question)
-        return {"answer": result}
+        from backend.knowledge.rag import rag_query
+        return rag_query(
+            question=question,
+            product_id=payload.get("product_id"),
+            source_type=payload.get("source_type", "inventory"),
+            operational_context=payload.get("include_operational_context", True)
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

@@ -108,12 +108,12 @@ def train_model(
     inventory_df = STORE.inventory()
     sales_df = STORE.sales_daily()
 
-    from Modeling.demand_forecasting_pipeline import ForecastModel
+    from ml_platform.models.demand_forecasting_pipeline import ForecastModel
 
     pipeline = ForecastModel(params=model_params or {})
     pipeline.train(products_df, inventory_df, sales_df)
 
-    models_dir = PROJECT_ROOT / "models"
+    models_dir = PROJECT_ROOT / "ml_platform" / "models"
     models_dir.mkdir(exist_ok=True)
     model_path = models_dir / f"model_{tenant_id}.json"
     pipeline.save(str(model_path))

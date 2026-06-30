@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.dependencies import _get_current_user, _utc_now
-from backend.db import SessionLocal, UserSettings
+from backend.db import SessionLocal, User, UserSettings
 from backend.globals import PROJECT_ROOT, MODELS, STORE
 from backend.knowledge.auth import AuthUser
 from backend.schemas.alerts import AlertItem
@@ -284,6 +284,21 @@ def system_save_settings(payload: UserSettingsPayload, user: AuthUser = Depends(
 
     db = SessionLocal()
     try:
+        # Ensure local user record exists to satisfy ForeignKey constraint
+        local_user = db.query(User).filter(User.id == str(user.id)).first()
+        if not local_user:
+            local_user = User(
+                id=str(user.id),
+                name=user.user_metadata.get("name", user.email.split("@")[0] if user.email else "User"),
+                email=user.email or f"{user.id}@clerk.local",
+                role=user.role,
+                is_active=True,
+                created_at=_utc_now(),
+                updated_at=_utc_now(),
+            )
+            db.add(local_user)
+            db.flush()
+
         row = db.query(UserSettings).filter(UserSettings.user_id == str(user.id)).first()
 
         if row:

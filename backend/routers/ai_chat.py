@@ -15,11 +15,12 @@ router = APIRouter(prefix="/api/v1/ai", tags=["ai-chat"])
 @router.post("/chat")
 def ai_chat(payload: dict, user: AuthUser = Depends(_get_current_user)):
     try:
-        message = payload.get("message", "")
-        from backend.services.chat_service import handle_chat_message
+        question = payload.get("message", "")
+        from backend.services.rag_service import RagService
 
-        result = handle_chat_message(message, user_id=str(user.id))
-        return {"reply": result}
+        svc = RagService()
+        result = svc.query(question, user_id=str(user.id))
+        return {"reply": result.get("answer", "")}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -28,9 +29,10 @@ def ai_chat(payload: dict, user: AuthUser = Depends(_get_current_user)):
 def copilot_chat(payload: dict, user: AuthUser = Depends(_get_current_user)):
     try:
         message = payload.get("message", "")
-        from backend.services.copilot_service import handle_copilot_chat
+        from backend.services.copilot_service import CopilotService
 
-        result = handle_copilot_chat(message, user_id=str(user.id))
+        svc = CopilotService()
+        result = svc.chat(message)
         return {"reply": result}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
@@ -40,10 +42,12 @@ def copilot_chat(payload: dict, user: AuthUser = Depends(_get_current_user)):
 def insights_generate(payload: dict, user: AuthUser = Depends(_get_current_user)):
     try:
         product_id = payload.get("product_id")
-        from backend.services.insight_service import generate_insights
+        question = payload.get("question", "Generate insights for this product.")
+        from backend.services.rag_service import RagService
 
-        result = generate_insights(product_id=product_id)
-        return {"insights": result}
+        svc = RagService()
+        result = svc.query(question, product_id=product_id, user_id=str(user.id))
+        return {"insights": result.get("answer", "")}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -51,11 +55,12 @@ def insights_generate(payload: dict, user: AuthUser = Depends(_get_current_user)
 @router.post("/insights/chat")
 def insights_chat(payload: dict, user: AuthUser = Depends(_get_current_user)):
     try:
-        message = payload.get("message", "")
         product_id = payload.get("product_id")
-        from backend.services.insight_service import chat_about_insights
+        question = payload.get("question", payload.get("message", ""))
+        from backend.services.rag_service import RagService
 
-        result = chat_about_insights(message, product_id=product_id)
-        return {"reply": result}
+        svc = RagService()
+        result = svc.query(question, product_id=product_id, user_id=str(user.id))
+        return {"reply": result.get("answer", "")}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

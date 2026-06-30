@@ -31,7 +31,7 @@ def retrain(n_months: int = 3) -> dict:
 
     # Step 1: Train model
     LOGGER.info("Step 1: Training model...")
-    from Modeling.demand_forecasting_pipeline import ForecastModel
+    from ml_platform.models.demand_forecasting_pipeline import ForecastModel
 
     model = ForecastModel()
     model.fit()
@@ -41,7 +41,7 @@ def retrain(n_months: int = 3) -> dict:
     # Step 2: Generate future forecasts
     LOGGER.info("Step 2: Generating %d-month forecasts...", n_months)
     future_df = model.predict_all(n_months=n_months)
-    future_csv = PROJECT_ROOT / "Modeling" / "future_forecast.csv"
+    future_csv = PROJECT_ROOT / "ml_platform" / "models" / "future_forecast.csv"
     future_df.to_csv(future_csv, index=False)
     results["forecast_rows"] = len(future_df)
     results["forecast_products"] = future_df["product_id"].nunique()

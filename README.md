@@ -395,7 +395,7 @@ graph TD
 |-----------------|-------|------|
 | `data/`, `data_analysis/`, `data/enriched data/` | Rahma (M1) | Data |
 | `src/pages/Dashboard.tsx`, `src/components/dashboard/` | Rahma (M1) | Frontend |
-| `Modeling/`, `demand_model_pipeline.pkl` | Karim (M2) | ML |
+| `ml_platform/models/`, `demand_model_pipeline.pkl` | Karim (M2) | ML |
 | `src/pages/AIInsights.tsx`, `LLM/`, `backend/agents/nodes.py` | Kenzi (M3) | LLM |
 | `src/pages/Inventory.tsx`, `src/components/inventory/`, `rag-powered-inventory-management/` | Ali Ehab (M4) | RAG |
 | `src/pages/MLOps.tsx`, `backend/knowledge/` | Ali S. (M5) | MLOps |
@@ -427,7 +427,7 @@ supplymind-ai/
 │   └── enriched data/                 # 6 enriched analytical CSVs
 │
 ├── 🤖 ML Platform
-│   ├── Modeling/                      # Demand forecasting pipeline
+│   ├── ml_platform/models/           # Demand forecasting pipeline
 │   │   ├── demand_forecasting_pipeline.py
 │   │   └── IMPLEMENTATION_SUMMARY.md
 │   ├── demand_model_pipeline.pkl      # Trained XGBoost model artifact
@@ -661,7 +661,7 @@ SESSION_SECRET=your-session-secret
 # DATABASE_URL=postgresql://user:pass@host:5432/supplymind
 
 # ── MLOps ─────────────────────────────────────────────────────
-MODEL_PATH=./Modeling/demand_model_pipeline.pkl
+MODEL_PATH=./ml_platform/models/demand_model_pipeline.pkl
 DRIFT_THRESHOLD=0.05
 LOG_LEVEL=INFO
 ```

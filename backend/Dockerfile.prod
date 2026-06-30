@@ -54,7 +54,7 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy application code
 COPY --chown=app:app backend/ ./backend/
 COPY --chown=app:app data/ ./data/
-COPY --chown=app:app Modeling/ ./Modeling/
+COPY --chown=app:app ml_platform/ ./ml_platform/
 COPY --chown=app:app scripts/ ./scripts/
 
 # Switch to non-root user

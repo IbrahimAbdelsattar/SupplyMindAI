@@ -180,7 +180,7 @@ SupplyMindAI/
 │       │   ├── core/           # ChromaDB, embeddings, config
 │       │   └── services/       # InventoryRagService
 │
-├── Modeling/                   # ML model artifacts
+├── ml_platform/models/         # ML model artifacts
 │   ├── demand_model_pipeline.pkl
 │   └── future_forecast.csv
 │
@@ -217,7 +217,6 @@ Client (React) → Vite Proxy (/api/*) → FastAPI
 
 - **`STORE`**: `DataStore` — singleton that lazy-loads and caches CSV datasets into pandas DataFrames
 - **`ML_MODEL`**: `DemandForecastService` — scikit-learn pipeline for demand prediction
-- **`RAG_SERVICE`**: `LazyRagService` — threadsafe lazy loader for ChromaDB-based RAG
 - **`FORECAST_INTELLIGENCE`**: `ForecastIntelligenceService` — CSV-based forecast enrichment
 
 ### Database Models (`backend/db.py`)
@@ -307,7 +306,7 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 - Backend: Webhook verification + custom JWT decode in `security.py`
 
 ### ML Pipeline
-- Training: scikit-learn pipeline stored as `.pkl` in `Modeling/`
+- Training: scikit-learn pipeline stored as `.pkl` in `ml_platform/models/`
 - Inference: `DemandForecastService` loads pipeline, predicts from CSV data
 - Persistence: Forecast results stored in `forecast_results` table
 

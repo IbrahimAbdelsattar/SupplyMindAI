@@ -131,11 +131,12 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     base_url = os.getenv("LLM_BASE_URL") or detected_url
     model = os.getenv("LLM_MODEL") or detected_model
     
-    extra_headers = {
-        "Authorization": f"Bearer {key}"
-    }
+    extra_headers = {}
     if base_url and "openrouter.ai" in base_url:
-        extra_headers.update(_openrouter_headers())
+        extra_headers = _openrouter_headers()
+        # Explicitly pass Authorization to prevent Langchain from dropping it on custom base_urls
+        if key:
+            extra_headers["Authorization"] = f"Bearer {key}"
     
     timeout = float(os.getenv("LLM_TIMEOUT", "30.0"))
     max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))

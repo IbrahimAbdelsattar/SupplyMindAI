@@ -61,35 +61,4 @@ def query_inventory_knowledge(query: str, product_id: str = "") -> str:
     if database_result:
         return database_result
 
-    import sys
-
-    rag = None
-    if "backend.main" in sys.modules:
-        rag = sys.modules["backend.main"].RAG_SERVICE
-
-    if rag is None:
-        return f"Knowledge retrieved (CSV fallback):\n{_csv_knowledge_fallback(query, product_id)}"
-
-    try:
-        sku = product_id or None
-        retrieved = rag.vector_store.query(
-            question=query,
-            documents=rag.documents,
-            selected_sku=sku,
-            limit=rag.settings.query_result_count,
-        )
-        if not retrieved:
-            return f"Knowledge retrieved (CSV fallback):\n{_csv_knowledge_fallback(query, product_id)}"
-
-        context_parts = []
-        sources = []
-        for item in retrieved:
-            context_parts.append(str(item.get("document", "")))
-            meta = item.get("metadata") or {}
-            sources.append(str(meta.get("source", meta.get("product_id", "Unknown"))))
-
-        context = "\n\n---\n\n".join(context_parts)
-        sources_str = ", ".join(sorted(set(sources)))
-        return f"Knowledge retrieved (Chroma):\n{context}\n\nSources consulted: {sources_str}"
-    except Exception as e:
-        return f"Knowledge retrieved (CSV fallback):\n{_csv_knowledge_fallback(query, product_id)}\n\n(RAG error: {e})"
+    return f"Knowledge retrieved (CSV fallback):\n{_csv_knowledge_fallback(query, product_id)}"

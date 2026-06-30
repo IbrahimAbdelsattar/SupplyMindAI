@@ -48,7 +48,7 @@ except Exception as e:
 try:
     print("\n--- Testing FORECAST_INTELLIGENCE initialization ---")
     from backend.services.forecast_intelligence_service import ForecastIntelligenceService
-    csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "Modeling" / "future_forecast.csv")))
+    csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "ml_platform" / "models" / "future_forecast.csv")))
     FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
     print("FORECAST_INTELLIGENCE initialized. Caching state:", getattr(FORECAST_INTELLIGENCE, "is_loaded", False))
 except Exception as e:

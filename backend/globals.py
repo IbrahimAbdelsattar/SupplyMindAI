@@ -27,6 +27,8 @@ class DataStore:
         if not path.exists():
             path = DATA_DIR / "enriched data" / name
         if not path.exists():
+            path = PROJECT_ROOT / "ml_platform" / "models" / name
+        if not path.exists():
             raise FileNotFoundError(f"Missing dataset: {name}")
         return pd.read_csv(path, parse_dates=parse_dates)
 
@@ -125,7 +127,6 @@ STORE = DataStore()
 
 # Set on startup via bootstrap (used by agent tools)
 ML_MODEL: Any = None
-RAG_SERVICE: Any = None
 
 # Forecast intelligence service (loaded from future_forecast.csv)
 FORECAST_INTELLIGENCE: Any = None

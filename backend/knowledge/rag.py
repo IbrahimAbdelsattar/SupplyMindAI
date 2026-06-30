@@ -83,13 +83,13 @@ def get_operational_snapshot(product_id: str | None = None) -> str:
 
 
 def _safe_demand_stats(product_id: str) -> tuple[float, float]:
-    from backend.main import _daily_demand_stats
+    from backend.globals import _daily_demand_stats
 
     return _daily_demand_stats(product_id)
 
 
 def _safe_inventory(product_id: str) -> float:
-    from backend.main import _latest_inventory_level
+    from backend.globals import _latest_inventory_level
 
     return _latest_inventory_level(product_id)
 

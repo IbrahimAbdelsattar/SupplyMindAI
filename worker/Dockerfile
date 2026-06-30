@@ -47,7 +47,7 @@ COPY --from=builder /opt/venv /opt/venv
 
 COPY --chown=app:app backend/ ./backend/
 COPY --chown=app:app worker/ ./worker/
-COPY --chown=app:app Modeling/ ./Modeling/
+COPY --chown=app:app ml_platform/ ./ml_platform/
 COPY --chown=app:app data/ ./data/
 COPY --chown=app:app requirements.txt .
 

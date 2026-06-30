@@ -56,8 +56,8 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./data:/app/data
-      - ./ml_platform/models:/app/ml_platform/models
-      - modeling_data:/app/Modeling/persistent
+      - ./ml_platform:/app/ml_platform
+      - modeling_data:/app/ml_platform/models/persistent
       - data_data:/app/data/persistent
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
