@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import os
+import socket
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
 import logging
 
@@ -21,13 +24,75 @@ if not DATABASE_URL:
         "Set it in .env (e.g., postgresql://user:pass@host:port/dbname)."
     )
 
+# ---------------------------------------------------------------------------
+# Database connectivity diagnostics
+# ---------------------------------------------------------------------------
+_parsed = urlparse(DATABASE_URL)
+_db_host = _parsed.hostname or "unknown"
+_db_port = _parsed.port or 5432
+
+LOGGER.info("Database hostname: %s", _db_host)
+LOGGER.info("Database port:     %s", _db_port)
+
+# Check DNS resolution
+try:
+    addrinfo = socket.getaddrinfo(_db_host, _db_port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    for af, socktype, proto, canonname, sa in addrinfo:
+        family = "IPv6" if af == socket.AF_INET6 else "IPv4"
+        LOGGER.info("DNS %s -> %s (family=%s)", _db_host, sa[0], family)
+except socket.gaierror as exc:
+    LOGGER.error(
+        "DNS resolution FAILED for %s — %s. "
+        "Check that the hostname is spelled correctly in DATABASE_URL "
+        "and that your environment has working DNS (especially for IPv6 lookups).",
+        _db_host, exc,
+    )
+
+# Warn if only IPv6 address is available and we might lack IPv6 connectivity
+try:
+    ipv4 = socket.getaddrinfo(_db_host, _db_port, socket.AF_INET, socket.SOCK_STREAM)
+except socket.gaierror:
+    ipv4 = []
+    LOGGER.warning(
+        "No IPv4 (A) record found for %s — only IPv6 is available. "
+        "If your runtime environment does not support IPv6, database "
+        "connections will hang or fail. Consider using the Supabase "
+        "connection pooler hostname or enabling IPv6 in your deployment.",
+        _db_host,
+    )
+
+# ---------------------------------------------------------------------------
+# Engine options with fast-fail timeouts
+# ---------------------------------------------------------------------------
+# connect_timeout: abort connection attempt after N seconds (psycopg2)
+# pool_timeout:    abort getting a connection from the pool after N seconds
+DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+
 engine_options: dict = {
     "pool_pre_ping": True,
     "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
     "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
+    "pool_timeout": DB_POOL_TIMEOUT,
+    "connect_args": {
+        "connect_timeout": DB_CONNECT_TIMEOUT,
+    },
 }
 
 engine = create_engine(DATABASE_URL, **engine_options)
+
+
+# ---------------------------------------------------------------------------
+# Connection event listener — log slow / failed connections
+# ---------------------------------------------------------------------------
+@event.listens_for(engine, "connect")
+def _on_connect(dbapi_connection, connection_record):
+    LOGGER.debug("New DB connection established (raw).")
+
+
+@event.listens_for(engine, "checkout")
+def _on_checkout(dbapi_connection, connection_record, connection_proxy):
+    LOGGER.debug("DB connection checked out from pool.")
 
 SessionLocal = sessionmaker(
     bind=engine,
