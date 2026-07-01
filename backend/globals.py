@@ -23,13 +23,21 @@ class DataStore:
         self._cache: dict[str, pd.DataFrame] = {}
 
     def _read_csv(self, name: str, *, parse_dates: Optional[list[str]] = None) -> pd.DataFrame:
+        # Try primary data directory
         path = DATA_DIR / name
         if not path.exists():
+            # Fallback to enriched data subdirectory
             path = DATA_DIR / "enriched data" / name
         if not path.exists():
+            # Finally, look for model files packaged with the repo
             path = PROJECT_ROOT / "ml_platform" / "models" / name
         if not path.exists():
-            raise FileNotFoundError(f"Missing dataset: {name}")
+            # Detailed error for debugging
+            raise FileNotFoundError(
+                f"Missing dataset or model '{name}'. Searched paths:"
+                f" {DATA_DIR / name}, {DATA_DIR / 'enriched data' / name},"
+                f" {PROJECT_ROOT / 'ml_platform' / 'models' / name}"
+            )
         return pd.read_csv(path, parse_dates=parse_dates)
 
     def load(self, products, inventory, sales, purchases):

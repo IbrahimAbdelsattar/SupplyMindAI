@@ -1,16 +1,10 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowUpDown, Package, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { List } from "react-window";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 
 export interface InventoryItem {
   sku: string;
@@ -33,57 +27,77 @@ interface InventoryTableProps {
   onSelectItem: (item: InventoryItem) => void;
 }
 
-type SortField =
-  | "sku"
-  | "name"
-  | "category"
-  | "productType"
-  | "stock"
-  | "averageDailyDemand"
-  | "stockStatus"
-  | "lastUpdated";
+type SortField = "sku" | "name" | "category" | "productType" | "lastUpdated";
 
-const statusStyles: Record<string, string> = {
-  Healthy: "bg-success text-success-foreground",
-  Low: "bg-warning text-warning-foreground",
-  Critical: "bg-destructive text-destructive-foreground",
-};
+const ROW_HEIGHT = 52;
+const LIST_MAX_HEIGHT = 572;
+
+interface RowData {
+  items: InventoryItem[];
+  selectedSku: string | null;
+  onSelectItem: (item: InventoryItem) => void;
+}
+
+const Row = React.memo(({ index, style, data }: { index: number; style: React.CSSProperties; data: RowData }) => {
+  const { items, selectedSku, onSelectItem } = data;
+  const item = items[index];
+
+  if (!item) return null;
+
+  return (
+    <div
+      style={style}
+      className={cn(
+        "flex items-center cursor-pointer transition-colors border-b border-border/50 text-sm",
+        selectedSku === item.sku ? "bg-accent/20" : "hover:bg-muted/50"
+      )}
+      onClick={() => onSelectItem(item)}
+    >
+      <div className="flex-1 min-w-[100px] px-4 py-3 font-mono text-xs truncate">{item.sku}</div>
+      <div className="flex-[2] min-w-[160px] px-4 py-3 font-medium truncate">{item.name}</div>
+      <div className="flex-1 min-w-[100px] px-4 py-3 truncate">{item.category}</div>
+      <div className="flex-1 min-w-[80px] px-4 py-3 truncate">{item.productType}</div>
+      <div className="flex-1 min-w-[100px] px-4 py-3 text-muted-foreground truncate">{item.lastUpdated}</div>
+    </div>
+  );
+});
+
+Row.displayName = "Row";
 
 export default function InventoryTable({ data, selectedSku, onSelectItem }: InventoryTableProps) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("sku");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const debouncedSearch = useCallback((value: string) => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => setSearch(value), 150);
+  }, []);
+
+  useEffect(() => () => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const statusRank: Record<string, number> = {
-      Critical: 0,
-      Low: 1,
-      Healthy: 2,
-    };
-
     return data
-      .filter(
-        (item) =>
+      .filter((item) => {
+        if (!q) return true;
+        return (
           item.sku.toLowerCase().includes(q) ||
           item.name.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
           item.productType.toLowerCase().includes(q)
-      )
+        );
+      })
       .sort((a, b) => {
         const av = a[sortField];
         const bv = b[sortField];
-        let cmp = 0;
-
-        if (sortField === "stockStatus") {
-          cmp = (statusRank[a.stockStatus] ?? 99) - (statusRank[b.stockStatus] ?? 99);
-        } else if (typeof av === "number" && typeof bv === "number") {
-          cmp = av - bv;
-        } else {
-          cmp = String(av).localeCompare(String(bv));
-        }
-
+        const cmp = typeof av === "number" && typeof bv === "number"
+          ? av - bv
+          : String(av).localeCompare(String(bv));
         return sortDir === "asc" ? cmp : -cmp;
       });
   }, [data, search, sortField, sortDir]);
@@ -91,93 +105,82 @@ export default function InventoryTable({ data, selectedSku, onSelectItem }: Inve
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
-      return;
+    } else {
+      setSortField(field);
+      setSortDir("asc");
     }
-    setSortField(field);
-    setSortDir("asc");
   };
 
-  const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead className="cursor-pointer select-none bg-card" onClick={() => toggleSort(field)}>
-      <span className="inline-flex items-center gap-1">
-        {children}
-        <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
-      </span>
-    </TableHead>
+  const itemData: RowData = useMemo(
+    () => ({ items: filtered, selectedSku, onSelectItem }),
+    [filtered, selectedSku, onSelectItem]
   );
+
+  const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <div
+      className="flex-1 px-4 py-3 cursor-pointer select-none flex items-center gap-1 truncate"
+      onClick={() => toggleSort(field)}
+    >
+      {children}
+      <ArrowUpDown className="h-3 w-3 text-muted-foreground shrink-0" />
+    </div>
+  );
+
+  const listHeight = Math.min(filtered.length * ROW_HEIGHT, LIST_MAX_HEIGHT);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <Package className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-bold text-foreground">{t('inventory:table.title')}</h1>
+        <span className="text-sm text-muted-foreground">{filtered.length} items</span>
         <div className="relative ml-auto rtl:mr-auto rtl:ml-0 w-64">
           <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('inventory:table.searchPlaceholder')}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(e) => debouncedSearch(e.target.value)}
             className="pl-9 rtl:pl-3 rtl:pr-9"
           />
         </div>
       </div>
 
-      <div className="max-h-[calc(100vh-10rem)] overflow-auto rounded-lg border bg-card">
-        <Table className="w-full">
-          <TableHeader className="sticky top-0 bg-card z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
-            <TableRow className="whitespace-nowrap bg-card">
-              <SortHeader field="sku">{t('inventory:table.sku')}</SortHeader>
-              <SortHeader field="name">{t('inventory:table.productName')}</SortHeader>
-              <SortHeader field="category">{t('inventory:table.category')}</SortHeader>
-              <SortHeader field="productType">{t('inventory:table.type')}</SortHeader>
-              <SortHeader field="stock">{t('inventory:table.stockLevel')}</SortHeader>
-              <SortHeader field="averageDailyDemand">{t('inventory:table.avgDailyDemand')}</SortHeader>
-              <TableHead className="bg-card">{t('inventory:table.coverage')}</TableHead>
-              <SortHeader field="stockStatus">{t('inventory:table.status')}</SortHeader>
-              <TableHead className="bg-card">{t('inventory:table.active')}</TableHead>
-              <SortHeader field="lastUpdated">{t('inventory:table.snapshotDate')}</SortHeader>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((item) => (
-              <TableRow
-                key={item.sku}
-                className={`cursor-pointer transition-colors whitespace-nowrap ${
-                  selectedSku === item.sku ? "bg-accent/20" : "hover:bg-muted/50"
-                }`}
-                onClick={() => onSelectItem(item)}
+      <div className="rounded-lg border bg-card overflow-hidden" style={{ height: listHeight + 48 }}>
+        <div className="flex items-center border-b border-border bg-muted/50 font-medium text-sm h-12">
+          <div style={{ minWidth: "100px" }} className="flex-[1]">
+            <SortHeader field="sku">{t('inventory:table.sku')}</SortHeader>
+          </div>
+          <div style={{ minWidth: "160px" }} className="flex-[2]">
+            <SortHeader field="name">{t('inventory:table.productName')}</SortHeader>
+          </div>
+          <div style={{ minWidth: "100px" }} className="flex-[1]">
+            <SortHeader field="category">{t('inventory:table.category')}</SortHeader>
+          </div>
+          <div style={{ minWidth: "80px" }} className="flex-[1]">
+            <SortHeader field="productType">{t('inventory:table.type')}</SortHeader>
+          </div>
+          <div style={{ minWidth: "100px" }} className="flex-[1]">
+            <SortHeader field="lastUpdated">{t('inventory:table.snapshotDate')}</SortHeader>
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="py-10 text-center text-muted-foreground">{t('inventory:table.noResults')}</div>
+        ) : (
+          <AutoSizer disableHeight>
+            {({ width }: { width: number }) => (
+              <List
+                height={listHeight}
+                itemCount={filtered.length}
+                itemSize={ROW_HEIGHT}
+                itemData={itemData}
+                width={width}
+                overscanCount={5}
               >
-                <TableCell className="font-mono text-xs">{item.sku}</TableCell>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>{item.category}</TableCell>
-                <TableCell>{item.productType}</TableCell>
-                <TableCell>{item.stock.toLocaleString()}{t('inventory:table.units')}</TableCell>
-                <TableCell>{item.averageDailyDemand.toFixed(2)}{t('inventory:table.units')}</TableCell>
-                <TableCell className="max-w-[220px] text-sm text-muted-foreground">
-                  {item.coverageDays !== null ? `${item.coverageDays.toFixed(2)}${t('inventory:table.days')}` : item.coverageLabel}
-                </TableCell>
-                <TableCell>
-                  <Badge className={statusStyles[item.stockStatus] ?? "bg-secondary text-secondary-foreground"}>
-                    {t(`inventory:badges.${item.stockStatus.toLowerCase()}`)}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={item.active ? "default" : "outline"}>
-                    {item.active ? t('inventory:badges.active') : t('inventory:badges.inactive')}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.lastUpdated}</TableCell>
-              </TableRow>
-            ))}
-            {filtered.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
-                  {t('inventory:table.noResults')}
-                </TableCell>
-              </TableRow>
+                {Row}
+              </List>
             )}
-          </TableBody>
-        </Table>
+          </AutoSizer>
+        )}
       </div>
     </div>
   );

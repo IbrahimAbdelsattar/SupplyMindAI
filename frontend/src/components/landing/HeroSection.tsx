@@ -1,12 +1,14 @@
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import { motion, useSpring, useTransform, useMotionValue, useInView } from 'framer-motion';
 import { ArrowRight, Play, Sparkles, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ResponsiveContainer, Area, AreaChart, Tooltip } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 
 const EASE_OUT    = [0.23, 1, 0.32, 1] as const;
 const EASE_DRAWER = [0.32, 0.72, 0, 1] as const;
+
 
 // Stable random-ish chart data
 const heroChartData = Array.from({ length: 50 }, (_, i) => ({
@@ -15,17 +17,41 @@ const heroChartData = Array.from({ length: 50 }, (_, i) => ({
 }));
 
 // Floating orb
-const Orb = ({ style, delay = 0 }: { style: React.CSSProperties; delay?: number }) => (
+const Orb = ({
+  style,
+  delay = 0,
+  prefersReduced,
+}: {
+  style: React.CSSProperties;
+  delay?: number;
+  prefersReduced?: boolean;
+}) => (
   <motion.div
     className="absolute rounded-full pointer-events-none"
     style={style}
-    animate={{ scale: [1, 1.18, 1], opacity: [0.5, 0.85, 0.5] }}
-    transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay }}
+    animate={
+      prefersReduced
+        ? { scale: 1, opacity: 0.7 }
+        : { scale: [1, 1.18, 1], opacity: [0.5, 0.85, 0.5] }
+    }
+    transition={
+      prefersReduced
+        ? undefined
+        : { duration: 8, repeat: Infinity, ease: 'easeInOut', delay }
+    }
   />
 );
 
 // 3D tilt card — Emil spring mouse tracking
-function TiltCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function TiltCard({
+  children,
+  className = '',
+  prefersReduced,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  prefersReduced: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const rawX = useMotionValue(0);
   const rawY = useMotionValue(0);
@@ -35,6 +61,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
   const rotateY = useTransform(springX, [-0.5, 0.5], [-5, 5]);
 
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (prefersReduced) return;
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
     rawX.set((e.clientX - r.left) / r.width - 0.5);
@@ -56,6 +83,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
 
 export const HeroSection = () => {
   const { t } = useTranslation('landing');
+  const prefersReduced = usePrefersReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
   const isInView = useInView(sectionRef, { once: true });
 
@@ -77,9 +105,21 @@ export const HeroSection = () => {
     >
       {/* ── Animated background orbs ──────────────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none">
-        <Orb delay={0} style={{ left: '8%', top: '15%', width: 520, height: 520, background: 'radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 70%)', transform: 'translate(-50%,-50%)' }} />
-        <Orb delay={2.5} style={{ right: '5%', top: '60%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 70%)', transform: 'translate(50%,-50%)' }} />
-        <Orb delay={5} style={{ left: '55%', top: '80%', width: 300, height: 300, background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', transform: 'translate(-50%,-50%)' }} />
+        <Orb
+          delay={0}
+          prefersReduced={prefersReduced}
+          style={{ left: '8%', top: '15%', width: 520, height: 520, background: 'radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 70%)', transform: 'translate(-50%,-50%)' }}
+        />
+        <Orb
+          delay={2.5}
+          prefersReduced={prefersReduced}
+          style={{ right: '5%', top: '60%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 70%)', transform: 'translate(50%,-50%)' }}
+        />
+        <Orb
+          delay={5}
+          prefersReduced={prefersReduced}
+          style={{ left: '55%', top: '80%', width: 300, height: 300, background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', transform: 'translate(-50%,-50%)' }}
+        />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
@@ -186,7 +226,7 @@ export const HeroSection = () => {
             variants={item}
             className="mx-auto max-w-4xl"
           >
-            <TiltCard>
+            <TiltCard prefersReduced={prefersReduced}>
               <div
                 className="rounded-3xl p-5 sm:p-8 relative overflow-hidden"
                 style={{
@@ -221,7 +261,7 @@ export const HeroSection = () => {
                     className="flex items-center gap-1.5 text-xs font-semibold text-emerald-500"
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Live
+                    Sample Forecast
                   </motion.div>
                 </div>
 

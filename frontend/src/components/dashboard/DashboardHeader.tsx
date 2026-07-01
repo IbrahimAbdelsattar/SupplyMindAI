@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useTranslation } from "react-i18next";
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Search, Calendar } from 'lucide-react';
 import {
@@ -9,6 +8,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { useDateRange } from '@/contexts/DateRangeContext';
+
 interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
@@ -16,7 +17,17 @@ interface DashboardHeaderProps {
 
 export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const { t } = useTranslation();
-  const [dateRange, setDateRange] = useState(t('common:dateRange.last7days'));
+  const dateRangeContext = (() => {
+    try {
+      return useDateRange();
+    } catch {
+      return null;
+    }
+  })();
+  const dateRange = dateRangeContext?.label ?? t('common:dateRange.last7days');
+  const setPeriodDays = dateRangeContext?.setPeriodDays;
+
+
 
   return (
     <motion.header
@@ -66,12 +77,15 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
             </motion.button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="neu-panel border-none rounded-2xl p-2 w-[200px]">
-            <DropdownMenuItem onClick={() => setDateRange(t('common:dateRange.today'))} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.today')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDateRange(t('common:dateRange.last7days'))} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last7days')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDateRange(t('common:dateRange.last30days'))} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last30days')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDateRange(t('common:dateRange.last90days'))} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last90days')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setPeriodDays?.(1)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.today')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setPeriodDays?.(7)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last7days')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setPeriodDays?.(30)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last30days')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setPeriodDays?.(90)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last90days')}</DropdownMenuItem>
+
           </DropdownMenuContent>
+
         </DropdownMenu>
+
       </div>
     </motion.header>
   );

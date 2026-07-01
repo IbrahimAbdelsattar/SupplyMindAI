@@ -53,12 +53,7 @@ class GuardrailsConfig(BaseModel):
     ])
 
     allowed_models: list[str] = Field(default_factory=lambda: [
-        "openai/gpt-4o",
-        "openai/gpt-4o-mini",
-        "anthropic/claude-3.5-sonnet",
-        "anthropic/claude-3-haiku",
-        "google/gemini-pro",
-        "meta-llama/llama-3-70b",
+        "nvidia/nemotron-3-super-120b-a12b:free",
     ])
 
     monitor_slow_queries_ms: int = 5000

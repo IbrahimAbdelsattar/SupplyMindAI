@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   Error details
                 </summary>
                 <pre className="mt-2 p-3 rounded-lg bg-muted text-xs text-muted-foreground overflow-auto max-h-40">
-                  {this.state.error.name}: {this.state.error.message}
+                  {this.state.error?.name}: {this.state.error?.message}
                   {this.state.errorInfo?.componentStack && (
                     <>
                       {'\n\nComponent stack:'}

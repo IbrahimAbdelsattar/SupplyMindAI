@@ -314,6 +314,7 @@ def system_get_settings(user: dict = Depends(lambda: {"id":"public","email":"pub
 @router.put("/settings")
 def system_save_settings(payload: UserSettingsPayload, user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
     from loguru import logger
+    logger.info("system_save_settings called with payload=%s, user=%s", payload, user)
 
     try:
         new_settings = payload.model_dump(exclude_none=True)
@@ -362,3 +363,17 @@ def system_save_settings(payload: UserSettingsPayload, user: dict = Depends(lamb
         raise HTTPException(status_code=500, detail="Failed to save settings") from exc
     finally:
         db.close()
+
+@router.get("/user")
+def system_get_user(user=Depends(_get_current_user)):
+    """Return the currently authenticated demo user"""
+    uid = user.id if hasattr(user, "id") else user["id"]
+    email = user.email if hasattr(user, "email") else user.get("email", "")
+    meta = user.user_metadata if hasattr(user, "user_metadata") else user.get("user_metadata", {})
+    app_meta = user.app_metadata if hasattr(user, "app_metadata") else user.get("app_metadata", {})
+    return {"user": {
+        "id": uid, "email": email,
+        "name": meta.get("name", email.split("@")[0]),
+        "role": app_meta.get("role", "admin"),
+        "user_metadata": meta,
+    }}

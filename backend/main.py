@@ -135,6 +135,7 @@ _ROUTERS_TO_LOAD = [
     ("backend.routers.settings", "router"),
     ("backend.routers.inventory_domain", "router"),
     ("backend.routers.data", "router"),
+    ("backend.routers.forecasting", "router"),
 ]
 
 

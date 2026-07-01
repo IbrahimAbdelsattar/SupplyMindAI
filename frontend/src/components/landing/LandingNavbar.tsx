@@ -29,7 +29,6 @@ export const LandingNavbar = () => {
   const navLinks = [
     { href: '#features', label: t('navbar.features') },
     { href: '#use-cases', label: t('navbar.useCases') },
-    { href: '#pricing', label: t('navbar.pricing') },
   ];
 
   return (

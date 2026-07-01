@@ -115,13 +115,19 @@ const Inventory = () => {
     [inventoryData?.items]
   );
 
-  const totalSavings = inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0);
+  const totalSavings = useMemo(
+    () => inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0),
+    [inventoryRecommendations]
+  );
 
-  const comparisonData = inventoryRecommendations.map((item) => ({
-    name: item.product_name.split(' ').slice(0, 2).join(' '),
-    current: item.currentStock,
-    optimal: item.reorderPoint + item.safetyStock,
-  }));
+  const comparisonData = useMemo(
+    () => inventoryRecommendations.map((item) => ({
+      name: item.product_name.split(' ').slice(0, 2).join(' '),
+      current: item.currentStock,
+      optimal: item.reorderPoint + item.safetyStock,
+    })),
+    [inventoryRecommendations]
+  );
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -259,7 +265,7 @@ const Inventory = () => {
                     key={item.product_id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    transition={{ duration: 0.2, delay: Math.min(index * 0.05, 0.3) }}
                     className="p-3 sm:p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors"
                   >
                     <div className="flex flex-col gap-3 sm:gap-4">

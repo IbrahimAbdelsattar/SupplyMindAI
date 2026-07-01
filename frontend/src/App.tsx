@@ -18,7 +18,7 @@ const Inventory = lazy(() => import("./pages/Inventory"));
 const AIInsights = lazy(() => import("./pages/AIInsights"));
 const Reports = lazy(() => import("./pages/Reports"));
 const MLOps = lazy(() => import("./pages/MLOps"));
-const Security = lazy(() => import("./pages/Security"));
+
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -42,7 +42,7 @@ const AppRoutes = () => (
       <Route path="/insights" element={<AIInsights />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/mlops" element={<MLOps />} />
-      <Route path="/security" element={<Security />} />
+
       <Route path="/settings" element={<Settings />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -14,7 +14,6 @@ import {
   FileText,
   Settings,
   Activity,
-  Shield,
   Sun,
   Moon,
   LogOut,
@@ -32,7 +31,6 @@ const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: s
   { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
   { icon: FileText, labelKey: 'common:nav.reports', path: '/reports' },
   { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops' },
-  { icon: Shield, labelKey: 'common:nav.security', path: '/security' },
   { icon: Settings, labelKey: 'common:nav.settings', path: '/settings' },
 ];
 

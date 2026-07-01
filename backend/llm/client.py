@@ -6,13 +6,9 @@ from langchain_openai import ChatOpenAI
 
 LOGGER = logging.getLogger(__name__)
 
-FALLBACK_MODELS = [
-    "google/gemini-2.5-flash",
-    "qwen/qwen3-235b-a22b-thinking-2507",
-    "deepseek/deepseek-v3.1",
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-120b:free"
-]
+NEMOTRON_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+
+FALLBACK_MODELS = [NEMOTRON_MODEL]
 
 
 def _resolve_key() -> str | None:
@@ -50,12 +46,12 @@ def _resolve_provider(key: str | None) -> tuple[str, str, str]:
             provider = "openai"
 
     if provider == "nvidia":
-        return "nvidia", "https://integrate.api.nvidia.com/v1", "nvidia/llama-3.1-nemotron-70b-instruct"
+        return "nvidia", "https://integrate.api.nvidia.com/v1", NEMOTRON_MODEL
     elif provider == "openai":
-        return "openai", "https://api.openai.com/v1", "openai/gpt-4o-mini"
+        return "openai", "https://api.openai.com/v1", NEMOTRON_MODEL
     else:
         # Default to OpenRouter
-        return "openrouter", "https://openrouter.ai/api/v1", "google/gemini-2.5-flash"
+        return "openrouter", "https://openrouter.ai/api/v1", NEMOTRON_MODEL
 
 
 def _openrouter_headers() -> dict[str, str]:
@@ -72,7 +68,8 @@ def _safe_create_chat_openai(
     temperature: float,
     extra_headers: dict,
     timeout: float,
-    max_retries: int
+    max_retries: int,
+    max_tokens: int = 4096,
 ) -> ChatOpenAI:
     """Instantiate ChatOpenAI using the correct parameter signature for the installed SDK version."""
     try:
@@ -81,6 +78,7 @@ def _safe_create_chat_openai(
             api_key=api_key,
             base_url=base_url or None,
             temperature=temperature,
+            max_tokens=max_tokens,
             default_headers=extra_headers or None,
             max_retries=max_retries,
             timeout=timeout,
@@ -92,6 +90,7 @@ def _safe_create_chat_openai(
                 api_key=api_key,
                 base_url=base_url or None,
                 temperature=temperature,
+                max_tokens=max_tokens,
                 default_headers=extra_headers or None,
                 max_retries=max_retries,
                 request_timeout=timeout,
@@ -102,6 +101,7 @@ def _safe_create_chat_openai(
                 api_key=api_key,
                 base_url=base_url or None,
                 temperature=temperature,
+                max_tokens=max_tokens,
                 default_headers=extra_headers or None,
                 max_retries=max_retries,
             )
@@ -114,6 +114,7 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     """
     from dotenv import load_dotenv
     from pathlib import Path
+    # Resolve the project root (two levels up from this file) to correctly load the top-level .env
     project_root = Path(__file__).resolve().parents[2]
     load_dotenv(project_root / ".env", override=True)
     
@@ -134,7 +135,9 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     extra_headers = {}
     if base_url and "openrouter.ai" in base_url:
         extra_headers = _openrouter_headers()
-        # Explicitly pass Authorization to prevent Langchain from dropping it on custom base_urls
+        # OpenRouter requires an explicit Authorization header. LangChain's ChatOpenAI
+        # does NOT reliably send the api_key as Authorization when base_url is overridden,
+        # so we must set it manually in default_headers to avoid 401 errors.
         if key:
             extra_headers["Authorization"] = f"Bearer {key}"
     
@@ -168,6 +171,11 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
 
 def get_llm_info() -> dict:
     """Returns resolved LLM configuration for diagnostics."""
+    from dotenv import load_dotenv
+    from pathlib import Path
+    project_root = Path(__file__).resolve().parents[2]
+    load_dotenv(project_root / ".env", override=True)
+
     key = _resolve_key()
     if not key:
         return {

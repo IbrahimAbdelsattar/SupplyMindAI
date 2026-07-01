@@ -28,6 +28,9 @@ const Settings = () => {
   const { currency, setCurrency } = useCurrency();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+
+  // User state
+  const [user, setUser] = useState<{ name?: string; email?: string; role?: string } | null>(null);
   
   const [notifications, setNotifications] = useState({
     stockAlerts: true,
@@ -38,21 +41,25 @@ const Settings = () => {
   
   const [region, setRegion] = useState('us');
 
-  // Load saved settings from API on mount
+  // Load saved settings and user data from API on mount
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadData = async () => {
       try {
         const { fetchApi } = await import('@/lib/api');
-        const res = await fetchApi('/system/settings') as { settings: Record<string, unknown> };
-        const s = res?.settings || {};
+        const [settingsRes, userRes] = await Promise.all([
+          fetchApi('/system/settings'),
+          fetchApi('/system/user'),
+        ]);
+        const s = (settingsRes as { settings: Record<string, unknown> })?.settings || {};
         if (s.notifications) setNotifications(prev => ({ ...prev, ...(s.notifications as typeof prev) }));
         if (s.region) setRegion(s.region as string);
-        // Currency is loaded by CurrencyContext — no need to set it here
+        const u = (userRes as { user: { name?: string; email?: string; role?: string } })?.user;
+        if (u) setUser(u);
       } catch {
-        // Settings not available yet — use defaults
+        // Use defaults if API fails
       }
     };
-    loadSettings();
+    loadData();
   }, []);
 
 
@@ -113,7 +120,7 @@ const Settings = () => {
                 <div className="flex items-center gap-4 sm:gap-6">
                   <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-xl sm:text-2xl font-bold text-primary">
-                      {user?.name.charAt(0)}
+                      {(user?.name ?? user?.email ?? '?').charAt(0)}
                     </span>
                   </div>
                   <div className="min-w-0">

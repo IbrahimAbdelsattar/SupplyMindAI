@@ -27,6 +27,7 @@ def generate_forecast(product_id: str, horizon_months: int = 3) -> str:
                 f"Trend: {row['demand_trend']}, Confidence: {row['confidence_level']}%\n"
             )
         return output
+    except Exception as e:
         return f"Failed to generate forecast for {product_id}: {str(e)}"
 
 # ---------------------------------------------------------------------------

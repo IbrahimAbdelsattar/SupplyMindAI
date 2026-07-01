@@ -308,8 +308,8 @@ export const PulseRing = ({
     <div className={`relative inline-flex items-center justify-center ${className}`}>
       <motion.div
         className={`absolute rounded-full ${color} opacity-20`}
-        style={{ inset: size === 'full'憎' : size === 'lg' ? '-8px' : size === 'md' ? '-6px' : '-4px' }
-        animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.25, 0.15] }
+        style={{ inset: size === 'full' ? '0' : size === 'lg' ? '-8px' : size === 'md' ? '-6px' : '-4px' }}
+        animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.25, 0.15] }}
         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
       />
       {children}
@@ -354,7 +354,7 @@ export const GlowOnHover = ({
 }) => {
   return (
     <motion.div
-      class={`relative ${className}`}
+      className={`relative ${className}`}
       whileHover={{ 
         boxShadow: `0 0 ${glowSize}px ${glowColor}`,
       }}

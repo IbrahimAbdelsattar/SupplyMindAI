@@ -1,23 +1,63 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
-import { useCurrency } from '@/contexts/CurrencyContext';
 import { TrendingDown, TrendingUp, DollarSign, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export const MetricsSection = () => {
-  const { currencySymbol, convertCurrency } = useCurrency();
   const { t } = useTranslation('landing');
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-60px' });
 
-  const metrics = [
-    { icon: TrendingDown, value: 25,                    suffix: '%',  labelKey: 'metrics.inventoryCost', descKey: 'metrics.inventoryCostDesc', color: '#10B981' },
-    { icon: Package,      value: 30,                    suffix: '%',  labelKey: 'metrics.stockOut',      descKey: 'metrics.stockOutDesc',      color: '#2563EB' },
-    { icon: TrendingUp,   value: 18,                    suffix: '%',  labelKey: 'metrics.revenue',       descKey: 'metrics.revenueDesc',       color: '#6366f1' },
-    { icon: DollarSign,   value: convertCurrency(2.5),  suffix: 'M+', labelKey: 'metrics.annualSavings', descKey: 'metrics.annualSavingsDesc', color: '#F97316', prefix: currencySymbol, decimals: 1 },
+  type Metric = {
+    icon: typeof TrendingDown;
+    value: number;
+    suffix: string;
+    labelKey: string;
+    descKey: string;
+    range: string;
+    color: string;
+  };
+
+  const metrics: Metric[] = [
+    {
+      icon: TrendingDown,
+      value: 25,
+      suffix: '%',
+      labelKey: 'metrics.inventoryCost',
+      descKey: 'metrics.inventoryCostDesc',
+      range: '20–30%',
+      color: '#10B981',
+    },
+    {
+      icon: Package,
+      value: 65,
+      suffix: '%',
+      labelKey: 'metrics.stockOut',
+      descKey: 'metrics.stockOutDesc',
+      range: 'Up to 65%',
+      color: '#2563EB',
+    },
+    {
+      icon: TrendingUp,
+      value: 3,
+      suffix: '%',
+      labelKey: 'metrics.revenue',
+      descKey: 'metrics.revenueDesc',
+      range: '2–3%',
+      color: '#6366f1',
+    },
+    {
+      icon: DollarSign,
+      value: 27,
+      suffix: '%',
+      labelKey: 'metrics.carryingCost',
+      descKey: 'metrics.carryingCostDesc',
+      range: '25–30%',
+      color: '#F97316',
+    },
   ];
 
   return (
@@ -40,7 +80,7 @@ export const MetricsSection = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Proven Results
+            Industry Benchmarks
           </motion.div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-foreground mb-4 tracking-tight">{t('metrics.title')}</h2>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">{t('metrics.description')}</p>
@@ -89,9 +129,7 @@ export const MetricsSection = () => {
                   {isInView && (
                     <AnimatedCounter
                       value={metric.value}
-                      prefix={metric.prefix || ''}
                       suffix={metric.suffix}
-                      decimals={metric.decimals || 0}
                       duration={1.8}
                     />
                   )}
@@ -99,6 +137,9 @@ export const MetricsSection = () => {
 
                 <h3 className="text-sm sm:text-base font-bold text-foreground mb-1">{t(metric.labelKey)}</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-snug">{t(metric.descKey)}</p>
+                {metric.range && (
+                  <p className="text-[11px] sm:text-xs text-muted-foreground opacity-70 mt-1 leading-snug">Typical range: {metric.range}</p>
+                )}
 
                 {/* Animated bottom bar */}
                 <motion.div
@@ -109,6 +150,10 @@ export const MetricsSection = () => {
             </motion.div>
           ))}
         </div>
+
+        <p className="text-center text-xs text-muted-foreground opacity-60 mt-8">
+          Based on published McKinsey & Company research on AI in distribution operations (2024–2025). Individual results vary by business and data quality.
+        </p>
       </div>
     </section>
   );

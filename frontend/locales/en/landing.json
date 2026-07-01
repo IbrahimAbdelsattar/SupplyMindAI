@@ -13,7 +13,7 @@
     "subheadline": "Make smarter, automated business decisions with deep AI-driven demand forecasting and inventory optimization that continually learns from your data.",
     "ctaPrimary": "View Live Dashboard",
     "ctaSecondary": "Try AI Forecast",
-    "chartLabel": "Demand Forecast \u2014 Interactive Live Preview"
+    "chartLabel": "Demand Forecast — Interactive Live Preview"
   },
   "features": {
     "title": "How It Works",
@@ -32,16 +32,32 @@
     "description": "Tailored AI solutions for every industry vertical",
     "retail": "Retail",
     "retailDesc": "Optimize store inventory, reduce overstock, and never miss a sale with precise demand predictions.",
-    "retailTags": ["Multi-store optimization", "Seasonal forecasting", "Promotion planning"],
+    "retailTags": [
+      "Multi-store optimization",
+      "Seasonal forecasting",
+      "Promotion planning"
+    ],
     "ecommerce": "E-Commerce",
     "ecommerceDesc": "Scale your online operations with AI-driven inventory management across warehouses.",
-    "ecommerceTags": ["Real-time demand tracking", "Fulfillment optimization", "Return prediction"],
+    "ecommerceTags": [
+      "Real-time demand tracking",
+      "Fulfillment optimization",
+      "Return prediction"
+    ],
     "manufacturing": "Manufacturing",
     "manufacturingDesc": "Align production schedules with demand forecasts to minimize waste and maximize efficiency.",
-    "manufacturingTags": ["Production planning", "Raw material optimization", "Supply chain sync"],
+    "manufacturingTags": [
+      "Production planning",
+      "Raw material optimization",
+      "Supply chain sync"
+    ],
     "pharmacies": "Pharmacies",
     "pharmaciesDesc": "Ensure critical medications are always available while minimizing expired stock.",
-    "pharmaciesTags": ["Expiry management", "Compliance tracking", "Emergency stock alerts"]
+    "pharmaciesTags": [
+      "Expiry management",
+      "Compliance tracking",
+      "Emergency stock alerts"
+    ]
   },
   "metrics": {
     "title": "Business Impact",
@@ -53,6 +69,9 @@
     "revenue": "Revenue Increase",
     "revenueDesc": "Through optimized availability",
     "annualSavings": "Annual Savings",
-    "annualSavingsDesc": "Average enterprise savings"
+    "annualSavingsDesc": "Average enterprise savings",
+    "carryingCost": "Inventory Carrying Cost Reduction",
+    "carryingCostDesc": "Inventory carrying costs typically run 25–30% of stock value"
   }
 }
+

@@ -12,11 +12,10 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
-    // Forward frontend API calls to FastAPI during local development.
-    // The backend runs on port 8081 (FastAPI).
     proxy: {
+      // Dev proxy: verify backend is actually listening on this target; ECONNRESET indicates the TCP connection was reset.
       '/api': {
-        target: 'http://127.0.0.1:8001',
+        target: 'http://localhost:8081',
         changeOrigin: true,
       },
     },
