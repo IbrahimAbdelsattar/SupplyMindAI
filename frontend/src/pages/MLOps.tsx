@@ -42,8 +42,7 @@ import {
   Shield,
   CircleDot,
 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { cn } from '@/lib/utils';
 
 type AccuracyPoint = {
@@ -140,15 +139,12 @@ const STATUS_CONFIG = {
 } as const;
 
 const MLOps = () => {
-  const { isAuthenticated } = useAuth();
   const { t, i18n } = useTranslation();
   const [metricsData, setMetricsData] = useState<MLOpsMetrics | null>(null);
   const [langsmithData, setLangsmithData] = useState<LangSmithData | null>(null);
   const [langsmithLoading, setLangsmithLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-
     const fetchMetrics = async () => {
       try {
         const res = await apiFetch<MLOpsMetrics>('/mlops/metrics');
@@ -173,7 +169,7 @@ const MLOps = () => {
 
     void fetchMetrics();
     void fetchLangSmith();
-  }, [isAuthenticated]);
+  }, []);
 
   const handleRefreshLangSmith = async () => {
     setLangsmithLoading(true);
@@ -186,10 +182,6 @@ const MLOps = () => {
       setLangsmithLoading(false);
     }
   };
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   if (!metricsData) {
     return <div className="p-8">{t('mlops:loading')}</div>;

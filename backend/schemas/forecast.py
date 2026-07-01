@@ -14,31 +14,27 @@ class KPIResponse(BaseModel):
 
 class ForecastPredictRequest(BaseModel):
     product_id: str
-    periods: int = 13
-    confidence: Optional[float] = None
+    horizon_days: int = 90
 
 
 class ForecastPoint(BaseModel):
-    ds: str
-    yhat: float
-    yhat_lower: float
-    yhat_upper: float
+    date: str
+    actual: Optional[float] = None
+    forecast: float
+    lower: float
+    upper: float
 
 
 class MonthlyPrediction(BaseModel):
-    month: str
+    period: str
     predicted_demand: float
-    predicted_revenue: float
-    recommended_stock: int
     confidence_level: float
-    risk_level: str
-    trend: str
-    seasonal_factor: float
+    demand_trend: str
+    revenue_forecast: Optional[float] = None
 
 
 class ForecastPredictResponse(BaseModel):
     product_id: str
-    forecast: list[ForecastPoint]
-    monthly_predictions: list[MonthlyPrediction]
-    mape: float
-    insights: Optional[list[str]] = None
+    horizon_days: int
+    series: list[ForecastPoint]
+    monthly_summary: Optional[list[MonthlyPrediction]] = None

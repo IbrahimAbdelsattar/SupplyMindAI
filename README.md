@@ -222,13 +222,13 @@ flowchart LR
 
     subgraph API["⚡ FastAPI Backend"]
         gateway["/api/v1 Gateway"]
-        auth["JWT Auth Router"]
+        guardrails["Guardrails Router"]
         forecastSvc["Forecast Service"]
         inventorySvc["Inventory + Alert Services"]
         insightSvc["Insights + LLM Chat"]
         mlopsSvc["MLOps + Reports Services"]
         cache[("🔴 Redis Cache")]
-        gateway --> auth & forecastSvc & inventorySvc & insightSvc & mlopsSvc
+        gateway --> forecastSvc & inventorySvc & insightSvc & mlopsSvc
         gateway <--> cache
     end
 
@@ -479,13 +479,12 @@ supplymind-ai/
 │   │   └── ui/                        # 50 shadcn/ui primitives
 │   │
 │   ├── 📚 lib/
-│   │   ├── api.ts                     # API client with auth headers
+│   │   ├── api.ts                     # API client
 │   │   ├── knowledgeApi.ts            # Knowledge/RAG API utilities
 │   │   ├── mockData.ts                # Mock data for development
 │   │   └── utils.ts                   # cn() class merging utility
 │   │
 │   ├── 🔐 contexts/
-│   │   ├── AuthContext.tsx            # Authentication state
 │   │   └── ThemeContext.tsx           # Dark/light theme
 │   │
 │   └── 🧪 test/                       # Test setup & examples
@@ -493,14 +492,13 @@ supplymind-ai/
 │       └── example.test.ts
 │
 ├── ⚙️ Backend (FastAPI)
-│   ├── main.py                        # App entry, 20+ endpoints, auth, JWT
+│   ├── main.py                        # App entry, 20+ endpoints
 │   ├── db.py                          # SQLAlchemy models (User, etc.)
-│   ├── dependencies.py                # Auth dependencies
+│   ├── dependencies.py                # Shared dependencies
 │   ├── bootstrap.py                   # ML model + RAG initialization
 │   ├── ml_adapter.py                  # ML model wrapper
 │   ├── analytics.py                   # Business logic helpers
 │   ├── routers/
-│   │   ├── auth.py                    # Database/JWT auth router
 │   │   ├── knowledge.py               # Knowledge ingestion/search router
 │   │   └── storage.py                 # File storage router
 │   ├── agents/
@@ -524,7 +522,6 @@ supplymind-ai/
 │   │   ├── copilot.py                 # Copilot orchestration
 │   │   ├── config.py                  # Knowledge settings
 │   │   ├── client.py                  # Knowledge database sessions
-│   │   ├── auth.py                    # Knowledge auth
 │   │   ├── langsmith_tracing.py       # LangSmith observability
 │   │   ├── storage.py                 # File storage
 │   │   └── stream.py                  # SSE streaming
@@ -644,8 +641,7 @@ RAG_API_KEY=sk-or-...           # RAG knowledge retrieval
 LLM_MODEL=moonshotai/kimi-k2.6:free
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 
-# ── Self-hosted auth, knowledge, and file storage ────────────
-JWT_SECRET=replace-with-a-random-secret
+# ── Storage ──────────────────────────────────────────────────
 STORAGE_PATH=./data/storage
 
 # ── LangSmith Observability (Optional) ────────────────────────

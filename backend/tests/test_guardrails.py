@@ -1,7 +1,6 @@
 import pytest
 from guardrails.config import GuardrailsConfig
 from guardrails.input_guardrails import InputGuardrails
-from guardrails.auth_guardrails import AuthGuardrails
 from guardrails.tenant_guardrails import TenantGuardrails
 from guardrails.rag_guardrails import RAGGuardrails
 from guardrails.forecast_guardrails import ForecastGuardrails
@@ -74,43 +73,6 @@ class TestInputGuardrails:
         violations_categories = [v.category.value for v in result.violations]
         assert len(result.violations) >= 2
 
-
-class TestAuthGuardrails:
-    def test_no_token_blocked(self, config):
-        g = AuthGuardrails(config)
-        result = g.check_token(None)
-        assert result.passed is False
-        assert result.blocked is True
-
-    def test_valid_token_passes(self, config):
-        g = AuthGuardrails(config)
-        result = g.check_token("valid_token_that_is_long_enough_for_checking")
-        assert result.passed is True
-
-    def test_malformed_token_blocked(self, config):
-        g = AuthGuardrails(config)
-        result = g.check_token("short")
-        assert result.passed is False
-
-    def test_no_roles_blocked(self, config):
-        g = AuthGuardrails(config)
-        result = g.check_authorization(None, "read")
-        assert result.passed is False
-
-    def test_insufficient_role_blocked(self, config):
-        g = AuthGuardrails(config)
-        result = g.check_authorization(["viewer"], "write")
-        assert result.passed is False
-
-    def test_sufficient_role_passes(self, config):
-        g = AuthGuardrails(config)
-        result = g.check_authorization(["admin"], "write")
-        assert result.passed is True
-
-    def test_manager_can_forecast(self, config):
-        g = AuthGuardrails(config)
-        result = g.check_authorization(["manager"], "forecast")
-        assert result.passed is True
 
 
 class TestTenantGuardrails:

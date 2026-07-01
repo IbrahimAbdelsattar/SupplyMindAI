@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 pydantic
-python-jose[cryptography]
 pandas
 python-multipart
 sqlalchemy

@@ -1,4 +1,4 @@
-from backend.schemas.auth import UserOut, UserAdminOut, RegisterRequest, LoginRequest, LoginResponse, UserUpdateRequest
+from backend.schemas.auth import UserOut, UserAdminOut, UserUpdateRequest
 from backend.schemas.forecast import KPIResponse, ForecastPredictRequest, ForecastPoint, MonthlyPrediction, ForecastPredictResponse
 from backend.schemas.inventory import InventoryRecommendation, InventoryItemOut, InventorySummaryOut
 from backend.schemas.reports import ReportItem
@@ -7,7 +7,7 @@ from backend.schemas.insights import InsightsGeneratePayload, ChatPayload, ChatR
 from backend.schemas.settings import UserSettingsPayload
 
 __all__ = [
-    "UserOut", "UserAdminOut", "RegisterRequest", "LoginRequest", "LoginResponse", "UserUpdateRequest",
+    "UserOut", "UserAdminOut", "UserUpdateRequest",
     "KPIResponse", "ForecastPredictRequest", "ForecastPoint", "MonthlyPrediction", "ForecastPredictResponse",
     "InventoryRecommendation", "InventoryItemOut", "InventorySummaryOut",
     "ReportItem",

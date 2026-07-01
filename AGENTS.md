@@ -9,7 +9,7 @@ SupplyMind AI is an AI-powered demand forecasting and inventory optimization pla
 - **Animation:** Framer Motion (Emil Design principles)
 - **State:** React Query + Context API
 - **Router:** React Router DOM
-- **Auth:** Clerk
+- **Auth:** None (demo mode — all users are admin)
 - **Charts:** Recharts
 
 ## Design System

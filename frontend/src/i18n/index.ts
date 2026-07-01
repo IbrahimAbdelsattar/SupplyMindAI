@@ -10,12 +10,11 @@ import enInsights from "../../locales/en/insights.json";
 import enReports from "../../locales/en/reports.json";
 import enMlops from "../../locales/en/mlops.json";
 import enSettings from "../../locales/en/settings.json";
-import enLogin from "../../locales/en/login.json";
 import enLanding from "../../locales/en/landing.json";
 import enChatbot from "../../locales/en/chatbot.json";
 import enUi from "../../locales/en/ui.json";
 import enAi from "../../locales/en/ai.json";
-import enSignUp from "../../locales/en/signUp.json";
+
 
 import arCommon from "../../locales/ar/common.json";
 import arDashboard from "../../locales/ar/dashboard.json";
@@ -25,12 +24,11 @@ import arInsights from "../../locales/ar/insights.json";
 import arReports from "../../locales/ar/reports.json";
 import arMlops from "../../locales/ar/mlops.json";
 import arSettings from "../../locales/ar/settings.json";
-import arLogin from "../../locales/ar/login.json";
 import arLanding from "../../locales/ar/landing.json";
 import arChatbot from "../../locales/ar/chatbot.json";
 import arUi from "../../locales/ar/ui.json";
 import arAi from "../../locales/ar/ai.json";
-import arSignUp from "../../locales/ar/signUp.json";
+
 
 i18n
   .use(LanguageDetector)
@@ -55,12 +53,10 @@ i18n
         reports: enReports,
         mlops: enMlops,
         settings: enSettings,
-        login: enLogin,
         landing: enLanding,
         chatbot: enChatbot,
         ui: enUi,
         ai: enAi,
-        signUp: enSignUp,
       },
       ar: {
         common: arCommon,
@@ -71,12 +67,10 @@ i18n
         reports: arReports,
         mlops: arMlops,
         settings: arSettings,
-        login: arLogin,
         landing: arLanding,
         chatbot: arChatbot,
         ui: arUi,
         ai: arAi,
-        signUp: arSignUp,
       },
     },
   });

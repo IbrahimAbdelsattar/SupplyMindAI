@@ -1,2 +1,2 @@
-- [ ] Update src/lib/api.ts to retry token resolution when Clerk provider returns null (avoid UI crash during initial load).
+- [x] Clerk removed — all auth gates stripped, system is demo-mode open.
 - [ ] Re-run frontend typecheck and (if possible) a quick runtime sanity check for HeatmapChart.

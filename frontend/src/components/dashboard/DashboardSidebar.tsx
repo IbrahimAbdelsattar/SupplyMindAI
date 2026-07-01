@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LanguageSwitcher } from '@/components/language/LanguageSwitcher';
@@ -48,7 +47,6 @@ const SidebarContent = ({
 }) => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
-  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -134,46 +132,6 @@ const SidebarContent = ({
         </motion.button>
 
         <LanguageSwitcher collapsed={isCollapsed} />
-
-        {!isCollapsed && user && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mt-4 mx-0 p-4 neu-panel-inset rounded-2xl flex items-center gap-3"
-          >
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              className="w-9 h-9 rounded-full bg-primary neu-panel flex items-center justify-center flex-shrink-0"
-            >
-              <span className="text-sm font-bold text-primary-foreground">
-                {(user?.name ?? '?').charAt(0).toUpperCase()}
-              </span>
-            </motion.div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-foreground truncate">{user?.name ?? ''}</p>
-              <p className="text-xs text-muted-foreground font-medium capitalize">{user?.role ?? 'analyst'}</p>
-            </div>
-          </motion.div>
-        )}
-
-        <motion.button
-          onClick={logout}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className={cn(
-            'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium w-full text-muted-foreground hover:text-destructive hover:neu-panel active:neu-button-active mt-2',
-            isCollapsed && 'justify-center px-0'
-          )}
-        >
-          <motion.div
-            whileHover={{ scale: 1.1, x: [0, -3, 0] }}
-            transition={{ duration: 0.3 }}
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-          </motion.div>
-          {!isCollapsed && <span>{t('common:auth.signOut')}</span>}
-        </motion.button>
       </div>
     </div>
   );

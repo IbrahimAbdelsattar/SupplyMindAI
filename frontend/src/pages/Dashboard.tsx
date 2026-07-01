@@ -3,12 +3,10 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { DemandChart } from '@/components/dashboard/DemandChart';
 import { HeatmapChart } from '@/components/dashboard/HeatmapChart';
-import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { TrendingUp, DollarSign, AlertTriangle, Package } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
@@ -50,18 +48,12 @@ const itemVariants = {
 
 const Dashboard = () => {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
   const { convertCurrency, currencySymbol } = useCurrency();
 
   const { data: kpiData } = useQuery({
     queryKey: ['kpis', 30],
     queryFn: () => apiFetch<KPIResponse>('/data/kpis?period_days=30'),
-    enabled: isAuthenticated,
   });
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   return (
     <div className="flex min-h-screen bg-background transition-colors duration-300 overflow-hidden">
@@ -127,14 +119,9 @@ const Dashboard = () => {
           </motion.div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <motion.div variants={itemVariants} className="xl:col-span-2">
-              <DemandChart />
-            </motion.div>
-            <motion.div variants={itemVariants}>
-              <AlertsPanel />
-            </motion.div>
-          </div>
+          <motion.div variants={itemVariants}>
+            <DemandChart />
+          </motion.div>
 
           {/* Heatmap */}
           <motion.div variants={itemVariants} className="pb-12">

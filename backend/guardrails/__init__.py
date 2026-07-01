@@ -7,7 +7,7 @@ from .models import (
     RedTeamResult,
 )
 from .input_guardrails import InputGuardrails
-from .auth_guardrails import AuthGuardrails
+
 from .tenant_guardrails import TenantGuardrails
 from .rag_guardrails import RAGGuardrails
 from .forecast_guardrails import ForecastGuardrails
@@ -24,7 +24,6 @@ __all__ = [
     "GuardrailResult",
     "RedTeamResult",
     "InputGuardrails",
-    "AuthGuardrails",
     "TenantGuardrails",
     "RAGGuardrails",
     "ForecastGuardrails",

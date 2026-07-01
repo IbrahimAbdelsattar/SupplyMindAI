@@ -16,16 +16,14 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
-import { Navigate } from 'react-router-dom';
-import { Palette, Bell, Globe, Shield, User, Save } from 'lucide-react';
+
+import { Palette, Globe, Shield, User, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Settings = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { currency, setCurrency } = useCurrency();
   const { toast } = useToast();
@@ -45,7 +43,7 @@ const Settings = () => {
     const loadSettings = async () => {
       try {
         const { fetchApi } = await import('@/lib/api');
-        const res = await fetchApi('/settings') as { settings: Record<string, unknown> };
+        const res = await fetchApi('/system/settings') as { settings: Record<string, unknown> };
         const s = res?.settings || {};
         if (s.notifications) setNotifications(prev => ({ ...prev, ...(s.notifications as typeof prev) }));
         if (s.region) setRegion(s.region as string);
@@ -54,19 +52,15 @@ const Settings = () => {
         // Settings not available yet — use defaults
       }
     };
-    if (isAuthenticated) loadSettings();
-  }, [isAuthenticated]);
+    loadSettings();
+  }, []);
 
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const { fetchApi } = await import('@/lib/api');
-      await fetchApi('/settings', {
+      await fetchApi('/system/settings', {
         method: 'PUT',
         body: JSON.stringify({
           theme,
@@ -165,43 +159,7 @@ const Settings = () => {
             </Card>
           </motion.div>
 
-          {/* Notifications */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-          >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  <CardTitle className="text-base sm:text-lg">{t('settings:section.notifications')}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm">{t('settings:notificationsDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6">
-                {[
-                  { key: 'stockAlerts', labelKey: 'settings:notifications.stockAlerts', descKey: 'settings:notifications.stockAlertsDesc' },
-                  { key: 'forecastUpdates', labelKey: 'settings:notifications.forecastUpdates', descKey: 'settings:notifications.forecastUpdatesDesc' },
-                  { key: 'weeklyReports', labelKey: 'settings:notifications.weeklyReports', descKey: 'settings:notifications.weeklyReportsDesc' },
-                  { key: 'systemUpdates', labelKey: 'settings:notifications.systemUpdates', descKey: 'settings:notifications.systemUpdatesDesc' },
-                ].map((item) => (
-                  <div key={item.key} className="flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <Label className="text-sm sm:text-base">{t(item.labelKey)}</Label>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{t(item.descKey)}</p>
-                    </div>
-                    <Switch
-                      checked={notifications[item.key as keyof typeof notifications]}
-                      onCheckedChange={(checked) =>
-                        setNotifications((prev) => ({ ...prev, [item.key]: checked }))
-                      }
-                    />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </motion.div>
+
 
           {/* Regional Settings */}
           <motion.div
@@ -268,7 +226,7 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {(user?.role === 'manager' ? [
+                  {(true ? [
                     { titleKey: 'settings:roleFeatures.executiveReports', descKey: 'settings:roleFeatures.executiveReportsDesc' },
                     { titleKey: 'settings:roleFeatures.budgetControls', descKey: 'settings:roleFeatures.budgetControlsDesc' },
                     { titleKey: 'settings:roleFeatures.teamManagement', descKey: 'settings:roleFeatures.teamManagementDesc' },

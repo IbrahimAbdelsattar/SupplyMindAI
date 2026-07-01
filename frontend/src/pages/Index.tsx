@@ -59,7 +59,7 @@ const CTASection = () => {
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             >
               <Link
-                to="/sign-up"
+                to="/dashboard"
                 className="inline-flex items-center gap-2 px-10 py-4 rounded-2xl bg-primary text-white text-lg font-bold shadow-[0_8px_30px_rgba(37,99,235,0.45)] hover:shadow-[0_12px_40px_rgba(37,99,235,0.6)] transition-shadow"
               >
                 Get Started Free
@@ -72,11 +72,11 @@ const CTASection = () => {
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             >
               <Link
-                to="/login"
+                to="/dashboard"
                 className="inline-flex items-center gap-2 px-10 py-4 rounded-2xl text-lg font-bold text-muted-foreground"
                 style={{ boxShadow: '6px 6px 14px rgba(163,177,198,0.55), -6px -6px 14px rgba(255,255,255,0.85)', background: 'var(--neu-bg, #dde1e7)' }}
               >
-                Sign In
+                Go to Dashboard
               </Link>
             </motion.div>
           </div>

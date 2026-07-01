@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
 
 from backend.knowledge.storage import (
@@ -18,8 +18,6 @@ from backend.knowledge.storage import (
     StorageBucket,
     is_storage_available,
 )
-from backend.knowledge.auth import get_user_from_token
-
 router = APIRouter(prefix="/api/v1/storage", tags=["storage"])
 
 
@@ -36,18 +34,9 @@ async def verify_storage_configured() -> None:
         )
 
 
-async def get_current_user_id(authorization: str | None = None) -> str:
-    """Extract the authenticated user ID from a bearer token."""
-    if not authorization:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization scheme")
-    try:
-        user = await get_user_from_token(token)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from exc
-    return user.id
+async def get_current_user_id() -> str:
+    """Return the current demo user ID."""
+    return "demo-user"
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -57,7 +46,6 @@ async def get_current_user_id(authorization: str | None = None) -> str:
 @router.post("/documents/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Upload document to storage.
     
@@ -67,7 +55,7 @@ async def upload_document(
     await verify_storage_configured()
     
     try:
-        user_id = await get_current_user_id(authorization)
+        user_id = await get_current_user_id()
         
         # Validate file type
         allowed_types = {
@@ -130,7 +118,6 @@ async def upload_document(
 @router.post("/data/upload")
 async def upload_data_file(
     file: UploadFile = File(...),
-    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Upload data file (CSV, Excel) for import.
     
@@ -140,7 +127,7 @@ async def upload_data_file(
     await verify_storage_configured()
     
     try:
-        user_id = await get_current_user_id(authorization)
+        user_id = await get_current_user_id()
         
         # Validate file type
         allowed_types = {
@@ -190,7 +177,6 @@ async def upload_data_file(
 @router.post("/reports/upload")
 async def upload_report(
     file: UploadFile = File(...),
-    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Upload report file (PDF, DOCX).
     
@@ -200,7 +186,7 @@ async def upload_report(
     await verify_storage_configured()
     
     try:
-        user_id = await get_current_user_id(authorization)
+        user_id = await get_current_user_id()
         
         # Validate file type
         allowed_types = {
@@ -255,13 +241,12 @@ async def upload_report(
 async def list_user_files(
     bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
     folder: str = Query(""),
-    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """List files in user's storage bucket."""
     await verify_storage_configured()
     
     try:
-        user_id = await get_current_user_id(authorization)
+        user_id = await get_current_user_id()
         
         files = await list_files(
             bucket=bucket,
@@ -289,13 +274,12 @@ async def list_user_files(
 async def delete_user_file(
     file_name: str,
     bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
-    authorization: str | None = Header(default=None),
 ) -> dict[str, str]:
     """Delete file from storage."""
     await verify_storage_configured()
     
     try:
-        user_id = await get_current_user_id(authorization)
+        user_id = await get_current_user_id()
         
         response = await delete_file(
             bucket=bucket,
@@ -330,13 +314,12 @@ async def get_file_url(
     file_name: str,
     bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
     expires_in: int = Query(3600, description="URL expiration in seconds"),
-    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     """Get public or signed URL for file."""
     await verify_storage_configured()
     
     try:
-        user_id = await get_current_user_id(authorization)
+        user_id = await get_current_user_id()
         
         # For signed URLs with expiration
         url = get_public_url(
@@ -377,11 +360,10 @@ async def get_file_url(
 async def download_user_file(
     file_name: str,
     bucket: StorageBucket = Query(StorageBucket.DOCUMENTS),
-    authorization: str | None = Header(default=None),
 ) -> Response:
     """Download a file owned by the authenticated user."""
     await verify_storage_configured()
-    user_id = await get_current_user_id(authorization)
+    user_id = await get_current_user_id()
     result = await download_file(bucket=bucket, file_path=file_name, user_id=user_id)
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")

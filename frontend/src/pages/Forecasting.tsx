@@ -35,8 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Download, Calendar, Package } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -53,7 +52,6 @@ const HORIZON_OPTIONS = [
 ];
 
 const Forecasting = () => {
-  const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
   const { data: products } = useQuery({
@@ -94,10 +92,6 @@ const Forecasting = () => {
     void forecastMutation.mutateAsync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct, horizon]);
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   const handleExport = () => {
     const csv = chartData

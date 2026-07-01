@@ -13,7 +13,7 @@ SupplyMindAI is an AI-powered **demand forecasting and inventory optimization pl
 | **Frontend** | React 18, TypeScript, Vite 6, Tailwind CSS, shadcn/ui |
 | **Backend** | Python 3.12+, FastAPI, Uvicorn |
 | **ORM / DB** | SQLAlchemy 2.0, PostgreSQL (Supabase) |
-| **Auth** | Clerk (frontend) + custom JWT (backend fallback) |
+| **Auth** | Demo mode (hardcoded admin user, no real auth) |
 | **ML** | scikit-learn pipeline (gradient boosting) + pandas |
 | **RAG** | ChromaDB + sentence-transformers (`all-MiniLM-L6-v2`) |
 | **LLM** | OpenAI-compatible API (OpenAI / OpenRouter / NVIDIA) |
@@ -59,7 +59,6 @@ SupplyMindAI/
 │   │   └── __init__.py
 │   │
 │   ├── knowledge/              # RAG & knowledge system
-│   │   ├── auth.py             # Document-level auth
 │   │   ├── client.py           # Knowledge API client
 │   │   ├── config.py           # RAG configuration
 │   │   ├── copilot.py          # Copilot integration
@@ -86,7 +85,6 @@ SupplyMindAI/
 │   │   ├── models.py
 │   │   ├── input_guardrails.py
 │   │   ├── output_guardrails.py
-│   │   ├── auth_guardrails.py
 │   │   ├── rag_guardrails.py
 │   │   ├── forecast_guardrails.py
 │   │   ├── agent_guardrails.py
@@ -123,8 +121,8 @@ SupplyMindAI/
 │   │   ├── Index.tsx           # Landing page (public)
 │   │   ├── Login.tsx           # Sign in (public)
 │   │   ├── SignUp.tsx
-│   │   ├── FactorOne.tsx
-│   │   ├── ClerkLoginCatchAll.tsx
+│   │   ├── FactorOne.tsx          (deleted — no longer used)
+│   │   ├── ClerkLoginCatchAll.tsx  (deleted — no longer used)
 │   │   ├── Dashboard.tsx       # Main dashboard (protected)
 │   │   ├── Forecasting.tsx     # Demand forecasting
 │   │   ├── Inventory.tsx       # Inventory management
@@ -150,7 +148,6 @@ SupplyMindAI/
 │   │   └── NavLink.tsx
 │   │
 │   ├── contexts/               # React contexts
-│   │   ├── AuthContext.tsx      # Auth state (Clerk)
 │   │   ├── ThemeContext.tsx     # Dark/light mode
 │   │   ├── CurrencyContext.tsx  # Currency preference
 │   │   └── DateRangeContext.tsx # Global date range
@@ -223,8 +220,8 @@ Client (React) → Vite Proxy (/api/*) → FastAPI
 
 | Table | Purpose |
 |-------|---------|
-| `users` | Local user accounts (fallback when Clerk not used) |
-| `auth_sessions` | JWT refresh token tracking |
+| `users` | Local user accounts |
+
 | `forecast_results` | Persisted demand forecast outputs |
 | `knowledge_documents` | RAG document store |
 | `knowledge_embeddings` | Vector embeddings for RAG |
@@ -275,10 +272,9 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 
 ### Routing & Auth
 
-- **Public routes**: `/`, `/login`, `/sign-up`, `/factor-one`
-- **Protected routes**: `/dashboard`, `/forecasting`, `/inventory`, `/insights`, `/reports`, `/mlops`, `/security`, `/settings`
-- **Auth guard**: `ProtectedRoute` wrapper redirects unauthenticated users to `/login`
-- **Public guard**: `PublicOnlyRoute` redirects authenticated users to `/dashboard`
+- **All routes** are publicly accessible (no auth guards).
+- `ProtectedRoute` and `PublicOnlyRoute` have been removed.
+- The app operates in demo mode with a single hardcoded admin user.
 
 ### State Management
 
@@ -286,7 +282,7 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 |-------|----------|
 | Server state | `@tanstack/react-query` (QueryClient) |
 | Theme | `ThemeContext` (dark/light mode) |
-| Auth | `AuthContext` (Clerk) |
+| Auth | Demo mode (hardcoded admin user, no auth) |
 | Currency | `CurrencyContext` |
 | Date range | `DateRangeContext` |
 
@@ -300,10 +296,11 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 ---
 
 ## Key Integration Points
+### Auth (Demo Mode)
 
-### Clerk Auth
-- Frontend: `@clerk/clerk-react` handles sign-in/sign-up
-- Backend: Webhook verification + custom JWT decode in `security.py`
+- Clerk has been removed from both frontend and backend.
+- The backend uses a static demo admin user for all operations.
+- All frontend routes are publicly accessible — no login/signup required.
 
 ### ML Pipeline
 - Training: scikit-learn pipeline stored as `.pkl` in `ml_platform/models/`
@@ -331,8 +328,7 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 | `OPENAI_API_KEY` | LLM API key |
 | `OPENAI_BASE_URL` | LLM base URL (OpenAI / OpenRouter / NVIDIA) |
 | `OPENAI_MODEL` | Model name (e.g. `gpt-4o-mini`) |
-| `CLERK_SECRET_KEY` | Clerk webhook verification |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk frontend SDK |
+
 | `ALLOWED_ORIGINS` | CORS origins |
 | `ALLOWED_HOSTS` | Trusted hosts |
 | `ENVIRONMENT` | `development` or `production` |

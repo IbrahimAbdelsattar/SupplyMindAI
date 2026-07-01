@@ -1,31 +1,19 @@
 import logging
 from datetime import datetime, timezone
-from fastapi import HTTPException, Request, status
-
-from backend.knowledge.auth import AuthUser, get_user_from_token
+from fastapi import Request
+from backend.knowledge.auth import AuthUser
 
 logger = logging.getLogger("backend.auth")
-
-
-def _auth_error(detail: str = "Invalid or expired token") -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=detail,
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
-
 async def _get_current_user(request: Request) -> AuthUser:
-    # return await get_user_from_token(token)
     return AuthUser(
-        id="dev_user_123",
-        email="dev@example.com",
-        user_metadata={"name": "Dev User"},
-        app_metadata={"role": "admin"},
+        id="demo-user",
+        email="demo@supplymind.ai",
+        user_metadata={"name": "Demo Admin"},
+        app_metadata={"role": "admin", "is_active": True},
         created_at=_utc_now().isoformat(),
-        updated_at=_utc_now().isoformat()
+        updated_at=_utc_now().isoformat(),
     )

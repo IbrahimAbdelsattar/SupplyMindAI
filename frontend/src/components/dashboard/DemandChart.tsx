@@ -28,13 +28,13 @@ type ForecastPoint = { date: string; actual?: number | null; forecast: number; l
 type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[] };
 
 const timeRanges = [
-  { label: '7 Days', value: 7 },
-  { label: '14 Days', value: 14 },
-  { label: '30 Days', value: 30 },
+  { label: '1 Month', value: 30 },
+  { label: '3 Months', value: 90 },
+  { label: '6 Months', value: 180 },
 ];
 
 export const DemandChart = () => {
-  const [selectedRange, setSelectedRange] = useState(14);
+  const [selectedRange, setSelectedRange] = useState(90);
   const [selectedProduct, setSelectedProduct] = useState<string>('all');
 
   const { data: products } = useQuery({

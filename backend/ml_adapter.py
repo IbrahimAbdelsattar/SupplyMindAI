@@ -97,7 +97,7 @@ class DemandForecastService:
         else:
             qty = sub["qty"] if "qty" in sub.columns else sub["total_qty"]
             base = float(qty.tail(30).mean()) if len(qty) else 0.0
-            std = float(qty.tail(30).std(ddof=0)) if len(qty) > 1 else 0.0
+            std = qty.tail(30).std(ddof=0) if len(qty) > 1 else 0.0
 
         monthly = max(0, int(round(base * 30)))
         rows = []

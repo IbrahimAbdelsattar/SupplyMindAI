@@ -36,8 +36,7 @@ import {
   Bot,
   User,
 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
@@ -335,7 +334,6 @@ function InsightCard({
 ════════════════════════════════════════════════ */
 const AIInsights = () => {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -346,7 +344,6 @@ const AIInsights = () => {
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: () => apiFetch<Product[]>('/data/products'),
-    enabled: isAuthenticated,
   });
 
   const productId = selectedProduct || products?.[0]?.product_id || 'BL_KIT';
@@ -401,10 +398,6 @@ const AIInsights = () => {
       setIsChatLoading(false);
     }
   };
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   /* ─── Insight summary stats ─── */
   const highCount = insights.filter((i) => i.impact === 'high').length;

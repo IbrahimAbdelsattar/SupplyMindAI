@@ -126,12 +126,32 @@ class DataStore:
 STORE = DataStore()
 
 # Set on startup via bootstrap (used by agent tools)
-ML_MODEL: Any = None
+ML_MODEL: Any = None  # Will be set by bootstrap at startup
 
 # Forecast intelligence service (loaded from future_forecast.csv)
 FORECAST_INTELLIGENCE: Any = None
 
 MODELS: dict = {}
+
+def load_ml_model() -> Any:
+    """
+    Lazily initialize and return the global ML_MODEL.
+    If the model is not loaded, attempt to load it via the bootstrap
+    initialization routine. This function is safe to call multiple times.
+    """
+    global ML_MODEL
+    if ML_MODEL is not None:
+        return ML_MODEL
+    # Import inside function to avoid circular imports
+    from backend.bootstrap import init_ml_model
+    from backend import globals as globs
+    try:
+        ML_MODEL = init_ml_model(globs.STORE)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Failed to load ML model lazily: %s", exc)
+        ML_MODEL = None
+    return ML_MODEL
 
 
 # -----------------------------------------------------------------------------

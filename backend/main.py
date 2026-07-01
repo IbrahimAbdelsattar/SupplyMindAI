@@ -124,21 +124,19 @@ try:
 except Exception as exc:
     logger.warning("Knowledge router not loaded: %s", exc)
 
-# Mount auth router
-try:
-    from backend.routers.auth import router as auth_router
-    app.include_router(auth_router)
-    logger.info("Auth router mounted at /api/v1/auth")
-except Exception as exc:
-    logger.warning("Auth router not loaded: %s", exc)
-
 _ROUTERS_TO_LOAD = [
-    ("backend.routers.data", "router"),
-    ("backend.routers.forecasting", "router"),
-    ("backend.routers.inventory_domain", "router"),
     ("backend.routers.ai_chat", "router"),
     ("backend.routers.system", "router"),
+
+    ("backend.routers.mlops", "router"),
+    ("backend.routers.security", "router"),
+    ("backend.routers.insights", "router"),
+    ("backend.routers.alerts", "router"),
+    ("backend.routers.settings", "router"),
+    ("backend.routers.inventory_domain", "router"),
+    ("backend.routers.data", "router"),
 ]
+
 
 import importlib
 for module_name, router_attr in _ROUTERS_TO_LOAD:
@@ -516,7 +514,7 @@ def _startup() -> None:
             logger.debug("[DATA] ℹ️  Optional file not found: %s", csv_name)
 
     # ── Startup Summary ──────────────────────────────────────────────────────
-    port = int(os.getenv("PORT", "8081"))
+    port = int(os.getenv("PORT", "8001"))
     logger.info("=" * 60)
     logger.info("  SupplyMindAI Backend — READY")
     logger.info("  Environment : %s", ENVIRONMENT.upper())
@@ -532,7 +530,7 @@ def _startup() -> None:
 # Entry point
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8000"))
+    port = int(os.getenv("PORT", "8001"))
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",

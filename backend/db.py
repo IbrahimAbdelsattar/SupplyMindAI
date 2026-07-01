@@ -18,68 +18,104 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL environment variable is required. "
-        "Set it in .env (e.g., postgresql://user:pass@host:port/dbname)."
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+
+# ---------------------------------------------------------------------------
+# SQLite-first mode for local development
+# ---------------------------------------------------------------------------
+# When ENVIRONMENT=development (or DB_USE_SQLITE=true), skip the remote
+# Postgres probe entirely and use a local SQLite file. This makes backend
+# startup instant instead of waiting 3-10s for a DNS/connection timeout.
+_SQLITE_PATH = PROJECT_ROOT / "backend" / "data" / "supplymind_dev.db"
+_USE_SQLITE = ENVIRONMENT == "development" or os.getenv("DB_USE_SQLITE", "").lower() in {"1", "true", "yes", "on"}
+
+if _USE_SQLITE and not os.getenv("DB_FORCE_POSTGRES", "").lower() in {"1", "true", "yes", "on"}:
+    _SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    engine = create_engine(
+        f"sqlite:///{_SQLITE_PATH}",
+        pool_pre_ping=True,
+        connect_args={"timeout": 10},
     )
+    LOGGER.info("DEV MODE — using local SQLite at %s (set DB_FORCE_POSTGRES=1 to override)", _SQLITE_PATH)
+else:
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is required when not in dev/SQLite mode. "
+            "Set it in .env (e.g., postgresql://user:pass@host:port/dbname)."
+        )
 
-# ---------------------------------------------------------------------------
-# Database connectivity diagnostics
-# ---------------------------------------------------------------------------
-_parsed = urlparse(DATABASE_URL)
-_db_host = _parsed.hostname or "unknown"
-_db_port = _parsed.port or 5432
+    # -----------------------------------------------------------------------
+    # Database connectivity diagnostics (production only)
+    # -----------------------------------------------------------------------
+    _parsed = urlparse(DATABASE_URL)
+    _db_host = _parsed.hostname or "unknown"
+    _db_port = _parsed.port or 5432
 
-LOGGER.info("Database hostname: %s", _db_host)
-LOGGER.info("Database port:     %s", _db_port)
+    LOGGER.info("Database hostname: %s", _db_host)
+    LOGGER.info("Database port:     %s", _db_port)
 
-# Check DNS resolution
-try:
-    addrinfo = socket.getaddrinfo(_db_host, _db_port, socket.AF_UNSPEC, socket.SOCK_STREAM)
-    for af, socktype, proto, canonname, sa in addrinfo:
-        family = "IPv6" if af == socket.AF_INET6 else "IPv4"
-        LOGGER.info("DNS %s -> %s (family=%s)", _db_host, sa[0], family)
-except socket.gaierror as exc:
-    LOGGER.error(
-        "DNS resolution FAILED for %s — %s. "
-        "Check that the hostname is spelled correctly in DATABASE_URL "
-        "and that your environment has working DNS (especially for IPv6 lookups).",
-        _db_host, exc,
-    )
+    try:
+        addrinfo = socket.getaddrinfo(_db_host, _db_port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        for af, socktype, proto, canonname, sa in addrinfo:
+            family = "IPv6" if af == socket.AF_INET6 else "IPv4"
+            LOGGER.info("DNS %s -> %s (family=%s)", _db_host, sa[0], family)
+    except socket.gaierror as exc:
+        LOGGER.error(
+            "DNS resolution FAILED for %s — %s. "
+            "Check that the hostname is spelled correctly in DATABASE_URL "
+            "and that your environment has working DNS (especially for IPv6 lookups).",
+            _db_host, exc,
+        )
 
-# Warn if only IPv6 address is available and we might lack IPv6 connectivity
-try:
-    ipv4 = socket.getaddrinfo(_db_host, _db_port, socket.AF_INET, socket.SOCK_STREAM)
-except socket.gaierror:
-    ipv4 = []
-    LOGGER.warning(
-        "No IPv4 (A) record found for %s — only IPv6 is available. "
-        "If your runtime environment does not support IPv6, database "
-        "connections will hang or fail. Consider using the Supabase "
-        "connection pooler hostname or enabling IPv6 in your deployment.",
-        _db_host,
-    )
+    try:
+        ipv4 = socket.getaddrinfo(_db_host, _db_port, socket.AF_INET, socket.SOCK_STREAM)
+    except socket.gaierror:
+        ipv4 = []
+        LOGGER.warning(
+            "No IPv4 (A) record found for %s — only IPv6 is available. "
+            "If your runtime environment does not support IPv6, database "
+            "connections will hang or fail. Consider using the Supabase "
+            "connection pooler hostname or enabling IPv6 in your deployment.",
+            _db_host,
+        )
 
-# ---------------------------------------------------------------------------
-# Engine options with fast-fail timeouts
-# ---------------------------------------------------------------------------
-# connect_timeout: abort connection attempt after N seconds (psycopg2)
-# pool_timeout:    abort getting a connection from the pool after N seconds
-DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
-DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    # -----------------------------------------------------------------------
+    # Engine options with fast-fail timeouts
+    # -----------------------------------------------------------------------
+    DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+    DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
 
-engine_options: dict = {
-    "pool_pre_ping": True,
-    "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
-    "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
-    "pool_timeout": DB_POOL_TIMEOUT,
-    "connect_args": {
-        "connect_timeout": DB_CONNECT_TIMEOUT,
-    },
-}
+    engine_options: dict = {
+        "pool_pre_ping": True,
+        "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
+        "pool_timeout": DB_POOL_TIMEOUT,
+        "connect_args": {
+            "connect_timeout": DB_CONNECT_TIMEOUT,
+        },
+    }
 
-engine = create_engine(DATABASE_URL, **engine_options)
+    try:
+        _probe_engine = create_engine(DATABASE_URL, **{
+            **engine_options,
+            "pool_size": 1,
+            "max_overflow": 0,
+            "connect_args": {"connect_timeout": 3},
+        })
+        with _probe_engine.connect() as _conn:
+            _conn.exec_driver_sql("SELECT 1")
+        _probe_engine.dispose()
+        engine = create_engine(DATABASE_URL, **engine_options)
+        LOGGER.info("Primary database connected successfully: %s", DATABASE_URL)
+    except Exception as _exc:
+        LOGGER.warning("Primary database unavailable — falling back to local SQLite: %s", _exc)
+        _SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        engine = create_engine(
+            f"sqlite:///{_SQLITE_PATH}",
+            pool_pre_ping=True,
+            connect_args={"timeout": 10},
+        )
+        LOGGER.info("Using local SQLite at %s", _SQLITE_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -108,9 +144,8 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    """Lightweight local user record keyed by Clerk user ID.
+    """Lightweight local user record.
 
-    Clerk is the source of truth for authentication and user profile data.
     This table exists so that app-specific relations (e.g. UserSettings) can
     reference a stable user_id via FK.
     """

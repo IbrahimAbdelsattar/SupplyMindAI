@@ -27,5 +27,29 @@ def generate_forecast(product_id: str, horizon_months: int = 3) -> str:
                 f"Trend: {row['demand_trend']}, Confidence: {row['confidence_level']}%\n"
             )
         return output
+        return f"Failed to generate forecast for {product_id}: {str(e)}"
+
+# ---------------------------------------------------------------------------
+# CLI helper – plain function version of the forecast tool
+# This allows direct invocation via Python scripts or the REPL without
+# needing the LangChain StructuredTool wrapper.
+def generate_forecast_cli(product_id: str, horizon_months: int = 3) -> str:
+    """Generate a demand forecast for *product_id* over *horizon_months* months.
+
+    This mirrors the behaviour of the `generate_forecast` tool but is a plain
+    callable function, making it usable from the command line and unit tests.
+    """
+    model = get_ml_model()
+    if not model:
+        return "Error: Forecasting ML model is currently not loaded or unavailable."
+    try:
+        preds_df = model.predict(product_id, n_months=horizon_months)
+        output = f"Forecast for product {product_id} over {horizon_months} months:\n"
+        for _, row in preds_df.iterrows():
+            output += (
+                f"- Month: {row['period']}, Predicted Demand: {row['predicted_demand']} units, "
+                f"Trend: {row['demand_trend']}, Confidence: {row['confidence_level']}%\n"
+            )
+        return output
     except Exception as e:
         return f"Failed to generate forecast for {product_id}: {str(e)}"

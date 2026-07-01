@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Currency, formatCurrency as formatCurrencyUtil, convertToCurrency, currencySymbols } from '@/lib/currency';
-import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
 
 interface CurrencyContextType {
@@ -29,7 +28,6 @@ export const useCurrency = () => {
 };
 
 export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
   const [currency, setCurrencyState] = useState<Currency>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('app_currency') as Currency) || 'usd';
@@ -43,7 +41,7 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [currency]);
 
-  // Load from backend on mount if authenticated
+  // Load currency preference from backend on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -58,10 +56,8 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
         // use default
       }
     };
-    if (isAuthenticated) {
-      loadSettings();
-    }
-  }, [isAuthenticated]);
+    loadSettings();
+  }, []);
 
   const setCurrency = (newCurrency: Currency) => {
     setCurrencyState(newCurrency);

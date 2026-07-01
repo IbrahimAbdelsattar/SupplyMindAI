@@ -149,7 +149,7 @@ export const HeroSection = () => {
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             >
               <Link
-                to="/sign-up"
+                to="/dashboard"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary text-white text-lg font-bold shadow-[0_8px_24px_rgba(37,99,235,0.4)] hover:shadow-[0_12px_32px_rgba(37,99,235,0.55)] transition-shadow group"
               >
                 {t('hero.ctaPrimary')}
@@ -168,7 +168,7 @@ export const HeroSection = () => {
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             >
               <Link
-                to="/login"
+                to="/dashboard"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold text-muted-foreground transition-all"
                 style={{
                   background: 'var(--neu-bg, #dde1e7)',

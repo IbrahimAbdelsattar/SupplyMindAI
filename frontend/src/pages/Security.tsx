@@ -1,4 +1,3 @@
-import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
@@ -6,7 +5,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, AlertTriangle, Ban, Activity, Bug, Lock, FileWarning } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -81,18 +80,12 @@ function SummaryCard({ icon: Icon, label, value, color }: {
 
 const Security = () => {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
 
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ['security-stats'],
     queryFn: () => apiFetch<StatsResponse>('/security/stats'),
-    enabled: isAuthenticated,
     refetchInterval: 30000,
   });
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   const categoryData = stats?.violations_by_category
     ? Object.entries(stats.violations_by_category).map(([name, value]) => ({

@@ -10,13 +10,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.dependencies import _get_current_user
 from backend.globals import PROJECT_ROOT, STORE
 from backend.db import SessionLocal, ForecastResult
-from backend.knowledge.auth import AuthUser
+
 
 router = APIRouter(prefix="/api/v1/data", tags=["data"])
 
 
 @router.get("/products")
-def data_products(user: AuthUser = Depends(_get_current_user)):
+def data_products(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
     try:
         prods = STORE.products()
         inv = STORE.inventory()
@@ -61,7 +61,7 @@ def data_products(user: AuthUser = Depends(_get_current_user)):
 
 
 @router.get("/kpis")
-def data_kpis(user: AuthUser = Depends(_get_current_user)):
+def data_kpis(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
     try:
         inventory = STORE.inventory()
         sales = STORE.sales_daily()
@@ -199,37 +199,51 @@ def data_kpis(user: AuthUser = Depends(_get_current_user)):
 
 
 @router.get("/heatmap")
-def data_heatmap(user: AuthUser = Depends(_get_current_user)):
+def data_heatmap(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
+    """
+    Returns product demand intensity data in a flat format suitable for
+    a product × store heatmap grid.
+
+    Response shape:
+      { "stores": [{id, name}], "data": [{product, store, demand}] }
+
+    Since the current dataset does not contain store-level granularity,
+    a single virtual "All Stores" aggregate is returned. When store data
+    becomes available, replace the hardcoded store with real ones.
+    """
     try:
-        inventory = STORE.inventory()
         sales = STORE.sales_daily()
         products = STORE.products()
 
-        if inventory.empty or sales.empty or products.empty:
-            return {"dates": [], "products": [], "values": []}
+        if sales.empty or products.empty:
+            return {"stores": [], "data": []}
 
-        inv_dates = sorted(inventory["date"].unique())
-        prod_ids = products["product_id"].unique().tolist()
+        # Build a map of product_id -> product_name
+        name_map: dict[str, str] = {}
+        for _, r in products.iterrows():
+            pid = str(r["product_id"])
+            name_map[pid] = str(r.get("product_name", pid))
 
-        stock_matrix: list[list[int]] = []
-        for pid in prod_ids:
-            row_data = []
-            for d in inv_dates:
-                rec = inventory[(inventory["product_id"] == pid) & (inventory["date"] == d)]
-                if not rec.empty:
-                    try:
-                        val = int(rec.iloc[0]["stock"])
-                    except (ValueError, TypeError):
-                        val = 0
-                else:
-                    val = 0
-                row_data.append(val)
-            stock_matrix.append(row_data)
+        # Calculate average daily demand per product from sales data
+        # Use the "qty" column; fall back to "total_qty" if absent.
+        qty_col = "qty" if "qty" in sales.columns else "total_qty"
+        product_demand: dict[str, float] = {}
+        for pid in name_map:
+            sub = sales[sales["product_id"] == pid]
+            if sub.empty:
+                product_demand[pid] = 0.0
+            else:
+                vals = sub[qty_col].dropna()
+                product_demand[pid] = float(vals.mean()) if not vals.empty else 0.0
 
-        return {
-            "dates": [str(d) for d in inv_dates],
-            "products": [str(p) for p in prod_ids],
-            "values": stock_matrix,
-        }
+        # Build response — single virtual store since we lack store-level data
+        stores = [{"id": "all", "name": "All Stores"}]
+        data = [
+            {"product": name_map[pid], "store": "All Stores", "demand": round(demand, 1)}
+            for pid, demand in product_demand.items()
+        ]
+
+        return {"stores": stores, "data": data}
+
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

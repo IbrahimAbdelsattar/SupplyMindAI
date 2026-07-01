@@ -1,5 +1,5 @@
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -18,8 +18,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Package, AlertTriangle, DollarSign, ArrowRight } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -42,14 +41,44 @@ type InventoryRecommendation = {
   riskLevel: 'low' | 'medium' | 'high';
 };
 
+interface RawInventoryItem {
+  product_id: string;
+  product_name: string;
+  category: string;
+  type: string;
+  stock: number;
+  date: string;
+}
+
 interface InventoryData {
   summary: InventorySummary;
-  items: InventoryItem[];
+  items: RawInventoryItem[];
+}
+
+function toInventoryItem(raw: RawInventoryItem): InventoryItem {
+  const stock = raw.stock ?? 0;
+  let stockStatus: string;
+  if (stock <= 5) stockStatus = "Critical";
+  else if (stock <= 20) stockStatus = "Low";
+  else stockStatus = "Healthy";
+  return {
+    sku: raw.product_id,
+    name: raw.product_name,
+    category: raw.category ?? "",
+    productType: raw.type ?? "",
+    active: stock > 0,
+    stock,
+    averageDailyDemand: 0,
+    coverageDays: null,
+    coverageLabel: "",
+    stockStatus,
+    lastUpdated: raw.date ?? "",
+    sourceText: "",
+  };
 }
 
 const Inventory = () => {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
   const { formatCurrency } = useCurrency();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const queryClient = useQueryClient();
@@ -74,20 +103,17 @@ const Inventory = () => {
   const { data: inventoryRecommendations = [] } = useQuery({
     queryKey: ['inventory-optimize', 13],
     queryFn: () => apiFetch<InventoryRecommendation[]>('/inventory/optimize?limit=13'),
-    enabled: isAuthenticated,
   });
 
   const { data: inventoryData } = useQuery({
     queryKey: ['inventory-list'],
     queryFn: () => apiFetch<InventoryData>('/inventory'),
-    enabled: isAuthenticated,
   });
 
-  const items = inventoryData?.items ?? [];
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  const items: InventoryItem[] = useMemo(
+    () => (inventoryData?.items ?? []).map(toInventoryItem),
+    [inventoryData?.items]
+  );
 
   const totalSavings = inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0);
 

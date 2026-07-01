@@ -9,10 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Download, Calendar, TrendingUp, Package, Eye, DollarSign, AlertTriangle } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, fetchApi } from '@/lib/api';
 import {
   Dialog,
@@ -71,8 +70,8 @@ const typeColors: Record<string, string> = {
 
 const Reports = () => {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
   const { formatCurrency } = useCurrency();
+  const queryClient = useQueryClient();
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
@@ -82,20 +81,24 @@ const Reports = () => {
 
   const { data: reports = [] } = useQuery({
     queryKey: ['reports'],
-    queryFn: () => apiFetch<ReportItem[]>('/reports/list'),
-    enabled: isAuthenticated,
+    queryFn: () => apiFetch<{ reports: ReportItem[] }>('/system/reports/list').then(res => res.reports),
   });
 
   const { data: invData } = useQuery({
     queryKey: ['inventory-list'],
     queryFn: () => apiFetch<{ summary: InvSummary; items: unknown[] }>('/inventory'),
-    enabled: isAuthenticated,
   });
 
   const { data: recommendations = [] } = useQuery({
     queryKey: ['inventory-optimize', 100],
     queryFn: () => apiFetch<InvRec[]>('/inventory/optimize?limit=100'),
-    enabled: isAuthenticated,
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => apiFetch('/system/reports/generate', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+    },
   });
 
   const totalSavings = recommendations.reduce((sum, r) => sum + r.costSavings, 0);
@@ -120,10 +123,6 @@ const Reports = () => {
     return [header.join(','), ...rows].join('\n');
   };
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
   const handlePreview = async (report: ReportItem) => {
     setIsPreviewLoading(true);
     setPreviewTitle(report.title);
@@ -135,7 +134,7 @@ const Reports = () => {
         const data = await apiFetch<InvRec[]>('/inventory/optimize?limit=100');
         text = buildInventoryCsv(data);
       } else {
-        const downloadPath = report.download_url || `/reports/download/report_${report.id}.json`;
+        const downloadPath = report.download_url || `/system/reports/download/report_${report.id}.json`;
         text = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
       }
 
@@ -165,7 +164,7 @@ const Reports = () => {
         csv = buildInventoryCsv(data);
         filename = 'inventory_recommendations.csv';
       } else {
-        const downloadPath = report.download_url || `/reports/download/report_${report.id}.json`;
+        const downloadPath = report.download_url || `/system/reports/download/report_${report.id}.json`;
         csv = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
 
         if (report.type === 'daily') filename = 'daily_operations_report.csv';
@@ -245,9 +244,14 @@ const Reports = () => {
                   <CardTitle className="text-base sm:text-lg">{t('reports:available_reports_title')}</CardTitle>
                   <CardDescription className="text-xs sm:text-sm">{t('reports:available_reports_description')}</CardDescription>
                 </div>
-                <Button className="gap-2 w-full sm:w-auto" size="sm">
+                <Button 
+                  className="gap-2 w-full sm:w-auto" 
+                  size="sm"
+                  onClick={() => generateMutation.mutate()}
+                  disabled={generateMutation.isPending}
+                >
                   <FileText className="w-4 h-4" />
-                  {t('reports:generate_new')}
+                  {generateMutation.isPending ? t('reports:generating') : t('reports:generate_new')}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
