@@ -85,7 +85,10 @@ class ForecastReasoningService:
         ]
 
         try:
-            response = self.llm.invoke(messages)
+            from backend.llm.monitor import monitor_llm_call
+            with monitor_llm_call(feature="forecast_reasoning", model="reasoning", provider="openrouter") as ctx:
+                response = self.llm.invoke(messages)
+                ctx["record_tokens"](response, input_len=len(user_message), output_len=0)
             content = response.content if hasattr(response, "content") else str(response)
 
             # Safe parse JSON

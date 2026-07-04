@@ -97,17 +97,19 @@ copilot_graph = _copilot_workflow.compile()
 
 def run_copilot_graph(question: str, product_id: str = "") -> dict:
     from backend.knowledge.langsmith_tracing import configure_langsmith
+    from backend.llm.monitor import monitor_llm_call
 
     configure_langsmith()
-    result = copilot_graph.invoke(
-        {
-            "messages": [HumanMessage(content=question)],
-            "product_id": product_id,
-            "current_intent": "copilot",
-            "tool_call_count": 0,
-        },
-        config={"recursion_limit": 20},
-    )
+    with monitor_llm_call(feature="copilot_agent", model="agent", provider="openrouter") as ctx:
+        result = copilot_graph.invoke(
+            {
+                "messages": [HumanMessage(content=question)],
+                "product_id": product_id,
+                "current_intent": "copilot",
+                "tool_call_count": 0,
+            },
+            config={"recursion_limit": 20},
+        )
     final = result["messages"][-1]
     answer = final.content if isinstance(final, AIMessage) else str(final)
     return {"answer": answer, "sources": []}

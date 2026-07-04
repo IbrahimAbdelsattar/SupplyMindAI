@@ -67,7 +67,7 @@ services:
       start_period: 60s
     networks:
       - default
-      - dokploy
+      - dokploy-network
 
   # ── Frontend (nginx) ─────────────────────────────────────────────────────
   frontend:
@@ -89,7 +89,7 @@ services:
       retries: 3
     networks:
       - default
-      - dokploy
+      - dokploy-network
 
 volumes:
   postgres_data:
@@ -102,5 +102,5 @@ volumes:
 networks:
   default:
     driver: bridge
-  dokploy:
+  dokploy-network:
     external: true

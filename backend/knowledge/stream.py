@@ -96,9 +96,11 @@ OPERATIONAL_SNAPSHOT:
         # Call astream on ChatOpenAI
         llm = _llm()
         full_response = []
-        async for chunk in llm.astream(
-            [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
-        ):
+        from backend.llm.monitor import monitor_llm_call
+        with monitor_llm_call(feature="rag_stream", model="rag", provider="openrouter") as ctx:
+            async for chunk in llm.astream(
+                [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
+            ):
             if chunk and hasattr(chunk, "content") and chunk.content:
                 full_response.append(chunk.content)
                 yield sse_event("token", {"text": chunk.content})

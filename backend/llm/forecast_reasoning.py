@@ -55,14 +55,13 @@ def _invoke_llm(system: str, human: str, feature: str = "forecast_reasoning") ->
     system = truncate_to_budget(system, budget, label=feature)
 
     from backend.llm.monitor import monitor_llm_call
-    from backend.llm.client import _PROVIDER
 
     messages = [
         SystemMessage(content=system),
         HumanMessage(content=human),
     ]
     try:
-        with monitor_llm_call(feature=feature, model="reasoning", provider=_PROVIDER or "unknown") as ctx:
+        with monitor_llm_call(feature=feature, model="reasoning", provider="openrouter") as ctx:
             response = llm.invoke(messages)
             ctx["record_tokens"](response, input_len=len(system), output_len=0)
         content = response.content if hasattr(response, "content") else str(response)

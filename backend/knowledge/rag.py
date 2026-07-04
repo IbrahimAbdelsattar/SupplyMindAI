@@ -133,9 +133,13 @@ OPERATIONAL_SNAPSHOT:
 """
 
         try:
-            response = _llm().invoke(
-                [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
-            )
+            from backend.llm.monitor import monitor_llm_call
+            llm = _llm()
+            with monitor_llm_call(feature="rag_query", model="rag", provider="openrouter") as ctx:
+                response = llm.invoke(
+                    [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
+                )
+                ctx["record_tokens"](response, input_len=len(user_content), output_len=0)
             answer = response.content if hasattr(response, "content") else str(response)
         except Exception as exc:
             LOGGER.exception("RAG LLM failed: %s", exc)
