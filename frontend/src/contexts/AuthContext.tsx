@@ -79,6 +79,16 @@ export const AuthContextProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   }, [isSignedIn, clerkUser, internalUser]);
 
+  // Track previous sign-in state to perform a hard refresh on sign-out
+  const [wasSignedIn, setWasSignedIn] = React.useState(isSignedIn);
+  
+  useEffect(() => {
+    if (wasSignedIn && !isSignedIn && isLoaded) {
+      window.location.href = '/';
+    }
+    setWasSignedIn(isSignedIn);
+  }, [isSignedIn, wasSignedIn, isLoaded]);
+
   const setUser = useCallback((user: AuthUser) => {
     setInternalUser(user);
     setInternalRole(user.role);

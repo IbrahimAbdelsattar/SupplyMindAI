@@ -25,21 +25,10 @@ export const ProtectedRoute = ({
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
-  const { setUser, userRole, isDomainValid } = useAuthContext();
+  const { userRole, isDomainValid } = useAuthContext();
 
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
-      // Sync Clerk user to AuthContext
-      if (!useAuthContext.getState().user) {
-        setUser({
-          id: user.id,
-          email: user.primaryEmailAddress?.emailAddress || '',
-          name: user.fullName || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User',
-          role: userRole || 'analista',
-          orgId: user.organization?.id || 'default',
-        });
-      }
-
       // Domain check
       const email = user.primaryEmailAddress?.emailAddress || '';
       const domain = email.split('@')[1];
@@ -48,7 +37,7 @@ export const ProtectedRoute = ({
         return;
       }
     }
-  }, [isLoaded, isSignedIn, user, setUser, userRole, navigate]);
+  }, [isLoaded, isSignedIn, user, navigate]);
 
   if (!isLoaded) {
     return <LoadingSpinner />;

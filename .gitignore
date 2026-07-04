@@ -132,6 +132,10 @@ data_audit.py
 
 # Credentials and secrets
 credentials.md
+*.bak
+*.backup
+*.tmp
+scratch/
 
 # Virtual environments
 .venv/
