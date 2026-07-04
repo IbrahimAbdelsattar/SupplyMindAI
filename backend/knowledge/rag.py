@@ -135,12 +135,21 @@ OPERATIONAL_SNAPSHOT:
 
         try:
             from backend.llm.monitor import monitor_llm_call
-            llm = _llm()
-            with monitor_llm_call(feature="rag_query", model="rag", provider="openrouter") as ctx:
-                response = llm.invoke(
-                    [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
-                )
-                ctx["record_tokens"](response, input_len=len(user_content), output_len=0)
+            messages = [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
+
+            def _call_llm():
+                llm = _llm()
+                with monitor_llm_call(feature="rag_query", model="rag", provider="openrouter") as ctx:
+                    response = llm.invoke(messages)
+                    ctx["record_tokens"](response, input_len=len(user_content), output_len=0)
+                return response
+
+            response = cached_llm_call(
+                feature="rag_query",
+                messages=messages,
+                llm_fn=_call_llm,
+                extra_key=f"{product_id}:{operational_context}",
+            )
             answer = response.content if hasattr(response, "content") else str(response)
         except Exception as exc:
             LOGGER.exception("RAG LLM failed: %s", exc)
