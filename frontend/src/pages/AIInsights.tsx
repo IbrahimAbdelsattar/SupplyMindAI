@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { consumeSSE } from '@/lib/stream';
 import { Button } from '@/components/ui/button';
@@ -290,6 +290,14 @@ const AIInsights = () => {
   const { t } = useTranslation();
   const [selectedProduct, setSelectedProduct] = useState('');
 
+  /* ── Streaming state ── */
+  const [streamStatus, setStreamStatus] = useState<string | null>(null);
+  const [streamTokens, setStreamTokens] = useState('');
+  const [streamResult, setStreamResult] = useState<InsightsResponse | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: () => apiFetch<Product[]>('/data/products'),
@@ -297,17 +305,33 @@ const AIInsights = () => {
 
   const productId = selectedProduct || products?.[0]?.product_id || 'BL_KIT';
 
-  const insightsMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<InsightsResponse>('/insights/generate', {
-        method: 'POST',
-        body: JSON.stringify({ product_id: productId }),
-      }),
-  });
+  const generateInsights = useCallback(() => {
+    setStreamStatus(null);
+    setStreamTokens('');
+    setStreamResult(null);
+    setStreamError(null);
+    setElapsedMs(null);
+    setIsStreaming(true);
 
-  const insights = insightsMutation.data?.insights ?? [];
-  const summary = insightsMutation.data?.executive_summary;
-  const recommendations = insightsMutation.data?.recommendations ?? [];
+    consumeSSE<InsightsResponse>({
+      url: `/api/v1/insights/generate/stream`,
+      method: 'POST',
+      body: JSON.stringify({ product_id: productId }),
+      onStart: () => setStreamStatus('Starting generation…'),
+      onStatus: (msg) => setStreamStatus(msg),
+      onToken: (tok) => setStreamTokens((prev) => prev + tok),
+      onResult: (res) => setStreamResult(res),
+      onError: (msg) => setStreamError(msg),
+      onDone: (ms) => {
+        setIsStreaming(false);
+        setElapsedMs(ms);
+      },
+    });
+  }, [productId]);
+
+  const insights = streamResult?.insights ?? [];
+  const summary = streamResult?.executive_summary;
+  const recommendations = streamResult?.recommendations ?? [];
 
   /* ─── Insight summary stats ─── */
   const highCount = insights.filter((i) => i.impact === 'high').length;
@@ -351,12 +375,12 @@ const AIInsights = () => {
               </SelectContent>
             </Select>
             <Button
-              onClick={() => insightsMutation.mutate()}
-              disabled={insightsMutation.isPending}
+              onClick={generateInsights}
+              disabled={isStreaming}
               className="flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              {insightsMutation.isPending ? t('insights:actions.generating') : t('insights:actions.generate')}
+              {isStreaming ? t('insights:actions.generating') : t('insights:actions.generate')}
             </Button>
           </div>
 
@@ -370,9 +394,39 @@ const AIInsights = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-base sm:text-lg font-semibold mb-2">{t('insights:summary.title')}</h3>
+
+                    {/* Streaming status indicator */}
+                    {isStreaming && (
+                      <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
+                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        <span className="text-xs text-primary font-medium">{streamStatus}</span>
+                      </div>
+                    )}
+
+                    {/* Streaming token display */}
+                    {isStreaming && streamTokens && (
+                      <div className="mb-3 p-3 rounded-lg bg-muted/50 border border-border max-h-32 overflow-y-auto">
+                        <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{streamTokens}</p>
+                      </div>
+                    )}
+
+                    {/* Error display */}
+                    {streamError && (
+                      <div className="mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <p className="text-xs text-destructive">{streamError}</p>
+                      </div>
+                    )}
+
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                       {summary || t('insights:summary.placeholder')}
                     </p>
+
+                    {/* Elapsed time badge */}
+                    {elapsedMs != null && (
+                      <span className="inline-block mt-2 px-2 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-full">
+                        {(elapsedMs / 1000).toFixed(1)}s
+                      </span>
+                    )}
 
                     {/* Recommendations grid */}
                     {recommendations.length > 0 && (

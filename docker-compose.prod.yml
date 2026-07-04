@@ -117,7 +117,7 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.supplymind-frontend-prod.rule=Host(`supplymind.tech`)"
+      - "traefik.http.routers.supplymind-frontend-prod.rule=Host(`supplymind.tech`) || Host(`www.supplymind.tech`)"
       - "traefik.http.routers.supplymind-frontend-prod.network=dokploy"
       - "traefik.http.services.supplymind-frontend-prod.loadbalancer.server.port=80"
 
