@@ -24,8 +24,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { apiFetch } from '@/lib/api';
-import InventoryTable, { type InventoryItem } from '@/components/inventory/InventoryTable';
-import StockChart, { type InventorySummary } from '@/components/inventory/StockChart';
+import InventoryTable, { type ProductItem } from '@/components/inventory/InventoryTable';
 import ChatBot from '@/components/inventory/ChatBot';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
@@ -41,46 +40,10 @@ type InventoryRecommendation = {
   riskLevel: 'low' | 'medium' | 'high';
 };
 
-interface RawInventoryItem {
-  product_id: string;
-  product_name: string;
-  category: string;
-  type: string;
-  stock: number;
-  date: string;
-}
-
-interface InventoryData {
-  summary: InventorySummary;
-  items: RawInventoryItem[];
-}
-
-function toInventoryItem(raw: RawInventoryItem): InventoryItem {
-  const stock = raw.stock ?? 0;
-  let stockStatus: string;
-  if (stock <= 5) stockStatus = "Critical";
-  else if (stock <= 20) stockStatus = "Low";
-  else stockStatus = "Healthy";
-  return {
-    sku: raw.product_id,
-    name: raw.product_name,
-    category: raw.category ?? "",
-    productType: raw.type ?? "",
-    active: stock > 0,
-    stock,
-    averageDailyDemand: 0,
-    coverageDays: null,
-    coverageLabel: "",
-    stockStatus,
-    lastUpdated: raw.date ?? "",
-    sourceText: "",
-  };
-}
-
 const Inventory = () => {
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { mutateAsync: applyMutation, isPending: isApplying } = useMutation({
@@ -97,7 +60,7 @@ const Inventory = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-optimize'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-list'] });
+      queryClient.invalidateQueries({ queryKey: ['products-list'] });
       toast({ title: t('inventory:toast.success'), description: t('inventory:toast.inventoryUpdated') });
     },
     onError: (error) => {
@@ -105,19 +68,19 @@ const Inventory = () => {
     },
   });
 
+  const { data: productsData } = useQuery({
+    queryKey: ['products-list'],
+    queryFn: () => apiFetch<{ items: ProductItem[]; total: number }>('/inventory/products'),
+  });
+
   const { data: inventoryRecommendations = [] } = useQuery({
     queryKey: ['inventory-optimize', 13],
     queryFn: () => apiFetch<InventoryRecommendation[]>('/inventory/optimize?limit=13'),
   });
 
-  const { data: inventoryData } = useQuery({
-    queryKey: ['inventory-list'],
-    queryFn: () => apiFetch<InventoryData>('/inventory'),
-  });
-
-  const items: InventoryItem[] = useMemo(
-    () => (inventoryData?.items ?? []).map(toInventoryItem),
-    [inventoryData?.items]
+  const products: ProductItem[] = useMemo(
+    () => productsData?.items ?? [],
+    [productsData?.items]
   );
 
   const totalSavings = useMemo(
@@ -218,18 +181,7 @@ const Inventory = () => {
             </motion.div>
           </div>
 
-          {/* Stock Overview — Full Width */}
-          {inventoryData?.summary && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.25 }}
-            >
-              <StockChart data={items} summary={inventoryData.summary} />
-            </motion.div>
-          )}
-
-          {/* Inventory Table — Full Width */}
+          {/* Products Table — Full Width */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -237,9 +189,9 @@ const Inventory = () => {
             className="w-full"
           >
             <InventoryTable
-              data={items}
-              selectedSku={selectedItem?.sku ?? null}
-              onSelectItem={setSelectedItem}
+              data={products}
+              selectedId={selectedProduct?.product_id ?? null}
+              onSelectItem={setSelectedProduct}
             />
           </motion.div>
 
@@ -250,7 +202,7 @@ const Inventory = () => {
             transition={{ duration: 0.4, delay: 0.35 }}
             className="h-[420px]"
           >
-            <ChatBot focusedItem={selectedItem} />
+            <ChatBot focusedItem={selectedProduct} />
           </motion.div>
 
           {/* AI Recommendations */}

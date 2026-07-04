@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { copilotChat } from "@/lib/knowledgeApi";
-import type { InventoryItem } from "./InventoryTable";
+import type { ProductItem } from "./InventoryTable";
 
 interface Message {
   role: "user" | "bot";
@@ -13,7 +13,7 @@ interface Message {
 }
 
 interface ChatBotProps {
-  focusedItem: InventoryItem | null;
+  focusedItem: ProductItem | null;
 }
 
 export default function ChatBot({ focusedItem }: ChatBotProps) {
@@ -43,7 +43,7 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
     try {
       const result = await copilotChat({
         message: msg,
-        product_id: focusedItem?.sku ?? undefined,
+        product_id: focusedItem?.product_id ?? undefined,
         mode: "business",
       });
       setMessages((current) => [
@@ -71,7 +71,7 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
         <div className="min-w-0">
           <span className="block text-sm font-semibold text-foreground">{t("chatbot:title")}</span>
           <span className="block text-xs text-muted-foreground">
-            {focusedItem ? `${t("chatbot:selected")} ${focusedItem.name} (${focusedItem.sku})` : t("chatbot:noSelection")}
+            {focusedItem ? `${t("chatbot:selected")} ${focusedItem.product_name} (${focusedItem.product_id})` : t("chatbot:noSelection")}
           </span>
         </div>
       </div>
@@ -109,7 +109,7 @@ export default function ChatBot({ focusedItem }: ChatBotProps) {
 
       <div className="flex gap-2 border-t px-4 py-3">
         <Input
-          placeholder={focusedItem ? `${t("chatbot:askAbout")} ${focusedItem.name}...` : t("chatbot:inputPlaceholder")}
+          placeholder={focusedItem ? `${t("chatbot:askAbout")} ${focusedItem.product_name}...` : t("chatbot:inputPlaceholder")}
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && !typing && send()}

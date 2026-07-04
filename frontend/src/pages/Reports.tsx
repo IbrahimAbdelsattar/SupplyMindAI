@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, Download, Calendar, TrendingUp, Package, Eye, DollarSign, AlertTriangle } from 'lucide-react';
 
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, fetchApi } from '@/lib/api';
 import {
@@ -45,11 +46,12 @@ type ReportItem = {
 };
 
 const typeColors: Record<string, string> = {
-  Forecast: 'bg-primary/10 text-primary',
-  Inventory: 'bg-accent/10 text-accent',
-  Executive: 'bg-success/10 text-success',
-  Technical: 'bg-warning/10 text-warning',
-  Risk: 'bg-destructive/10 text-destructive',
+  forecast: 'bg-primary/10 text-primary',
+  inventory: 'bg-accent/10 text-accent',
+  executive: 'bg-success/10 text-success',
+  technical: 'bg-warning/10 text-warning',
+  risk: 'bg-destructive/10 text-destructive',
+  supply_chain: 'bg-indigo-500/10 text-indigo-400',
 };
 
 const Reports = () => {
@@ -57,11 +59,7 @@ const Reports = () => {
   const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
 
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewTitle, setPreviewTitle] = useState('');
-  const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
-  const [previewRows, setPreviewRows] = useState<string[][]>([]);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const { toast } = useToast();
 
   const { data: reports = [] } = useQuery({
     queryKey: ['reports'],
@@ -79,17 +77,39 @@ const Reports = () => {
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => apiFetch('/system/reports/generate', { method: 'POST' }),
-    onSuccess: () => {
+    mutationFn: () => apiFetch<{ status: string; message: string }>('/system/reports/generate', { method: 'POST' }),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      toast({
+        title: t('common:success', 'Success'),
+        description: data.message || 'New reports generated successfully.',
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: t('common:error', 'Error'),
+        description: err instanceof Error ? err.message : 'Failed to generate reports',
+        variant: 'destructive',
+      });
     },
   });
+
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
+  const [previewRows, setPreviewRows] = useState<string[][]>([]);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const totalSavings = recommendations.reduce((sum, r) => sum + r.costSavings, 0);
   const summary = invData?.summary;
   const totalProducts = summary?.totalProducts ?? 0;
   const healthyPct = totalProducts > 0 ? Math.round((summary?.healthyProducts ?? 0) / totalProducts * 100) : 0;
   const issuesCount = recommendations.filter(r => r.riskLevel === 'high' || r.riskLevel === 'medium').length;
+
+  const totalReportsSize = reports.reduce((sum, r) => sum + (r.file_size || 0), 0);
+  const formattedTotalSize = totalReportsSize < 1024 * 1024
+    ? `${(totalReportsSize / 1024).toFixed(1)} KB`
+    : `${(totalReportsSize / (1024 * 1024)).toFixed(1)} MB`;
 
   const handlePreview = async (report: ReportItem) => {
     setIsPreviewLoading(true);
@@ -99,17 +119,47 @@ const Reports = () => {
       const downloadPath = report.download_url || `/system/reports/download/${report.id}.csv`;
       const text = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
 
-      const rows = text.split('\n').map(row =>
-        row.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''))
-      ).filter(row => row.length > 0 && row.some(cell => cell !== ''));
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      const parsedRows: string[][] = [];
+      for (const line of lines) {
+        let insideQuote = false;
+        let entries: string[] = [];
+        let entry = '';
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            insideQuote = !insideQuote;
+          } else if (char === ',' && !insideQuote) {
+            entries.push(entry.trim().replace(/^"|"$/g, ''));
+            entry = '';
+          } else {
+            entry += char;
+          }
+        }
+        entries.push(entry.trim().replace(/^"|"$/g, ''));
+        if (entries.length > 0 && entries.some(e => e !== '')) {
+          parsedRows.push(entries);
+        }
+      }
 
-      if (rows.length > 0) {
-        setPreviewHeaders(rows[0]);
-        setPreviewRows(rows.slice(1));
+      if (parsedRows.length > 0) {
+        setPreviewHeaders(parsedRows[0]);
+        setPreviewRows(parsedRows.slice(1));
         setIsPreviewOpen(true);
+      } else {
+        toast({
+          title: t('common:error', 'Error'),
+          description: 'The report data is empty or invalid.',
+          variant: 'destructive',
+        });
       }
     } catch (err) {
       console.error('Failed to preview report:', err);
+      toast({
+        title: t('common:error', 'Error'),
+        description: err instanceof Error ? err.message : 'Failed to load report preview.',
+        variant: 'destructive',
+      });
     } finally {
       setIsPreviewLoading(false);
     }
@@ -128,8 +178,18 @@ const Reports = () => {
       a.href = URL.createObjectURL(blob);
       a.download = filename;
       a.click();
+
+      toast({
+        title: t('common:success', 'Success'),
+        description: `Successfully downloaded ${report.title}.`,
+      });
     } catch (err) {
       console.error('Failed to download report:', err);
+      toast({
+        title: t('common:error', 'Error'),
+        description: err instanceof Error ? err.message : 'Failed to download report.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -160,9 +220,9 @@ const Reports = () => {
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 sm:gap-6">
             {[
-              { icon: FileText, label: t('reports:stats_reports_generated'), value: String(totalProducts || reports.length), color: 'primary' },
-              { icon: Download, label: t('reports:stats_downloads_this_month'), value: String(recommendations.length), color: 'accent' },
-              { icon: DollarSign, label: t('reports:stats_scheduled_reports'), value: formatCurrency(totalSavings), color: 'success' },
+              { icon: FileText, label: t('reports:stats_reports_generated'), value: String(reports.length), color: 'primary' },
+              { icon: Download, label: t('reports:stats_downloads_this_month'), value: "CSV / JSON", color: 'accent' },
+              { icon: DollarSign, label: t('reports:stats_scheduled_reports'), value: formattedTotalSize, color: 'success' },
             ].map((stat, index) => (
               <motion.div
                 key={stat.label}

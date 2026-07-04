@@ -11,12 +11,32 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from backend.dependencies import _get_current_user
 from backend.globals import PROJECT_ROOT, STORE
+from backend.analytics import (
+    daily_demand_stats,
+    lead_time_days as calc_lead_time,
+    safety_stock as calc_safety_stock,
+    risk_level as calc_risk_level,
+    latest_inventory_level,
+)
 
 
 router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
 
 INVENTORY_REPORTS_DIR = PROJECT_ROOT / "reports" / "inventory"
 os.makedirs(INVENTORY_REPORTS_DIR, exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# GET /products — list products from products.csv
+# ---------------------------------------------------------------------------
+@router.get("/products")
+def list_products(user: dict = Depends(_get_current_user)) -> dict[str, Any]:
+    try:
+        prods = STORE.products()
+        items = prods.fillna("").to_dict(orient="records")
+        return {"items": items, "total": len(items)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -86,34 +106,40 @@ def inventory_optimize_list(limit: int = Query(20, ge=1, le=500), user: dict = D
         for _, r in prods.head(limit).iterrows():
             pid = str(r["product_id"])
             pname = str(r.get("product_name", pid))
-            latest = inv[inv["product_id"] == pid]
-            stock = int(latest.sort_values("date").iloc[-1]["stock"]) if not latest.empty else 0
-            sales_sub = sales[sales["product_id"] == pid]
-            qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
-            daily_avg = float(sales_sub[qty_col].tail(90).mean()) if not sales_sub.empty else 1.0
-            daily_avg = max(daily_avg, 0.1)
-            lead_time_days = max(int(round(daily_avg * 0.3)), 1)
-            safety_stock = int(round(daily_avg * 7))
-            reorder_point = int(round(daily_avg * lead_time_days * 1.5))
-            reorder_qty = int(round(daily_avg * 30))
-            coverage_months = stock / max(daily_avg * 30, 1)
-            if coverage_months < 0.5:
-                risk = "high"
-            elif coverage_months < 1.5:
-                risk = "medium"
-            else:
-                risk = "low"
-            unit_price = float(r.get("unit_price", 10.0))
-            purchase_price = float(r.get("purchase_price", unit_price * 0.7))
-            savings = max(0, (stock - reorder_point - safety_stock) * (unit_price - purchase_price) * 0.05)
+
+            mean_d, std_d = daily_demand_stats(STORE, pid)
+            lt = calc_lead_time(STORE, pid)
+            safety = calc_safety_stock(std_d, lt)
+            rop = int(round(mean_d * lt + safety))
+            stock = latest_inventory_level(STORE, pid)
+
+            days_supply = (stock / mean_d) if mean_d > 0 else 0.0
+            risk = calc_risk_level(days_supply)
+
+            # Economic Order Quantity
+            annual_d = mean_d * 365.0
+            min_p = float(r.get("min_price", 0.0)) or 0.0
+            max_p = float(r.get("max_price", 0.0)) or 0.0
+            avg_p = (min_p + max_p) / 2.0 if (min_p + max_p) > 0 else 10.0
+
+            unit_price = float(r.get("unit_price", 0.0)) or avg_p
+            purchase_price = float(r.get("purchase_price", 0.0)) or (unit_price * 0.7)
+
+            S = 50.0
+            H = max(1.0, 0.2 * max_p) if max_p > 0 else 2.0
+            eoq = int(round(((2 * annual_d * S) / H) ** 0.5)) if annual_d > 0 else 0
+            reorder_qty = max(eoq, max(0, rop - stock))
+
+            savings = max(0.0, (stock - rop - safety) * (unit_price - purchase_price) * 0.05)
+
             items.append({
                 "product_id": pid,
                 "product_name": pname,
                 "currentStock": stock,
-                "reorderPoint": reorder_point,
+                "reorderPoint": rop,
                 "reorderQty": reorder_qty,
-                "safetyStock": safety_stock,
-                "leadTime": lead_time_days,
+                "safetyStock": safety,
+                "leadTime": lt,
                 "costSavings": round(savings, 2),
                 "riskLevel": risk,
             })

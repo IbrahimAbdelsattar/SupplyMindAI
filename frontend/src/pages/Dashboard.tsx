@@ -21,8 +21,8 @@ const containerVariants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.05,
+      staggerChildren: 0.03,
+      delayChildren: 0.02,
     },
   },
 };
@@ -33,7 +33,7 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.3, ease: easeOutExpo },
+    transition: { duration: 0.15, ease: easeOutExpo },
   },
 };
 

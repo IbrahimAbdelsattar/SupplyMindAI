@@ -1,6 +1,7 @@
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 
 interface KPICardProps {
@@ -38,18 +39,20 @@ export const KPICard = ({
   const changeColor = isPositive ? '#10B981' : '#EF4444';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.5, delay: index * 0.08, ease: [0.23, 1, 0.32, 1] }}
-      whileHover={{ 
-        scale: 1.02, 
-        y: -4,
-        transition: { type: 'spring', stiffness: 300, damping: 22 }
-      }}
-      whileTap={{ scale: 0.98 }}
-      className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-full cursor-default relative overflow-hidden neu-card min-w-0"
-    >
+    <Popover>
+      <PopoverTrigger asChild>
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.15, delay: index * 0.03, ease: [0.23, 1, 0.32, 1] }}
+          whileHover={{ 
+            scale: 1.02, 
+            y: -4,
+            transition: { type: 'spring', stiffness: 300, damping: 22 }
+          }}
+          whileTap={{ scale: 0.98 }}
+          className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-full cursor-pointer relative overflow-hidden neu-card min-w-0"
+        >
       {/* Decorative background glow based on the KPI color */}
       <motion.div 
         className="absolute -right-6 -top-6 w-28 h-28 rounded-full blur-[40px] opacity-10 pointer-events-none"
@@ -107,5 +110,21 @@ export const KPICard = ({
         )}
       </div>
     </motion.div>
+    </PopoverTrigger>
+    <PopoverContent 
+      className="w-64 rounded-2xl p-4 origin-[var(--radix-popover-content-transform-origin)]"
+      sideOffset={8}
+    >
+      <div className="space-y-2">
+        <h4 className="font-medium leading-none flex items-center gap-2">
+          <Icon className="w-4 h-4 text-muted-foreground" />
+          {title}
+        </h4>
+        <p className="text-sm text-muted-foreground">
+          Detailed historical breakdown and related metrics will be visualized here in a future update.
+        </p>
+      </div>
+    </PopoverContent>
+  </Popover>
   );
 };

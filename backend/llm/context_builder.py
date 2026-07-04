@@ -75,6 +75,94 @@ def build_product_context(product_id: str, forecasts: list[dict[str, Any]]) -> s
     )
 
 
+def build_shap_context(shap_features: list[dict[str, Any]], product_id: str | None = None) -> str:
+    """Build a context string from SHAP feature importance data for LLM consumption.
+
+    Parameters
+    ----------
+    shap_features : list[dict]
+        List of dicts with keys: feature, importance, direction
+    product_id : str, optional
+        Product identifier for labeling
+
+    Returns
+    -------
+    str — formatted context string
+    """
+    if not shap_features:
+        return "No SHAP feature importance data available."
+
+    label = f" for {product_id}" if product_id else ""
+    lines = [f"## SHAP Feature Importance{label}", ""]
+
+    for i, f in enumerate(shap_features[:10], 1):
+        impact_word = "increases" if f["direction"] == "positive" else "decreases"
+        lines.append(
+            f"  {i}. **{f['feature']}** — importance={f['importance']:.6f}, "
+            f"{impact_word} predicted demand"
+        )
+
+    total = sum(f["importance"] for f in shap_features[:10])
+    lines.append("")
+    lines.append(f"Top-10 features account for {total:.4f} total importance weight.")
+
+    return "\n".join(lines)
+
+
+def build_insights_context(
+    product_id: str,
+    product_name: str,
+    category: str,
+    unit_price: float,
+    stats: dict[str, Any],
+    shap_features: list[dict[str, Any]],
+) -> str:
+    """Build a comprehensive context string for the AI Insights endpoint.
+
+    Combines product metadata, demand statistics, inventory position, and
+    SHAP feature importance into a single context string for the LLM.
+    """
+    lines = [
+        f"## Product: {product_name} ({product_id})",
+        f"**Category:** {category}",
+        f"**Unit Price:** ${unit_price:.2f}",
+        "",
+        "## Demand Statistics (Last 30 Days)",
+        f"- Average daily demand: {stats.get('velocity_30', 0):.1f} units",
+        f"- Previous 30-day average: {stats.get('velocity_prev', 0):.1f} units",
+        f"- 90-day average: {stats.get('velocity_90', 0):.1f} units",
+        f"- Demand trend: {stats.get('trend_pct', 0):+.1f}%",
+        f"- Demand volatility (CV): {stats.get('demand_volatility', 0):.2f}",
+        "",
+        "## Inventory Position",
+        f"- Current stock: {stats.get('current_stock', 0):,} units",
+        f"- Coverage at current velocity: {stats.get('coverage_days', 0):.1f} days",
+    ]
+
+    coverage = stats.get("coverage_days", 999)
+    if coverage < 14:
+        lines.append("- ⚠ CRITICAL: Less than 2 weeks of stock remaining")
+    elif coverage > 90:
+        lines.append("- ⚠ WARNING: Over 90 days of excess inventory")
+
+    lines.append("")
+
+    # SHAP section
+    if shap_features:
+        lines.append("## SHAP Feature Importance (ML Model)")
+        lines.append("The ML model identified these as the most influential demand drivers:")
+        for i, f in enumerate(shap_features[:10], 1):
+            impact_word = "increases" if f["direction"] == "positive" else "decreases"
+            lines.append(
+                f"  {i}. **{f['feature']}** (importance={f['importance']:.6f}, {impact_word} demand)"
+            )
+    else:
+        lines.append("## SHAP Feature Importance")
+        lines.append("SHAP analysis not available for this product.")
+
+    return "\n".join(lines)
+
+
 def build_multi_product_context(products: list[dict[str, Any]], title: str = "Forecast Intelligence Overview") -> str:
     if not products:
         return "No forecast data available."

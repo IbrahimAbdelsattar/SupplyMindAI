@@ -70,36 +70,40 @@ def generate_executive_insights(
     product_forecasts: list[dict[str, Any]],
     context_str: str | None = None,
 ) -> dict[str, Any]:
+    """Generate executive insights. Context is in system prompt only — human message is instruction-only."""
     if context_str is None:
         context_str = build_multi_product_context(product_forecasts)
 
     system = EXECUTIVE_SYSTEM_PROMPT.format(context=context_str)
-    return _invoke_llm(system, EXECUTIVE_INSIGHT_PROMPT.format(context=context_str))
+    return _invoke_llm(system, EXECUTIVE_INSIGHT_PROMPT)
 
 
 def generate_high_risk_insights(
     high_risk_forecasts: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    """High-risk product analysis. Context in system prompt only."""
     context = build_multi_product_context(high_risk_forecasts, title="High-Risk Products")
     return _invoke_llm(
         EXECUTIVE_SYSTEM_PROMPT.format(context=context),
-        HIGH_RISK_INSIGHT_PROMPT.format(context=context),
+        HIGH_RISK_INSIGHT_PROMPT,
     )
 
 
 def generate_revenue_insights(
     revenue_forecasts: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    """Revenue forecast analysis. Context in system prompt only."""
     context = build_multi_product_context(revenue_forecasts, title="Revenue Forecasts")
     return _invoke_llm(
         EXECUTIVE_SYSTEM_PROMPT.format(context=context),
-        REVENUE_INSIGHT_PROMPT.format(context=context),
+        REVENUE_INSIGHT_PROMPT,
     )
 
 
 def generate_product_insight(product_id: str, forecasts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Single product insight. Context in system prompt only."""
     context = build_product_context(product_id, forecasts)
     return _invoke_llm(
         EXECUTIVE_SYSTEM_PROMPT.format(context=context),
-        EXECUTIVE_INSIGHT_PROMPT.format(context=context),
+        EXECUTIVE_INSIGHT_PROMPT,
     )

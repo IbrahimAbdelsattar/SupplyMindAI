@@ -1,72 +1,48 @@
-EXECUTIVE_SYSTEM_PROMPT = """You are a Senior Supply Chain Executive Advisor at SupplyMind AI.
-
-Your role is to analyze forecast intelligence data and provide strategic recommendations to supply chain executives.
-
-You MUST reason from the **forecast intelligence data** provided below. Do NOT invent data or use external knowledge about specific products.
-
-For every analysis, structure your response as:
-
-## Executive Summary
-A clear 2-3 sentence overview of the most critical findings.
-
-## Key Risks
-List specific risks with:
-- WHAT the risk is
-- WHY it matters
-- BUSINESS IMPACT in quantitative terms
-
-## Strategic Recommendations
-List actionable recommendations with:
-- WHAT action to take
-- WHY now
-- EXPECTED OUTCOME
-
-## Revenue Opportunities
-Identify products with the highest forecasted revenue and growth potential.
-
----
-
-Use this forecast intelligence to inform your analysis:
-{context}
-"""
-
-EXECUTIVE_INSIGHT_PROMPT = """Analyze the following forecast intelligence data for the SupplyMind AI supply chain.
+EXECUTIVE_SYSTEM_PROMPT = """Senior Supply Chain Executive Advisor. Analyze forecast intelligence data below. Do NOT invent data — reason only from provided data.
 
 {context}
 
-Provide your analysis as a structured JSON with these keys:
-- "summary": string — 2-3 sentence executive summary
-- "risks": array of {{"risk": string, "impact": string, "severity": "high"|"medium"|"low"}}
-- "recommendations": array of {{"action": string, "rationale": string, "expected_outcome": string}}
-- "revenue_opportunities": array of {{"product": string, "forecasted_revenue": float, "strategy": string}}
+## Response Structure
+1. **Executive Summary** — 2-3 critical findings
+2. **Key Risks** — WHAT/WHY/BUSINESS IMPACT (quantified)
+3. **Strategic Recommendations** — WHAT action/WHY now/EXPECTED OUTCOME
+4. **Revenue Opportunities** — products with highest forecasted revenue + growth"""
 
-Return ONLY valid JSON, no markdown formatting, no code fences.
-"""
+EXECUTIVE_INSIGHT_PROMPT = """Analyze the forecast data above. Return JSON ONLY (no markdown, no fences):
+- "summary": string (2-3 sentences)
+- "risks": [{{"risk": str, "impact": str, "severity": "high"|"medium"|"low"}}]
+- "recommendations": [{{"action": str, "rationale": str, "expected_outcome": str}}]
+- "revenue_opportunities": [{{"product": str, "forecasted_revenue": float, "strategy": str}}]"""
 
-HIGH_RISK_INSIGHT_PROMPT = """The following products have been flagged with HIGH stock risk:
+HIGH_RISK_INSIGHT_PROMPT = """Analyze the HIGH-risk products above. For each: (1) cause of risk, (2) urgency, (3) financial impact, (4) reorder actions.
+Return JSON ONLY: "summary", "risks", "recommendations", "revenue_opportunities"."""
 
-{context}
+SUPPLY_CHAIN_INSIGHTS_PROMPT = """Supply Chain Intelligence Analyst. Analyze product-level demand data including demand stats, inventory position, and SHAP feature importance. Ground ALL insights in provided data — never invent metrics.
 
-For each high-risk product, analyze:
-1. What is causing the stock risk?
-2. How urgently does each product need attention?
-3. What is the financial impact of stockouts?
-4. What reorder actions are recommended?
+RULES:
+- Reference specific numbers (demand velocity, trend %, coverage days, SHAP values)
+- Each insight cites a specific data point as evidence
+- Severity: high = immediate financial impact, medium = moderate risk, low = informational
+- Recommendations must be specific and actionable
+- If SHAP available, use it to explain WHY demand patterns exist
 
-Provide your analysis as JSON with keys: "summary", "risks", "recommendations", "revenue_opportunities"
-Return ONLY valid JSON.
-"""
+Return JSON ONLY matching this schema:
+{{
+  "insights": [
+    {{
+      "title": "string (max 60 chars)",
+      "description": "string with specific data points",
+      "impact": "high | medium | low",
+      "direction": "up | down | flat",
+      "factor": "Historical Trends | ML Feature Analysis | Inventory Position | Demand Variability | Seasonality",
+      "confidence": 0-100
+    }}
+  ],
+  "executive_summary": "string (2-3 sentences)",
+  "recommendations": ["string — specific actionable recommendation"]
+}}
 
-REVENUE_INSIGHT_PROMPT = """Analyze the following revenue forecasts:
+Generate 3-6 insights max, prioritize by impact. Data: {context}"""
 
-{context}
-
-For each product:
-1. What is driving revenue?
-2. Which products have the highest growth potential?
-3. Which products have declining revenue risk?
-4. What strategic actions should be taken?
-
-Provide your analysis as JSON with keys: "summary", "risks", "recommendations", "revenue_opportunities"
-Return ONLY valid JSON.
-"""
+REVENUE_INSIGHT_PROMPT = """Analyze revenue forecasts above. For each product: (1) revenue drivers, (2) growth potential, (3) declining revenue risk, (4) strategic actions.
+Return JSON ONLY: "summary", "risks", "recommendations", "revenue_opportunities"."""

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
 type Product = { product_id: string; product_name: string };
@@ -48,8 +49,8 @@ function HeatmapCellComponent({
   return (
     <div
       className="h-10 rounded-lg flex items-center justify-center text-[13px] font-semibold
-                 cursor-default select-none transition-all duration-150
-                 hover:shadow-md hover:brightness-110"
+                 cursor-default select-none transition-[transform,opacity] duration-150 ease-out
+                 hover:scale-[1.05] hover:opacity-90 relative z-0 hover:z-10"
       style={{ backgroundColor: bg, color: fg }}
       aria-label={label}
     >
@@ -82,37 +83,23 @@ function HeatmapSkeleton({ storeCount }: { storeCount: number }) {
 }
 
 export const HeatmapChart = () => {
-  const [apiProducts, setApiProducts] = useState<Product[]>([]);
-  const [apiStores, setApiStores] = useState<Store[]>([]);
-  const [apiData, setApiData] = useState<HeatmapCell[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setError(null);
-      try {
-        const [prods, heat] = await Promise.all([
-          fetchApi('/data/products') as Promise<Product[]>,
-          fetchApi('/data/heatmap') as Promise<HeatmapResponse>,
-        ]);
-        if (cancelled) return;
-        if (prods) setApiProducts(prods);
-        if (heat) {
-          setApiData(heat.data);
-          if (heat.stores?.length) setApiStores(heat.stores);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load heatmap');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    void load();
-    return () => { cancelled = true; };
-  }, []);
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['heatmapData'],
+    queryFn: async () => {
+      const [prods, heat] = await Promise.all([
+        fetchApi('/data/products') as Promise<Product[]>,
+        fetchApi('/data/heatmap') as Promise<HeatmapResponse>,
+      ]);
+      return { prods, heat };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const apiProducts = data?.prods || [];
+  const apiData = data?.heat?.data || [];
+  const apiStores = data?.heat?.stores || [];
 
   const { minDemand, maxDemand } = useMemo(() => {
     if (apiData.length === 0) return { minDemand: 0, maxDemand: 200 };
@@ -145,7 +132,7 @@ export const HeatmapChart = () => {
             </svg>
           </div>
           <h3 className="text-base font-bold text-foreground mb-1">Unable to load heatmap</h3>
-          <p className="text-sm text-muted-foreground max-w-xs">{error}</p>
+          <p className="text-sm text-muted-foreground max-w-xs">{error instanceof Error ? error.message : 'Unknown error'}</p>
         </div>
       </div>
     );

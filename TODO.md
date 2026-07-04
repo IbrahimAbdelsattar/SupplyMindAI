@@ -1,2 +1,0 @@
-- [x] Clerk removed — all auth gates stripped, system is demo-mode open.
-- [ ] Re-run frontend typecheck and (if possible) a quick runtime sanity check for HeatmapChart.

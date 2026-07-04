@@ -125,8 +125,12 @@ def _build_inventory_summary() -> pd.DataFrame:
         pid = str(r["product_id"])
         pname = str(r.get("product_name", pid))
         cat = str(r.get("category", ""))
-        unit_price = float(r.get("unit_price", 0.0)) or 0.0
-        purchase_price = float(r.get("purchase_price", 0.0)) or 0.0
+        min_p = float(r.get("min_price", 0.0)) or 0.0
+        max_p = float(r.get("max_price", 0.0)) or 0.0
+        avg_p = (min_p + max_p) / 2.0 if (min_p + max_p) > 0 else 10.0
+
+        unit_price = float(r.get("unit_price", 0.0)) or avg_p
+        purchase_price = float(r.get("purchase_price", 0.0)) or (unit_price * 0.7)
         stock = _get_latest_stock(pid, inv)
 
         sales_sub = sales[sales["product_id"] == pid]
@@ -157,7 +161,10 @@ def _build_sales_performance() -> pd.DataFrame:
         pid = str(r["product_id"])
         pname = str(r.get("product_name", pid))
         cat = str(r.get("category", ""))
-        unit_price = float(r.get("unit_price", 0.0)) or 0.0
+        min_p = float(r.get("min_price", 0.0)) or 0.0
+        max_p = float(r.get("max_price", 0.0)) or 0.0
+        avg_p = (min_p + max_p) / 2.0 if (min_p + max_p) > 0 else 10.0
+        unit_price = float(r.get("unit_price", 0.0)) or avg_p
 
         sales_sub = sales[sales["product_id"] == pid].copy()
         qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
@@ -192,7 +199,10 @@ def _build_abc_analysis() -> pd.DataFrame:
         pid = str(r["product_id"])
         pname = str(r.get("product_name", pid))
         cat = str(r.get("category", ""))
-        unit_price = float(r.get("unit_price", 0.0)) or 0.0
+        min_p = float(r.get("min_price", 0.0)) or 0.0
+        max_p = float(r.get("max_price", 0.0)) or 0.0
+        avg_p = (min_p + max_p) / 2.0 if (min_p + max_p) > 0 else 10.0
+        unit_price = float(r.get("unit_price", 0.0)) or avg_p
 
         sales_sub = sales[sales["product_id"] == pid]
         qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
@@ -228,7 +238,10 @@ def _build_purchase_analysis() -> pd.DataFrame:
     for _, r in prods.iterrows():
         pid = str(r["product_id"])
         pname = str(r.get("product_name", pid))
-        purchase_price = float(r.get("purchase_price", 0.0)) or 0.0
+        min_p = float(r.get("min_price", 0.0)) or 0.0
+        max_p = float(r.get("max_price", 0.0)) or 0.0
+        avg_p = (min_p + max_p) / 2.0 if (min_p + max_p) > 0 else 10.0
+        purchase_price = float(r.get("purchase_price", 0.0)) or (avg_p * 0.7)
 
         psub = purchases[purchases["product_id"] == pid] if "product_id" in purchases.columns else pd.DataFrame()
         if psub.empty:
@@ -368,10 +381,16 @@ def _load_existing_reports() -> list[ReportItem]:
     for csv_file in REPORTS_DIR.glob("*.csv"):
         if csv_file.name in seen_csv:
             continue
+        report_type = "custom"
+        for k, v in REPORT_TYPE_MAP.items():
+            if csv_file.name.startswith(k):
+                report_type = v
+                break
+
         reports.append(ReportItem(
             id=csv_file.stem,
             title=csv_file.stem.replace("_", " ").title(),
-            type=REPORT_TYPE_MAP.get(csv_file.stem.split("_")[0], "custom"),
+            type=report_type,
             format="csv",
             period_start=datetime.now(timezone.utc).isoformat(),
             period_end=datetime.now(timezone.utc).isoformat(),

@@ -1,0 +1,14 @@
+{
+  "id": "sales_performance_20260704110903",
+  "title": "Sales Performance Report",
+  "description": "Revenue, units sold, and daily demand trends by product",
+  "type": "forecast",
+  "format": "csv",
+  "period_start": "2026-06-04T11:09:03.189405+00:00",
+  "period_end": "2026-07-04T11:09:03.189405+00:00",
+  "generated_at": "2026-07-04T11:09:03.189405Z",
+  "date": "2026-07-04T11:09:03.189405+00:00",
+  "status": "ready",
+  "file_size": 799,
+  "download_url": "/system/reports/download/sales_performance_20260704_110903.csv"
+}

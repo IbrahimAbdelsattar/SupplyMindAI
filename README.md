@@ -73,12 +73,12 @@
 
 **SupplyMind AI** is an **enterprise-grade SaaS platform** designed to revolutionize supply chain operations through cutting-edge AI. It combines:
 
-- 🤖 **Advanced ML Models** — XGBoost, LSTM, GRU, and Temporal Fusion Transformers
+- 🤖 **Advanced ML Models** — XGBoost demand forecasting (R² = 0.9984, WAPE = 1.51%)
 - 🔍 **Explainability Layer** — SHAP-powered feature attribution and business insights
 - 📦 **Inventory Intelligence** — EOQ, Safety Stock, Reorder Point automation
-- 🧠 **LLM-Powered Analytics** — OpenRouter (multi-model gateway) for natural-language supply chain reasoning
-- 🛡️ **Production MLOps** — Drift detection, automated retraining, MLflow registry
-- ☁️ **Azure Cloud Native** — AKS, Data Factory, Azure ML, App Insights
+- 🧠 **LLM-Powered Analytics** — OpenRouter multi-model gateway for natural-language supply chain reasoning
+- 🛡️ **Production Guardrails** — Input/output sanitization, rate limiting, prompt injection defense
+- 🌐 **Bilingual Interface** — Full EN/AR support with RTL layout
 
 > Built for **Data Scientists**, **Supply Chain Analysts**, and **Operations Managers** who need AI that explains itself.
 
@@ -108,7 +108,7 @@ Modern businesses face critical supply chain bottlenecks:
 
 | Challenge | Our Solution |
 |-----------|-------------|
-| Bad forecasts | Multi-model ensemble (LSTM + XGBoost + TFT) |
+| Bad forecasts | XGBoost ensemble with R² = 0.9984 |
 | Overstock | EOQ + Safety Stock optimizer |
 | Stockouts | Predictive alert engine |
 | Black-box AI | SHAP explainability layer |
@@ -128,11 +128,11 @@ Modern businesses face critical supply chain bottlenecks:
 <td align="center" width="33%">
 <br/>
 <b>📈 Demand Forecasting</b><br/><br/>
-Multi-horizon (7/14/30+ days)<br/>
+Multi-horizon (1/3/6 months)<br/>
 Probabilistic confidence intervals<br/>
 Seasonality & promotion-aware<br/>
 Product-level & store-level<br/>
-Continuous retraining<br/><br/>
+XGBoost with 99.84% accuracy<br/><br/>
 </td>
 <td align="center" width="33%">
 <br/>
@@ -169,15 +169,15 @@ Configurable thresholds<br/><br/>
 Model performance tracking<br/>
 Automated retraining triggers<br/>
 Data drift monitoring<br/>
-Inference latency tracking<br/>
-Model version control<br/><br/>
+LangSmith agent tracing<br/>
+System resource gauges<br/><br/>
 </td>
 <td align="center" width="33%">
 <br/>
 <b>📊 Reporting & Exports</b><br/><br/>
 Weekly & monthly AI reports<br/>
 Executive summaries<br/>
-CSV / PDF exports<br/>
+CSV exports<br/>
 Scheduled report delivery<br/>
 LLM-generated narratives<br/><br/>
 </td>
@@ -194,7 +194,7 @@ LLM-generated narratives<br/><br/>
 |:------:|:------:|-------------|
 | 📉 **Stock-out Risk** | **−31%** | Predictive alerts prevent inventory gaps |
 | 💰 **Inventory Cost** | **−22%** | Optimal reorder quantities reduce holding cost |
-| 🎯 **Forecast Accuracy** | **94.2%** | Ensemble model outperforms single-model baselines |
+| 🎯 **Forecast Accuracy** | **99.84%** | XGBoost model with R² = 0.9984, WAPE = 1.51% |
 | 🚚 **On-time Delivery** | **98.7%** | Proactive planning ensures supply availability |
 | ⏱️ **Planning Time** | **−60%** | Automated recommendations vs manual analysis |
 | 📈 **Working Capital** | **+18%** | Freed capital from reduced excess inventory |
@@ -224,26 +224,27 @@ flowchart LR
 
     subgraph API["⚡ FastAPI Backend"]
         gateway["/api/v1 Gateway"]
-        guardrails["Guardrails Router"]
-        forecastSvc["Forecast Service"]
+        auth["Clerk JWT Auth\nRBAC (4 roles, 19 perms)"]
+        guardrails["Guardrails Middleware\nInput/Output Sanitization"]
+        forecastSvc["Forecast Service\nXGBoost Pipeline"]
         inventorySvc["Inventory + Alert Services"]
-        insightSvc["Insights + LLM Chat"]
+        insightSvc["Insights + LLM Chat\nOpenRouter Multi-Model"]
         mlopsSvc["MLOps + Reports Services"]
         cache[("🔴 Redis Cache")]
-        gateway --> forecastSvc & inventorySvc & insightSvc & mlopsSvc
+        gateway --> auth --> guardrails --> forecastSvc & inventorySvc & insightSvc & mlopsSvc
         gateway <--> cache
     end
 
     subgraph DATA["🤖 ML Platform"]
-        raw["📂 Azure Blob / Local CSVs"]
-        ingest["Ingestion + Validation"]
-        features["Feature Engineering\nfeatures_daily.parquet"]
-        postgres[("🐘 PostgreSQL")]
-        training["XGBoost / LSTM / TFT"]
+        raw["📂 CSV Data Sources\n8 Business Datasets"]
+        ingest["Ingestion + Validation\nPandas + Pydantic"]
+        features["Feature Engineering\nTime-series features"]
+        postgres[("🐘 PostgreSQL\n+ SQLite Fallback")]
+        training["XGBoost Training\nR² = 0.9984"]
         registry["📦 MLflow Registry"]
         drift["Drift Detection + Retraining"]
         optimizer["EOQ / ROP / Safety Stock"]
-        vector[("🔍 ChromaDB / Azure AI Search")]
+        vector[("🔍 ChromaDB\nRAG Knowledge Base")]
         raw --> ingest --> features --> training --> registry
         ingest --> postgres
         features --> drift
@@ -251,10 +252,10 @@ flowchart LR
         optimizer --> postgres
     end
 
-    subgraph CLOUD["☁️ Azure Infrastructure"]
-        llm["OpenRouter API"]
-        monitor["Azure Monitor + App Insights"]
-        deploy["Docker + GitHub Actions + AKS"]
+    subgraph CLOUD["☁️ Infrastructure"]
+        llm["OpenRouter API\nMulti-Model Gateway"]
+        celery["Celery Workers\nAsync Task Queue"]
+        docker["Docker Compose\nDev + Prod Stacks"]
     end
 
     user --> app
@@ -263,8 +264,59 @@ flowchart LR
     inventorySvc --> postgres & optimizer & vector
     insightSvc --> forecastSvc & llm
     mlopsSvc --> registry & drift & postgres
-    deploy --> app & gateway
-    monitor --> gateway & registry
+    docker --> app & gateway
+    celery --> forecastSvc & inventorySvc
+```
+
+---
+
+## 🔄 Data Flow Architecture
+
+```mermaid
+flowchart TD
+    subgraph INGESTION["📥 Data Ingestion Layer"]
+        CSV["📂 8 CSV Sources\nproducts · sales · inventory\nsuppliers · contracts · BOM\nraw_materials · production"]
+        PANDAS["🐼 Pandas + Pydantic\nValidation & Cleaning"]
+        ENRICHED["📊 6 Enriched CSVs\ndemand · inventory · sales\nmonthly · product_cost · production"]
+    end
+
+    subgraph PROCESSING["⚙️ Processing Layer"]
+        FEAT["🔧 Feature Engineering\nTime-series · Seasonality\nPromotion flags · Lag features"]
+        XGBOOST["🤖 XGBoost Model\nR² = 0.9984\nWAPE = 1.51%"]
+        FORECAST["📈 Forecast Output\nPredictions · Confidence\nMonthly Summary"]
+    end
+
+    subgraph STORAGE["🗄️ Storage Layer"]
+        PG[("🐘 PostgreSQL\nUsers · Settings\nForecast Results\nKnowledge Docs")]
+        REDIS[("⚡ Redis\nAPI Cache\nSession Store")]
+        CHROMA[("🔍 ChromaDB\nVector Embeddings\nSemantic Search")]
+    end
+
+    subgraph API_LAYER["🌐 API Layer"]
+        REST["⚡ FastAPI REST\n10 Routers · 30+ Endpoints"]
+        AUTH["🔐 Clerk Auth\nJWT Verification\nDomain Validation"]
+        GUARD["🛡️ Guardrails\nInput/Output Safety\nRate Limiting"]
+    end
+
+    subgraph PRESENTATION["🖥️ Presentation Layer"]
+        DASH["📊 Dashboard\nKPIs · Heatmap · Alerts"]
+        FORE["📈 Forecasting\nProduct + Horizon\nConfidence Intervals"]
+        INV["📦 Inventory\nOptimization · Table\nAI Chatbot"]
+        INS["🧠 AI Insights\nSHAP · Recommendations\nFactor Analysis"]
+        MLOPS["⚙️ MLOps\nDrift · Retracing\nLangSmith Tracing"]
+        REP["📋 Reports\nCSV Generation\nDownload · Preview"]
+    end
+
+    CSV --> PANDAS --> ENRICHED
+    ENRICHED --> FEAT --> XGBOOST --> FORECAST
+    ENRICHED --> PG
+    FORECAST --> PG
+    FEAT --> CHROMA
+    PG --> REST
+    REDIS --> REST
+    CHROMA --> REST
+    REST --> AUTH --> GUARD
+    GUARD --> DASH & FORE & INV & INS & MLOPS & REP
 ```
 
 ---
@@ -279,20 +331,56 @@ flowchart LR
 
 ```mermaid
 graph LR
-    A["📥 Raw Data\n8 CSV Sources"] --> B["🧹 Ingestion & Validation\nPandas + Pydantic"]
+    A["📥 Raw Data\n8 CSV Sources\n~24K rows each"] --> B["🧹 Ingestion & Validation\nPandas + Pydantic\nSchema enforcement"]
     B --> C["⚙️ Feature Engineering\nTime-series features\nSeasonality encoding\nPromotion flags"]
-    C --> D["🏋️ Model Training\nXGBoost · LSTM · TFT\nGRU · ARIMA · Prophet"]
-    D --> E["📊 Evaluation\nMAE · RMSE · MAPE\nMAPE < 5.8%"]
-    E --> F["📦 MLflow Registry\nVersioning & Staging"]
-    F --> G["🚀 FastAPI Inference\nReal-time predictions"]
-    G --> H["💡 Business Insights\nSHAP + LLM narratives"]
-    H --> I["📋 Reports & Alerts\nAutomated exports"]
+    C --> D["🏋️ XGBoost Training\nR² = 0.9984\nWAPE = 1.51%"]
+    D --> E["📊 Evaluation\nMAE · RMSE · MAPE\nCross-validation"]
+    E --> F["📦 MLflow Registry\nVersioning & Staging\nModel artifacts"]
+    F --> G["🚀 FastAPI Inference\nReal-time predictions\nConfidence bounds"]
+    G --> H["💡 Business Insights\nSHAP + LLM narratives\nFactor breakdown"]
+    H --> I["📋 Reports & Alerts\n5 report types\nCSV export"]
     I -.->|"Drift detected"| D
     style A fill:#1e1b4b,color:#a5b4fc
     style D fill:#312e81,color:#c7d2fe
     style F fill:#1e3a5f,color:#93c5fd
     style H fill:#14532d,color:#86efac
 ```
+
+---
+
+## 🔐 Authentication & Authorization Flow
+
+```mermaid
+flowchart TD
+    USER["👤 User\nAttempts Login"] --> CLERK["🔐 Clerk SignIn\nCustom Neumorphism UI"]
+    CLERK --> JWT["🎫 JWT Token\nClerk-issued"]
+    JWT --> MIDDLEWARE["🔒 Auth Middleware\nExtracts Bearer token"]
+    MIDDLEWARE --> JWKS["🔑 JWKS Verification\nClerk public keys"]
+    JWKS --> DOMAIN{"🌐 Domain\nCheck"}
+    DOMAIN -->|"@supplymind.tech ✅"| RBAC{"🎭 Role\nCheck"}
+    DOMAIN -->|"Other domain ❌"| DENY["🚫 403 Forbidden"]
+    RBAC -->|"admin (full access)"| ADMIN["✅ All Routes"]
+    RBAC -->|"manager (elevated)"| MANAGER["✅ Dashboard\n+ Forecasting\n+ Reports"]
+    RBAC -->|"analyst (standard)"| ANALYST["✅ Dashboard\n+ Inventory\n+ Insights"]
+    RBAC -->|"viewer (read-only)"| VIEWER["✅ Dashboard\nOnly"]
+    RBAC -->|"unknown role ❌"| DENY
+
+    style CLERK fill:#6C47FF,color:#fff
+    style DENY fill:#DC2626,color:#fff
+    style ADMIN fill:#059669,color:#fff
+    style MANAGER fill:#0891B2,color:#fff
+    style ANALYST fill:#7C3AED,color:#fff
+    style VIEWER fill:#6B7280,color:#fff
+```
+
+**Role Hierarchy:** `admin` > `manager` > `analyst` > `viewer`
+
+| Role | Dashboard | Inventory | Insights | Forecasting | Reports | MLOps | Settings |
+|------|:---------:|:---------:|:--------:|:-----------:|:-------:|:-----:|:--------:|
+| 👑 Admin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 📊 Manager | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| 🔍 Analyst | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 👁️ Viewer | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 
@@ -303,58 +391,250 @@ graph LR
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | **Frontend** | React 18 + TypeScript + Vite | SPA Dashboard & UI |
-| **Styling** | Tailwind CSS + Shadcn/UI + Framer Motion | Design system & animations |
+| **Styling** | Tailwind CSS + Shadcn/UI + Framer Motion | Neumorphism design system & animations |
+| **Auth** | Clerk (@clerk/clerk-react) | JWT authentication, domain validation |
+| **State** | React Query + Context API | Server state + global preferences |
+| **i18n** | react-i18next | EN/AR with RTL support |
 | **Backend** | FastAPI + Python 3.10+ | REST API & business logic |
-| **Database** | PostgreSQL (Azure) | Persistent data store |
+| **Database** | PostgreSQL (prod) / SQLite (dev) | Persistent data store |
 | **Cache** | Redis | API response caching |
-| **ML Models** | XGBoost, PyTorch (LSTM/GRU/TFT) | Demand forecasting |
+| **ML Model** | XGBoost (trained .pkl) | Demand forecasting (R² = 0.9984) |
 | **AutoML** | Scikit-learn + SHAP | Feature selection & explainability |
-| **MLOps** | MLflow + Azure ML | Model registry & tracking |
-| **Vector DB** | ChromaDB / Azure AI Search | RAG knowledge base |
-| **LLM** | OpenRouter (GPT-4o, DeepSeek, etc.) | Natural language insights |
-| **Cloud** | Microsoft Azure (AKS, Data Factory, Blob) | Infrastructure |
-| **CI/CD** | GitHub Actions + Azure DevOps | Automated deployment |
-| **Containers** | Docker + Kubernetes | Scalable deployment |
-| **Monitoring** | Azure Monitor + App Insights | Production observability |
+| **MLOps** | MLflow + LangSmith | Model registry & agent tracing |
+| **Vector DB** | ChromaDB | RAG knowledge base |
+| **LLM** | OpenRouter (multi-model gateway) | Natural language insights |
+| **Queue** | Celery + Redis | Async task processing |
+| **Guardrails** | Custom middleware | Input/output safety, rate limiting |
+| **Containers** | Docker Compose (dev + prod) | Scalable deployment |
 
 </div>
 
 ---
 
-## ☁️ Azure Cloud Infrastructure
+## 🗄️ Database Schema
 
-<div align="center">
+```mermaid
+erDiagram
+    USERS {
+        string id PK "Clerk user ID"
+        string email "Unique email"
+        string name "Display name"
+        string role "admin/manager/analyst/viewer"
+        boolean active "Account status"
+        datetime created_at "Registration date"
+    }
+
+    FORECAST_RESULTS {
+        int id PK "Auto-increment"
+        string product_id "Product reference"
+        date forecast_date "Forecast target date"
+        float predicted_demand "ML prediction"
+        float confidence_lower "Lower bound"
+        float confidence_upper "Upper bound"
+        string model_version "MLflow version"
+        datetime created_at "Prediction timestamp"
+    }
+
+    KNOWLEDGE_DOCUMENTS {
+        int id PK "Auto-increment"
+        string title "Document title"
+        text content "Full text content"
+        string category "Document category"
+        datetime ingested_at "Ingestion timestamp"
+    }
+
+    KNOWLEDGE_EMBEDDINGS {
+        int id PK "Auto-increment"
+        int document_id FK "References knowledge_documents"
+        text chunk "Text chunk"
+        vector embedding "ChromaDB vector"
+    }
+
+    CONVERSATIONS {
+        int id PK "Auto-increment"
+        string user_id FK "References users"
+        text message "Chat message"
+        string role "user/assistant"
+        datetime created_at "Message timestamp"
+    }
+
+    AGENT_MEMORY {
+        int id PK "Auto-increment"
+        string agent_name "Agent identifier"
+        text memory_content "Stored memory"
+        string context "Memory context"
+        datetime created_at "Memory timestamp"
+    }
+
+    USER_SETTINGS {
+        int id PK "Auto-increment"
+        string user_id FK "References users"
+        json preferences "Theme, currency, etc."
+        datetime updated_at "Last update"
+    }
+
+    USERS ||--o{ CONVERSATIONS : "has"
+    USERS ||--o{ USER_SETTINGS : "has"
+    KNOWLEDGE_DOCUMENTS ||--o{ KNOWLEDGE_EMBEDDINGS : "chunks"
+```
+
+---
+
+## ☁️ Docker Deployment Architecture
 
 ```mermaid
 graph TD
-    ADL["🏔️ Azure Data Lake\nRaw Data Ingestion"] --> ADF["🔄 Azure Data Factory\nOrchestrated ETL"]
-    ADF --> BLOB["📦 Azure Blob Storage\nProcessed Data"]
-    BLOB --> AML["🤖 Azure Machine Learning\nTraining Compute"]
-    AML --> MLFLOW["📋 MLflow Registry\nModel Versioning"]
-    MLFLOW --> AKS["⚓ Azure Kubernetes Service\nModel Serving"]
-    AKS --> APIM["🔀 API Management\nRate Limiting & Auth"]
-    APIM --> APP["📱 React SPA\nUser Interface"]
-    AZPG["🐘 Azure PostgreSQL\nApplication DB"] <--> AKS
-    AZMON["📡 Azure Monitor\n+ App Insights"] --> AKS
-    AZMON --> MLFLOW
-    GHACTIONS["⚙️ GitHub Actions\nCI/CD Pipeline"] --> AKS
-    style AML fill:#1e3a8a,color:#bfdbfe
-    style AKS fill:#0f766e,color:#99f6e4
-    style APP fill:#4c1d95,color:#ddd6fe
+    subgraph DEV["🛠️ Development Stack"]
+        DPG["🐘 PostgreSQL\nPort: 5433"]
+        DBE["⚡ FastAPI Backend\nPort: 8000"]
+        DFE["🖥️ Frontend (nginx)\nPort: 8080"]
+        DPG --> DBE
+        DFE --> DBE
+    end
+
+    subgraph PROD["🚀 Production Stack"]
+        PPG["🐘 PostgreSQL 16\nPersistent Volume"]
+        PRD["🔴 Redis 7\nCache + Queue"]
+        PBE["⚡ FastAPI Backend\nPort: 8000"]
+        PFE["🖥️ Frontend (nginx)\nPort: 8080"]
+        PCEL["⚙️ Celery Worker\nML + RAG + Reports"]
+        PCELB["⏰ Celery Beat\nScheduled Tasks"]
+        PPG --> PBE
+        PRD --> PBE
+        PRD --> PCEL
+        PCELB --> PCEL
+        PFE --> PBE
+    end
+
+    style DEV fill:#1e3a5f,color:#93c5fd
+    style PROD fill:#14532d,color:#86efac
 ```
 
-</div>
+| Service | Dev Stack | Prod Stack |
+|---------|-----------|------------|
+| 🐘 PostgreSQL | ✅ Port 5433 | ✅ Persistent Volume |
+| 🔴 Redis | ❌ | ✅ Cache + Celery Broker |
+| ⚡ Backend | ✅ Port 8000 | ✅ Port 8000 |
+| 🖥️ Frontend | ✅ Port 8080 | ✅ Port 8080 |
+| ⚙️ Celery Worker | ❌ | ✅ ML + RAG tasks |
+| ⏰ Celery Beat | ❌ | ✅ Scheduled jobs |
 
-| Component | Azure Service | Status |
-|-----------|--------------|--------|
-| 🗄️ Data Ingestion | Azure Data Factory | Planned |
-| 📦 Storage | Azure Data Lake + Blob Storage | Planned |
-| 🐘 Database | Azure PostgreSQL Flexible Server | Planned |
-| 🤖 ML Training | Azure Machine Learning Compute | Planned |
-| 📋 Model Registry | MLflow on Azure ML | Planned |
-| ⚓ Deployment | Azure Kubernetes Service (AKS) | Planned |
-| 📡 Monitoring | Azure Monitor + Application Insights | Planned |
-| ⚙️ CI/CD | GitHub Actions + Azure DevOps Pipelines | Active |
+---
+
+## 🌐 API Endpoints
+
+### Authentication & Users
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `GET` | `/auth/admin/users/me` | Any authenticated | Current user profile |
+| `GET` | `/auth/admin/users` | Manager+ | List all users |
+| `POST` | `/auth/admin/users` | Admin | Create user (domain validated) |
+| `PATCH` | `/auth/admin/users/{id}` | Admin | Update user role/status |
+| `DELETE` | `/auth/admin/users/{id}` | Admin | Soft-deactivate user |
+| `GET` | `/auth/admin/roles` | Manager+ | List roles with permissions |
+
+### Data & Dashboard
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `GET` | `/api/v1/data/products` | Any authenticated | Products with stock & demand |
+| `GET` | `/api/v1/data/kpis` | Any authenticated | KPI metrics from CSVs |
+| `GET` | `/api/v1/data/heatmap` | Any authenticated | Product×Store demand grid |
+
+### Forecasting
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `POST` | `/api/v1/forecast/predict` | Manager+ | ML prediction with confidence |
+| `POST` | `/api/v1/forecast/insights` | Manager+ | Forecast insights (stub) |
+
+### Inventory
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `GET` | `/api/v1/inventory/products` | Any authenticated | Product inventory list |
+| `GET` | `/api/v1/inventory` | Any authenticated | Full inventory with summary |
+| `GET` | `/api/v1/inventory/optimize` | Any authenticated | Optimization recommendations |
+| `POST` | `/api/v1/inventory/update` | Any authenticated | Adjust inventory levels |
+| `POST` | `/api/v1/inventory/rag-query` | Any authenticated | Inventory-specific RAG |
+
+### AI Insights
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `POST` | `/api/v1/insights/generate` | Any authenticated | Statistical insight generation |
+
+### MLOps
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `GET` | `/api/v1/mlops/metrics` | Admin | Model metrics & system resources |
+| `GET` | `/api/v1/mlops/langsmith` | Admin | LangSmith agent tracing data |
+
+### Knowledge & RAG
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `GET` | `/api/v1/knowledge/status` | Any authenticated | Knowledge base status |
+| `POST` | `/api/v1/knowledge/ingest` | Admin | Ingest document to vector store |
+| `POST` | `/api/v1/knowledge/search` | Any authenticated | Semantic search |
+| `POST` | `/api/v1/rag/query` | Any authenticated | RAG query with context |
+| `POST` | `/api/v1/copilot/chat` | Any authenticated | Copilot chat |
+| `POST` | `/api/v1/copilot/chat/stream` | Any authenticated | Streaming copilot (SSE) |
+
+### Reports & Settings
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `GET` | `/api/v1/system/alerts/active` | Any authenticated | Active stockout/low-stock alerts |
+| `POST` | `/api/v1/system/reports/generate` | Manager+ | Generate CSV reports |
+| `GET` | `/api/v1/system/reports/list` | Manager+ | List available reports |
+| `GET` | `/api/v1/system/reports/download/{f}` | Manager+ | Download report CSV |
+| `GET` | `/api/v1/settings` | Any authenticated | User settings |
+| `PUT` | `/api/v1/settings` | Any authenticated | Save user settings |
+
+---
+
+## 🛡️ Guardrails System
+
+```mermaid
+flowchart LR
+    REQ["📥 Incoming\nRequest"] --> INPUT["🔍 Input Guardrails\n20+ jailbreak patterns\nPrompt injection detection\nBase64 decoding\nSensitive data (Luhn check)"]
+    INPUT --> RATE["⏱️ Rate Limiter\nPer-user limits\nConfigurable windows"]
+    RATE --> TENANT["🏢 Tenant Guardrails\nDomain isolation\nData boundaries"]
+    TENANT --> PROCESS["⚙️ Business Logic\nForecast · Inventory · Insights"]
+    PROCESS --> OUTPUT["📤 Output Guardrails\nPII detection\nHallucination check\nResponse sanitization"]
+    OUTPUT --> MONITOR["📊 Monitor\nViolation tracking\nAudit logging"]
+    MONITOR --> RES["✅ Response"]
+
+    style INPUT fill:#7C3AED,color:#fff
+    style RATE fill:#0891B2,color:#fff
+    style TENANT fill:#059669,color:#fff
+    style OUTPUT fill:#DC2626,color:#fff
+    style MONITOR fill:#D97706,color:#fff
+```
+
+**Guardrail Components:**
+- `input_guardrails.py` — 20+ jailbreak patterns, forbidden topics, adversarial detection
+- `output_guardrails.py` — PII detection, response sanitization
+- `rag_guardrails.py` — RAG-specific input/output safety
+- `forecast_guardrails.py` — Forecast request validation
+- `agent_guardrails.py` — Agent behavior constraints
+- `tenant_guardrails.py` — Multi-tenant data isolation
+- `rate_limiter.py` — Per-user rate limiting
+- `middleware.py` — Intercepts guardrailed endpoints
+
+---
+
+## 🌐 Internationalization (i18n)
+
+```mermaid
+flowchart LR
+    USER["👤 User\nSelects Language"] --> SWITCH["🌐 Language Switcher\nEN / AR Toggle"]
+    SWITCH --> I18N["📦 i18next\n12 Namespaces"]
+    I18N --> EN["🇺🇸 English\nDefault LTR"]
+    I18N --> AR["🇸🇦 Arabic\nRTL Layout"]
+    AR --> RTL["↔️ RTL Handler\ndocument.dir = 'rtl'"]
+    EN --> LTR["↔️ LTR Handler\ndocument.dir = 'ltr'"]
+
+    style EN fill:#1e3a5f,color:#93c5fd
+    style AR fill:#14532d,color:#86efac
+```
+
+**12 Translation Namespaces:** `common`, `dashboard`, `forecasting`, `inventory`, `insights`, `reports`, `mlops`, `settings`, `landing`, `chatbot`, `ui`, `ai`
 
 ---
 
@@ -364,10 +644,10 @@ graph TD
 
 | # | Name | Role | Responsibilities |
 |---|------|------|-----------------|
-| 👑 | **Ibrahim Abdelsttar Abdelgawad** | Team Leader · Deployment | FastAPI Backend, PostgreSQL, Azure, Docker, CI/CD, Auth |
+| 👑 | **Ibrahim Abdelsttar Abdelgawad** | Team Leader · Deployment | FastAPI Backend, PostgreSQL, Docker, CI/CD, Auth |
 | 🤖 | **Kenzi Walid Sorour Hosny** | LLM Engineer | AI Insights, LLM Reasoning, Report Generation |
 | 📊 | **Rahma Shaaban Elhusseiny Shaaban** | Data Analyst | Data Pipeline, Feature Store, Dashboard Pages |
-| 🧮 | **Karim Ayman Abdelgaber Deif** | ML Engineer | XGBoost/LSTM/GRU/TFT, Training & Evaluation |
+| 🧮 | **Karim Ayman Abdelgaber Deif** | ML Engineer | XGBoost Training & Evaluation, Model Artifacts |
 | ⚙️ | **Ali El Shaarawy** | MLOps Engineer | Drift Detection, Retraining Pipeline, Model Monitoring |
 | 🔍 | **Ali Ehab Massad Abdelghany** | RAG Engineer | Inventory Page, RAG System, Alert Engine |
 
@@ -378,11 +658,11 @@ graph TD
 ```mermaid
 graph TD
     M1["👤 Rahma\nData Analyst"] --> Data["📊 Data Pipeline\nFeature Store\nDashboard Pages"]
-    M2["👤 Karim\nML Engineer"] --> Models["🤖 XGBoost/LSTM/GRU/TFT\nTraining & Evaluation\nModel Artifacts"]
+    M2["👤 Karim\nML Engineer"] --> Models["🤖 XGBoost Training\nR² = 0.9984\nModel Artifacts"]
     M3["👤 Kenzi\nLLM Engineer"] --> LLM["💡 AI Insights Page\nLLM Reasoning\nReport Generation"]
-    M4["👤 Ali E.\nRAG Engineer"] --> RAG["📦 Inventory Page\nRAG System\nAlert Engine"]
+    M4["👤 Ali Ehab\nRAG Engineer"] --> RAG["📦 Inventory Page\nRAG System\nAlert Engine"]
     M5["👤 Ali S.\nMLOps Engineer"] --> MLOps["⚙️ MLOps Page\nDrift Detection\nRetraining Pipeline"]
-    M6["👤 Ibrahim\nBackend Lead"] --> Infra["🔧 FastAPI Backend\nPostgreSQL DB\nAzure + Docker + CI/CD"]
+    M6["👤 Ibrahim\nBackend Lead"] --> Infra["🔧 FastAPI Backend\nPostgreSQL DB\nDocker + CI/CD"]
 
     M1 -->|"clean data"| M2
     M2 -->|"model outputs + SHAP"| M3
@@ -395,14 +675,14 @@ graph TD
 
 | File / Directory | Owner | Area |
 |-----------------|-------|------|
-| `data/`, `data_analysis/`, `data/enriched data/` | Rahma (M1) | Data |
-| `src/pages/Dashboard.tsx`, `src/components/dashboard/` | Rahma (M1) | Frontend |
+| `data/`, `data/enriched data/`, `data_analysis/` | Rahma (M1) | Data |
+| `frontend/src/pages/Dashboard.tsx`, `frontend/src/components/dashboard/` | Rahma (M1) | Frontend |
 | `ml_platform/models/`, `demand_model_pipeline.pkl` | Karim (M2) | ML |
-| `src/pages/AIInsights.tsx`, `LLM/`, `backend/agents/nodes.py` | Kenzi (M3) | LLM |
-| `src/pages/Inventory.tsx`, `src/components/inventory/`, `rag-powered-inventory-management/` | Ali Ehab (M4) | RAG |
-| `src/pages/MLOps.tsx`, `backend/knowledge/` | Ali S. (M5) | MLOps |
-| `backend/` (core), `.github/`, `scripts/`, `docker-compose.yml` | Ibrahim (M6) | Backend |
-| `src/pages/Forecasting.tsx` | M2 (data) + M6 (API) | Shared |
+| `frontend/src/pages/AIInsights.tsx`, `backend/llm/` | Kenzi (M3) | LLM |
+| `frontend/src/pages/Inventory.tsx`, `frontend/src/components/inventory/` | Ali Ehab (M4) | RAG |
+| `frontend/src/pages/MLOps.tsx`, `backend/knowledge/` | Ali S. (M5) | MLOps |
+| `backend/` (core), `docker-compose*.yml`, `backend/auth/` | Ibrahim (M6) | Backend |
+| `frontend/src/pages/Forecasting.tsx` | M2 (data) + M6 (API) | Shared |
 
 ---
 
@@ -417,150 +697,249 @@ supplymind-ai/
 ├── 📄 README.md                       # Project overview & documentation
 ├── 📦 package.json                    # Vite + React + shadcn/ui + Recharts + Framer Motion
 │
-├── 📊 Data Sources
-│   ├── bom.csv                        # Bill of Materials (40 rows)
-│   ├── contracts.csv                  # B2B Contracts (25 rows)
-│   ├── inventory.csv                  # Daily inventory 2020–2025 (23,753 rows)
-│   ├── production_schedule.csv        # Daily production schedules (23,753 rows)
+├── 📊 Data Sources (data/)
 │   ├── products.csv                   # Product catalog (13 products)
-│   ├── raw_materials.csv              # 6 raw materials with supplier links
-│   ├── sales_daily.csv                # Sales transactions 2020–2024 (15,001 rows)
+│   ├── sales_daily.csv                # Sales transactions 2020–2024 (~15K rows)
+│   ├── inventory.csv                  # Daily inventory 2020–2025 (~24K rows)
+│   ├── production_schedule.csv        # Daily production schedules
 │   ├── suppliers.csv                  # 8 suppliers with reliability scores
+│   ├── contracts.csv                  # B2B Contracts (25 rows)
+│   ├── bom.csv                        # Bill of Materials (40 rows)
+│   ├── raw_materials.csv              # 6 raw materials with supplier links
 │   └── enriched data/                 # 6 enriched analytical CSVs
 │
 ├── 🤖 ML Platform
-│   ├── ml_platform/models/           # Demand forecasting pipeline
-│   │   ├── demand_forecasting_pipeline.py
-│   │   └── IMPLEMENTATION_SUMMARY.md
-│   ├── demand_model_pipeline.pkl      # Trained XGBoost model artifact
-│   ├── LLM/                           # LLM reasoning engine
-│   │   ├── llm_client.py              # OpenRouter client
-│   │   ├── context_builder.py         # RAG context builder
-│   │   └── prompts.py                 # System prompts
-│   └── data_analysis/                 # Jupyter notebooks
-│       └── demand_forcasting_data_analysis.ipynb
+│   ├── ml_platform/
+│   │   ├── models/
+│   │   │   ├── demand_forecasting_pipeline.py   # XGBoost ForecastModel class
+│   │   │   ├── demand_model_pipeline.pkl        # Trained model artifact (~15MB)
+│   │   │   ├── future_forecast.csv              # Pre-computed 3-month forecast
+│   │   │   ├── shap_summary.csv                 # SHAP feature importance
+│   │   │   ├── sales_enriched.csv               # Enriched sales data
+│   │   │   ├── inventory_enriched.csv           # Enriched inventory data
+│   │   │   ├── monthly_sales.csv                # Monthly aggregations
+│   │   │   ├── product_mat_cost.csv             # Material costs
+│   │   │   ├── demand_compliance.csv            # Compliance data
+│   │   │   ├── production_enriched.csv          # Production data
+│   │   │   └── requirements.txt                 # ML dependencies
+│   │   └── analysis/
+│   │       └── demand_forcasting_data_analysis.ipynb
+│   └── LLM/                                    # LLM reasoning engine (legacy)
+│       ├── llm_client.py
+│       ├── context_builder.py
+│       └── prompts.py
 │
 ├── 🖥️ frontend/src/
-│   ├── App.tsx                        # Root component: routing & providers
+│   ├── App.tsx                        # Root: Clerk + React Query + Providers + Routes
 │   ├── main.tsx                       # Entry point
-│   ├── index.css                      # CSS variables, dark/light theme tokens
+│   ├── index.css                      # Neumorphism design system + CSS variables
 │   │
-│   ├── 📄 pages/
-│   │   ├── Index.tsx                  # Landing page (hero, features, metrics)
-│   │   ├── Login.tsx                  # Auth with demo access & roles
-│   │   ├── Dashboard.tsx              # KPIs, demand chart, heatmap, alerts
-│   │   ├── Forecasting.tsx            # Forecast visualization + CSV export
-│   │   ├── Inventory.tsx              # Inventory optimization & RAG chatbot
-│   │   ├── AIInsights.tsx             # SHAP insights, factor weights, patterns
-│   │   ├── MLOps.tsx                  # Accuracy trend, drift, retraining
-│   │   ├── Reports.tsx                # Report list with download
-│   │   ├── Settings.tsx               # User preferences, theme, notifications
+│   ├── 📄 pages/ (11 pages)
+│   │   ├── Index.tsx                  # Landing page (hero, features, metrics, CTA)
+│   │   ├── Login.tsx                  # Clerk SignIn with neumorphism styling
+│   │   ├── Dashboard.tsx              # KPIs, demand heatmap, AI summary, alerts
+│   │   ├── Forecasting.tsx            # Product + horizon selectors, forecast chart, CSV export
+│   │   ├── Inventory.tsx              # Inventory optimization, table, chatbot, apply changes
+│   │   ├── AIInsights.tsx             # Product insights, SHAP cards, factor analysis
+│   │   ├── MLOps.tsx                  # Model status, LangSmith tracing, drift, resources
+│   │   ├── Reports.tsx                # Report generation, list, preview, download
+│   │   ├── Settings.tsx               # Profile, theme, regional prefs, Clerk sign-out
+│   │   ├── Unauthorized.tsx           # Access denied page
 │   │   └── NotFound.tsx               # 404 page
 │   │
 │   ├── 🧩 components/
-│   │   ├── ai/AISummaryCard.tsx       # AI-powered summary card
-│   │   ├── chatbot/AIChatbot.tsx      # Floating AI chatbot (general)
-│   │   ├── inventory/
-│   │   │   ├── InventoryTable.tsx     # Searchable inventory table
-│   │   │   ├── StockChart.tsx         # Stock by category chart
-│   │   │   └── ChatBot.tsx            # RAG inventory chatbot (Ask Stock Mind)
+│   │   ├── ai/
+│   │   │   ├── AISummaryCard.tsx       # RAG-backed AI summary with localStorage cache
+│   │   │   └── FormattedMessage.tsx    # Markdown-like formatter
+│   │   ├── chatbot/
+│   │   │   └── AIChatbot.tsx           # Global floating copilot chatbot
 │   │   ├── dashboard/
-│   │   │   ├── AlertsPanel.tsx        # Dismissible alert cards
-│   │   │   ├── DashboardHeader.tsx    # Search, date range, notifications
-│   │   │   ├── DashboardSidebar.tsx   # Collapsible sidebar with mobile support
-│   │   │   ├── DemandChart.tsx        # Recharts area/line chart
-│   │   │   ├── HeatmapChart.tsx       # Product×Store demand heatmap
-│   │   │   └── KPICard.tsx            # Animated KPI display
+│   │   │   ├── DashboardSidebar.tsx    # Collapsible sidebar with role-based nav
+│   │   │   ├── DashboardHeader.tsx     # Page header with title/subtitle
+│   │   │   ├── DashboardKPIGrid.tsx    # 4 animated KPI cards
+│   │   │   ├── HeatmapChart.tsx        # Product×Store demand heatmap
+│   │   │   ├── KPICard.tsx             # Individual KPI display
+│   │   │   ├── AlertsPanel.tsx         # Dismissible alert cards
+│   │   │   └── DemandChart.tsx         # Recharts area/line chart
+│   │   ├── inventory/
+│   │   │   ├── InventoryTable.tsx      # Virtualized sortable table (react-window)
+│   │   │   ├── ChatBot.tsx             # Inventory-specific AI chatbot
+│   │   │   └── StockChart.tsx          # Stock level chart
 │   │   ├── landing/
-│   │   │   ├── HeroSection.tsx        # Hero with CTA and animated stats
-│   │   │   ├── FeaturesSection.tsx    # Feature cards grid
-│   │   │   ├── MetricsSection.tsx     # Animated business metrics
-│   │   │   ├── UseCasesSection.tsx    # Use case showcase
-│   │   │   ├── LandingNavbar.tsx      # Landing page navigation
-│   │   │   └── Footer.tsx             # Landing page footer
-│   │   └── ui/                        # 50 shadcn/ui primitives
+│   │   │   ├── HeroSection.tsx         # Hero with animated text
+│   │   │   ├── FeaturesSection.tsx     # Features grid
+│   │   │   ├── MetricsSection.tsx      # Animated business metrics
+│   │   │   ├── UseCasesSection.tsx     # Use case showcase
+│   │   │   ├── LandingNavbar.tsx       # Landing page navigation
+│   │   │   └── Footer.tsx              # Landing page footer
+│   │   ├── mlops/
+│   │   │   ├── AccuracyChart.tsx       # Model accuracy chart
+│   │   │   ├── DriftMonitor.tsx        # Data drift monitoring
+│   │   │   ├── ModelRegistry.tsx       # Model registry display
+│   │   │   ├── RetrainingHistory.tsx   # Retraining history
+│   │   │   ├── StatusCards.tsx         # Status cards
+│   │   │   ├── SystemResources.tsx     # System resource gauges
+│   │   │   └── TracingOverview.tsx     # LangSmith tracing
+│   │   ├── brand/
+│   │   │   └── SupplyMindLogo.tsx      # Brand logo
+│   │   ├── language/
+│   │   │   └── LanguageSwitcher.tsx    # EN/AR toggle
+│   │   ├── executive/
+│   │   │   └── DashboardLayout.tsx     # Layout wrapper
+│   │   ├── ErrorBoundary.tsx           # React error boundary
+│   │   ├── LoadingSpinner.tsx          # Loading spinner
+│   │   ├── NavLink.tsx                 # Navigation link
+│   │   ├── ProtectedRoute.tsx          # Auth guard with RBAC
+│   │   └── ui/                         # 50+ shadcn/ui primitives
 │   │
 │   ├── 📚 lib/
-│   │   ├── api.ts                     # API client
-│   │   ├── knowledgeApi.ts            # Knowledge/RAG API utilities
-│   │   ├── mockData.ts                # Mock data for development
-│   │   └── utils.ts                   # cn() class merging utility
+│   │   ├── api.ts                      # API client with Clerk JWT
+│   │   ├── knowledgeApi.ts             # Knowledge/RAG API utilities
+│   │   ├── mockData.ts                 # Mock data for development
+│   │   └── utils.ts                    # cn() class merging utility
 │   │
 │   ├── 🔐 contexts/
-│   │   └── ThemeContext.tsx           # Dark/light theme
+│   │   ├── AuthContext.tsx              # Clerk auth sync, role management
+│   │   ├── CurrencyContext.tsx          # USD/EUR/GBP/EGP preference
+│   │   ├── DateRangeContext.tsx         # Date range filtering (1/7/30/90 days)
+│   │   └── ThemeContext.tsx             # Dark/light theme toggle
 │   │
-│   └── 🧪 test/                       # Test setup & examples
+│   ├── 🪝 hooks/
+│   │   ├── use-mobile.tsx              # Mobile detection
+│   │   ├── use-toast.ts                # Toast notifications
+│   │   └── usePrefersReducedMotion.ts  # Accessibility: reduced motion
+│   │
+│   ├── 🌐 i18n/
+│   │   └── index.ts                    # i18next config (EN/AR, 12 namespaces)
+│   │
+│   └── 🧪 test/
 │       ├── setup.ts
 │       └── example.test.ts
 │
 ├── ⚙️ Backend (FastAPI)
-│   ├── main.py                        # App entry, 20+ endpoints
-│   ├── db.py                          # SQLAlchemy models (User, etc.)
-│   ├── dependencies.py                # Shared dependencies
-│   ├── bootstrap.py                   # ML model + RAG initialization
-│   ├── ml_adapter.py                  # ML model wrapper
-│   ├── analytics.py                   # Business logic helpers
-│   ├── routers/
-│   │   ├── knowledge.py               # Knowledge ingestion/search router
-│   │   └── storage.py                 # File storage router
-│   ├── agents/
-│   │   ├── graph.py                   # LangGraph agent orchestration
-│   │   ├── copilot_graph.py           # Copilot multi-agent workflow
-│   │   ├── nodes.py                   # Agent nodes (LLM, tools)
-│   │   └── state.py                   # Agent state schema
-│   ├── tools/
-│   │   ├── forecasting_tools.py       # Forecast tool for agents
-│   │   ├── inventory_tools.py         # Inventory tool for agents
-│   │   ├── knowledge_tools.py         # Knowledge search tools
-│   │   ├── mlops_tools.py             # MLOps metrics tool
-│   │   └── rag_tools.py               # RAG query tool
-│   ├── knowledge/
-│   │   ├── rag.py                     # Production RAG generation
-│   │   ├── search.py                  # Local semantic vector search
-│   │   ├── embeddings.py              # Text embedding generation
-│   │   ├── ingestion.py               # Document ingestion pipeline
-│   │   ├── memory.py                  # Agent conversation memory
-│   │   ├── hooks.py                   # Operational hooks
-│   │   ├── copilot.py                 # Copilot orchestration
-│   │   ├── config.py                  # Knowledge settings
-│   │   ├── client.py                  # Knowledge database sessions
-│   │   ├── langsmith_tracing.py       # LangSmith observability
-│   │   ├── storage.py                 # File storage
-│   │   └── stream.py                  # SSE streaming
+│   ├── main.py                         # App entry, lifespan, middleware, 20+ endpoints
+│   ├── db.py                           # SQLAlchemy models (7 tables), SQLite/PostgreSQL
+│   ├── bootstrap.py                    # ML model + RAG initialization
+│   ├── ml_adapter.py                   # ML model wrapper
+│   ├── analytics.py                    # Business logic helpers
+│   ├── globals.py                      # Global state (STORE, ML_MODEL, FORECAST_INTELLIGENCE)
+│   ├── dependencies.py                 # Shared dependencies
+│   │
+│   ├── 🔐 auth/
+│   │   ├── dependencies.py             # JWT verification (Clerk JWKS → RBAC)
+│   │   ├── rbac.py                     # 4 roles, 19 permissions, hierarchy
+│   │   ├── middleware.py               # Auth enrichment middleware
+│   │   ├── domain.py                   # Domain validation (@supplymind.tech)
+│   │   └── audit.py                    # Audit logging
+│   │
+│   ├── 🛡️ guardrails/
+│   │   ├── middleware.py               # Intercepts guardrailed endpoints
+│   │   ├── config.py                   # Guardrails configuration
+│   │   ├── input_guardrails.py         # 20+ jailbreak patterns, prompt injection
+│   │   ├── output_guardrails.py        # PII detection, response sanitization
+│   │   ├── rag_guardrails.py           # RAG-specific safety
+│   │   ├── forecast_guardrails.py      # Forecast validation
+│   │   ├── agent_guardrails.py         # Agent behavior constraints
+│   │   ├── tenant_guardrails.py        # Multi-tenant isolation
+│   │   ├── rate_limiter.py             # Per-user rate limiting
+│   │   ├── monitor.py                  # Violation tracking
+│   │   ├── models.py                   # Guardrail data models
+│   │   ├── nemo_policies.py            # NeMo guardrail policies
+│   │   ├── red_team.py                 # Red team testing
+│   │   └── deepeval_integration.py     # DeepEval integration
+│   │
+│   ├── 🌐 routers/ (12 routers)
+│   │   ├── auth.py                     # /auth/admin — User CRUD, RBAC
+│   │   ├── system.py                   # /api/v1/system — Alerts, reports, user info
+│   │   ├── data.py                     # /api/v1/data — Products, KPIs, heatmap
+│   │   ├── forecasting.py              # /api/v1/forecast — ML predictions
+│   │   ├── inventory_domain.py         # /api/v1/inventory — Optimization, RAG
+│   │   ├── insights.py                 # /api/v1/insights — Statistical insights
+│   │   ├── mlops.py                    # /api/v1/mlops — Metrics, LangSmith
+│   │   ├── knowledge.py                # /api/v1 — RAG, copilot, ingestion
+│   │   ├── settings.py                 # /api/v1/settings — User preferences
+│   │   ├── storage.py                  # /api/v1/storage — File storage
+│   │   └── __init__.py
+│   │
+│   ├── 💡 services/
+│   │   ├── copilot_service.py          # LLM copilot chat (OpenRouter)
+│   │   ├── rag_service.py              # RAG pipeline (search + context + LLM)
+│   │   ├── forecast_intelligence_service.py  # Forecast analysis from CSV
+│   │   ├── insight_service.py          # Insight generation (stub)
+│   │   ├── optimization_service.py     # Optimization (stub)
+│   │   ├── inventory_service.py        # Inventory adjustment (stub)
+│   │   ├── analysis_service.py         # ABC/XYZ analysis (stub)
+│   │   ├── forecast_intelligence.py    # Forecast scenarios (stub)
+│   │   ├── forecast_persistence.py     # Forecast persistence
+│   │   ├── forecast_reasoning_service.py # Forecast reasoning
+│   │   └── langsmith_tracing_service.py # LangSmith tracing
+│   │
+│   ├── 🧠 llm/
+│   │   ├── client.py                   # Multi-provider LLM factory (OpenRouter/NVIDIA/OpenAI)
+│   │   ├── context_builder.py          # Context building for LLM
+│   │   ├── executive_prompts.py        # Executive prompt templates
+│   │   └── forecast_reasoning.py       # Forecast reasoning prompts
+│   │
+│   ├── 📚 knowledge/ (15 files)
+│   │   ├── client.py                   # Knowledge DB sessions
+│   │   ├── config.py                   # Knowledge settings
+│   │   ├── embeddings.py               # Text embedding generation
+│   │   ├── ingestion.py                # Document ingestion pipeline
+│   │   ├── search.py                   # Local semantic vector search
+│   │   ├── rag.py                      # RAG generation pipeline
+│   │   ├── copilot.py                  # Copilot orchestration
+│   │   ├── memory.py                   # Agent conversation memory
+│   │   ├── hooks.py                    # Operational hooks
+│   │   ├── stream.py                   # SSE streaming
+│   │   ├── storage.py                  # File storage
+│   │   ├── langsmith_tracing.py        # LangSmith observability
+│   │   ├── auth.py                     # Knowledge auth
+│   │   └── models.py                   # Knowledge data models
+│   │
+│   ├── 🔗 integrations/                # (empty — planned for ERP/SAP)
+│   │
+│   ├── 📊 schemas/                     # Pydantic schemas
+│   ├── 🔄 migrations/                  # Alembic database migrations
+│   ├── 🧪 tests/                       # Backend tests
+│   │
 │   ├── requirements.txt
-│   ├── Dockerfile
-│   └── Dockerfile.prod
+│   ├── Dockerfile                      # Dev Docker image
+│   ├── Dockerfile.prod                 # Production Docker image
+│   └── alembic.ini                     # Alembic config
 │
-├── 🔍 RAG Sub-Project
-│   ├── rag-powered-inventory-management/
-│   │   ├── src/rag/                   # RAG pipeline (ChromaDB, OpenRouter)
-│   │   ├── lovable-page/              # Standalone inventory frontend
-│   │   ├── data/chroma_db/            # Vector store
-│   │   └── notebooks/                 # RAG analysis notebooks
-│
-├── 🗄️ Self-hosted data services
-│   ├── backend/db.py                   # Users, knowledge, memory, conversations
-│   └── data/storage/                   # User-isolated local file storage
+├── ⚙️ Celery Worker
+│   ├── worker/
+│   │   ├── celery_app.py               # Celery configuration
+│   │   ├── tasks/
+│   │   │   ├── ml_tasks.py             # ML async tasks
+│   │   │   ├── notification_tasks.py   # Notification tasks
+│   │   │   ├── rag_tasks.py            # RAG ingestion tasks
+│   │   │   └── report_tasks.py         # Report generation tasks
+│   │   └── Dockerfile                  # Worker Docker image
 │
 ├── 🐳 Docker & Deployment
-│   ├── docker-compose.yml
-│   ├── docker-compose.prod.yml
-│   ├── frontend.Dockerfile.prod
-│   ├── nginx.conf
+│   ├── docker-compose.yml              # Dev stack (PostgreSQL + Backend + Frontend)
+│   ├── docker-compose.prod.yml         # Prod stack (+ Redis + Celery Worker + Beat)
+│   ├── frontend.Dockerfile.prod        # Frontend production build
+│   ├── nginx.conf                      # Nginx config for frontend
 │   ├── scripts/
 │   │   ├── deploy.sh
 │   │   ├── healthcheck.sh
 │   │   └── init-db.sql
-│   ├── start.bat / start.sh
+│   ├── start.bat / start.sh            # Quick start scripts
 │   └── stop.bat
 │
 ├── ⚙️ CI/CD
-│   └── .github/workflows/ci.yml
+│   └── .github/workflows/             # (planned — no workflow files yet)
 │
-├── 📋 Docs & Plans
+├── 📋 Docs
 │   ├── docs/
-│   │   ├── images/                    # Architecture & pipeline diagrams
-│   │   └── architecture-diagrams.md
+│   │   ├── images/                     # Architecture & pipeline diagrams
+│   │   │   ├── dashboard_preview.png
+│   │   │   ├── architecture_diagram.png
+│   │   │   └── ml_pipeline.png
+│   │   ├── architecture-diagrams.md
+│   │   └── business-plan.md
 │   ├── plans/implementation_plan.md
 │   ├── DEPLOYMENT.md
 │   ├── PRODUCTION_DEPLOYMENT.md
@@ -568,21 +947,21 @@ supplymind-ai/
 │   └── LANGSMITH_SETUP.md
 │
 ├── 🔐 Environment
-│   ├── .env                           # Active environment config
-│   ├── .env.example                   # Template with defaults
-│   ├── .env.local                     # Local overrides
-│   └── .env.production                # Production template
+│   ├── .env                            # Active environment config
+│   ├── .env.example                    # Template with defaults
+│   ├── .env.local                      # Local overrides
+│   └── .env.production                 # Production template
 │
 └── ⚙️ Config
-    ├── vite.config.ts                 # Vite dev server on :8080
-    ├── vitest.config.ts               # Test runner config
-    ├── tailwind.config.ts             # Tailwind v3 + design tokens
+    ├── vite.config.ts                  # Vite dev server on :8080
+    ├── vitest.config.ts                # Test runner config
+    ├── tailwind.config.ts              # Tailwind v3 + design tokens
     ├── postcss.config.js
     ├── eslint.config.js
-    ├── tsconfig.json                  # TypeScript project references
+    ├── tsconfig.json                   # TypeScript project references
     ├── tsconfig.app.json
     ├── tsconfig.node.json
-    ├── components.json                # shadcn/ui config
+    ├── components.json                 # shadcn/ui config
     └── .dockerignore
 ```
 
@@ -598,67 +977,70 @@ supplymind-ai/
 node >= 18.0.0
 npm >= 9.0.0
 python >= 3.10
+docker >= 24.0.0 (optional — for containerized setup)
 ```
 
-### Frontend Setup
+### Quick Start (Docker)
 
 ```bash
 # Clone the repository
 git clone https://github.com/IbrahimAbdelsattar/Demand-Forecasting-Inventory-Optimization-Engine.git
 cd Demand-Forecasting-Inventory-Optimization-Engine
 
-# Install dependencies
-npm install
+# Copy environment template
+cp .env.example .env
 
-# Start development server (runs on :8080)
-npm run dev
+# Start all services (PostgreSQL + Backend + Frontend)
+docker compose up -d
+
+# Access the application
+# Frontend: http://localhost:8080
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
 ```
 
-### Backend Setup
+### Manual Setup
 
 ```bash
-# Create Python virtual environment
+# ── Frontend ──────────────────────────────────────────────
+npm install
+npm run dev                    # Runs on :8080
+
+# ── Backend ──────────────────────────────────────────────
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install backend dependencies
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r backend/requirements.txt
-pip install -r LLM/requirements.txt
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
-
-# Start FastAPI server
+cp .env.example .env           # Edit with your API keys
 uvicorn backend.main:app --reload --port 8000
 ```
 
 ### Environment Variables
 
 ```env
-# ── LLM / AI (OpenRouter) ─────────────────────────────────────
+# ── Clerk Authentication ──────────────────────────────────
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+
+# ── LLM / AI (OpenRouter) ────────────────────────────────
 CHATBOT_API_KEY=sk-or-...       # General chatbot
 LLM_REASONING_API_KEY=sk-or-... # LLM reasoning / insights
 RAG_API_KEY=sk-or-...           # RAG knowledge retrieval
 LLM_MODEL=moonshotai/kimi-k2.6:free
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 
-# ── Storage ──────────────────────────────────────────────────
+# ── Database ──────────────────────────────────────────────
+DATABASE_URL=postgresql://user:pass@localhost:5433/supplymind
+REDIS_URL=redis://localhost:6379/0
+
+# ── Storage ──────────────────────────────────────────────
 STORAGE_PATH=./data/storage
 
-# ── LangSmith Observability (Optional) ────────────────────────
+# ── LangSmith Observability (Optional) ────────────────────
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_API_KEY=lsv2_pt_...
 LANGCHAIN_PROJECT=supplymind-ai
 
-# ── Security ──────────────────────────────────────────────────
-JWT_SECRET=your-jwt-secret
-SESSION_SECRET=your-session-secret
-
-# ── Database (Optional - uses SQLite by default) ─────────────
-# DATABASE_URL=postgresql://user:pass@host:5432/supplymind
-
-# ── MLOps ─────────────────────────────────────────────────────
+# ── MLOps ─────────────────────────────────────────────────
 MODEL_PATH=./ml_platform/models/demand_model_pipeline.pkl
 DRIFT_THRESHOLD=0.05
 LOG_LEVEL=INFO
@@ -684,13 +1066,33 @@ gantt
     section MLOps
     Drift Detection Pipeline     :done, 2026-04-29, 7d
     Automated Retraining         :done, 2026-04-29, 7d
-    section Deployment
-    Docker + Azure AKS Deploy    :active, 2026-05-06, 7d
-    CI/CD & Monitoring Setup     :2026-05-06, 7d
+    section Auth & Security
+    Clerk Authentication         :done, 2026-05-06, 7d
+    RBAC & Guardrails            :done, 2026-05-06, 7d
+    section i18n
+    EN/AR Translation            :done, 2026-05-13, 7d
+    RTL Support                  :done, 2026-05-13, 7d
     section Polish
-    Testing & QA                 :2026-05-13, 7d
-    Documentation & Demo         :2026-05-13, 7d
+    Neumorphism Design System    :done, 2026-05-20, 7d
+    Testing & QA                 :active, 2026-05-27, 7d
+    Documentation & Demo         :2026-06-03, 7d
 ```
+
+### ✅ Completed
+
+- [x] FastAPI backend with 10 routers and 30+ endpoints
+- [x] XGBoost demand forecasting (R² = 0.9984)
+- [x] Clerk authentication with JWT and domain validation
+- [x] RBAC with 4 roles and 19 permissions
+- [x] Guardrails middleware (input/output/rate limiting)
+- [x] RAG pipeline (ChromaDB + embeddings + semantic search)
+- [x] LLM copilot chat (OpenRouter multi-model)
+- [x] i18n with EN/AR and RTL support
+- [x] Neumorphism design system (light/dark mode)
+- [x] Docker Compose (dev + prod stacks)
+- [x] Celery worker for async tasks
+- [x] Report generation (5 CSV report types)
+- [x] LangSmith agent tracing integration
 
 ### 🔮 Future Improvements
 
@@ -701,7 +1103,9 @@ gantt
 - [ ] 🎭 Scenario simulation & what-if analysis
 - [ ] 🔔 Advanced anomaly detection with isolation forests
 - [ ] 📱 Mobile app (React Native)
-- [ ] 🌐 Multi-language support
+- [ ] ⚙️ CI/CD pipeline with GitHub Actions
+- [ ] 📊 ABC/XYZ analysis implementation
+- [ ] 🔄 Automated model retraining triggers
 
 ---
 
@@ -738,8 +1142,8 @@ This project is developed for **academic and research purposes** as part of a un
 <br/>
 
 <img src="https://img.shields.io/badge/Made%20with-Python-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
-<img src="https://img.shields.io/badge/Powered%20by-Azure%20AI-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white"/>
-<img src="https://img.shields.io/badge/Deployed%20on-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white"/>
+<img src="https://img.shields.io/badge/Powered%20by-OpenRouter-412991?style=for-the-badge&logo=openai&logoColor=white"/>
+<img src="https://img.shields.io/badge/Deployed%20with-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
 
 <br/><br/>
 

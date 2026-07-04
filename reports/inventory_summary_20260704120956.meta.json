@@ -1,0 +1,14 @@
+{
+  "id": "inventory_summary_20260704120956",
+  "title": "Inventory Summary Report",
+  "description": "Current stock levels, coverage days, and reorder recommendations for all products",
+  "type": "inventory",
+  "format": "csv",
+  "period_start": "2026-06-04T12:09:56.815896+00:00",
+  "period_end": "2026-07-04T12:09:56.815896+00:00",
+  "generated_at": "2026-07-04T12:09:56.815896Z",
+  "date": "2026-07-04T12:09:56.815896+00:00",
+  "status": "ready",
+  "file_size": 1145,
+  "download_url": "/system/reports/download/inventory_summary_20260704_120956.csv"
+}

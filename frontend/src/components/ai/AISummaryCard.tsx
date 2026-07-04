@@ -118,14 +118,30 @@ export function AISummaryCard({
       
       <div className="pt-2">
         {loading ? (
-          <div className="flex items-center justify-center gap-3 text-sm font-semibold text-muted-foreground py-12 neu-panel-inset rounded-2xl">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            >
-              <Loader2 className="w-5 h-5 text-primary" />
-            </motion.div>
-            Synthesizing Insights…
+          <div className="flex flex-col gap-4 py-8 px-6 neu-panel-inset rounded-2xl overflow-hidden relative">
+            {/* Shimmer effect background */}
+            <motion.div 
+              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent pointer-events-none"
+              animate={{ x: ['100%', '-100%'] }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+            />
+            
+            <div className="flex items-center gap-3 text-[15px] font-bold text-primary relative z-10">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.6, repeat: Infinity, ease: 'linear' }}
+              >
+                <Sparkles className="w-5 h-5 drop-shadow-sm" />
+              </motion.div>
+              Synthesizing Insights...
+            </div>
+            
+            <div className="space-y-3 w-full relative z-10 mt-2">
+              <div className="h-3.5 w-full rounded-md bg-primary/20 animate-pulse" style={{ animationDuration: '0.7s' }} />
+              <div className="h-3.5 w-[85%] rounded-md bg-primary/15 animate-pulse" style={{ animationDuration: '0.7s', animationDelay: '0.1s' }} />
+              <div className="h-3.5 w-[92%] rounded-md bg-primary/10 animate-pulse" style={{ animationDuration: '0.7s', animationDelay: '0.2s' }} />
+              <div className="h-3.5 w-[70%] rounded-md bg-primary/5 animate-pulse" style={{ animationDuration: '0.7s', animationDelay: '0.3s' }} />
+            </div>
           </div>
         ) : hasCachedValue && summary ? (
           <div className="space-y-6">
