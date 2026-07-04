@@ -282,16 +282,19 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    import traceback as _tb
+    tb_str = _tb.format_exc()
     logger.critical(
-        "🔥 SUCCESS_FAIL_AUDIT | GLOBAL EXCEPTION | Request: %s %s | Error: %s",
+        "🔥 SUCCESS_FAIL_AUDIT | GLOBAL EXCEPTION | Request: %s %s | Error: %s | Type: %s | Traceback:\n%s",
         request.method,
         request.url.path,
         str(exc),
-        exc_info=True
+        type(exc).__name__,
+        tb_str,
     )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An unexpected server error occurred."}
+        content={"detail": "An unexpected server error occurred.", "error_type": type(exc).__name__, "error_msg": str(exc)}
     )
 
 @app.middleware("http")

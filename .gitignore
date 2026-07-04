@@ -121,7 +121,6 @@ backend/supplymind.db
 backend/alembic.ini
 bun.lock
 bun.lockb
-package-lock.json
 
 # Build artifacts
 *.tsbuildinfo
