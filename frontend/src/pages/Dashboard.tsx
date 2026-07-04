@@ -84,13 +84,4 @@ const DashboardInner = () => {
   );
 };
 
-const Dashboard = () => {
-  return (
-    <DateRangeProvider>
-      <DashboardInner />
-    </DateRangeProvider>
-  );
-};
-
-export default Dashboard;
-
+export default DashboardInner;

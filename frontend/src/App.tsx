@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { DateRangeProvider } from "@/contexts/DateRangeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -70,13 +71,15 @@ const App = () => {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <CurrencyProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <AppRoutes />
-                </BrowserRouter>
-              </TooltipProvider>
+              <DateRangeProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <AppRoutes />
+                  </BrowserRouter>
+                </TooltipProvider>
+              </DateRangeProvider>
             </CurrencyProvider>
           </ThemeProvider>
         </QueryClientProvider>
