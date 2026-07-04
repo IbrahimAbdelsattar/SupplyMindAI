@@ -13,23 +13,17 @@ from langchain_openai import ChatOpenAI
 from backend.knowledge.config import get_knowledge_settings
 from backend.knowledge.langsmith_tracing import configure_langsmith, trace_run
 from backend.knowledge.search import semantic_search
+from backend.llm.limits import truncate_to_budget, get_input_budget
 
 LOGGER = logging.getLogger(__name__)
 
-GROUNDED_SYSTEM = """You are SupplyMind AI, a supply chain copilot.
-Answer ONLY using the provided CONTEXT and OPERATIONAL_SNAPSHOT.
-Rules:
-- If context is insufficient, say what is missing — do not invent metrics, SKUs, or dates.
-- Cite source titles when referencing historical knowledge.
-- Prefer quantitative facts from OPERATIONAL_SNAPSHOT over general statements.
-- Keep answers concise and actionable for supply chain managers.
-"""
+GROUNDED_SYSTEM = """SupplyMind AI supply chain copilot. Answer ONLY from CONTEXT and OPERATIONAL_SNAPSHOT. If context insufficient, state what's missing — never invent metrics/SKUs/dates. Cite source titles. Prefer quantitative facts from operational data. Keep answers concise and actionable."""
 
 
 from backend.llm.client import get_llm
 
-def _llm() -> ChatOpenAI:
-    return get_llm(temperature=0.1)
+def _llm(max_tokens: int = 512) -> ChatOpenAI:
+    return get_llm(temperature=0.1, max_tokens=max_tokens)
 
 
 
@@ -114,6 +108,10 @@ def rag_query(
             match_count=settings.default_match_count,
         )
         snapshot = get_operational_snapshot(product_id) if operational_context else ""
+
+        # Truncate context to token budget
+        budget = get_input_budget("rag_query")
+        context = truncate_to_budget(context, budget, label="rag_query")
 
         if not context and not snapshot:
             return {

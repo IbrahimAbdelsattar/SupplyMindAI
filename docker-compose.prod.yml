@@ -90,6 +90,7 @@ services:
       - app_data:/app/data/storage
     networks:
       - supplymind_net
+      - dokploy
 
   # -------------------------------------------------------------------------
   # 4. Frontend (Nginx)
@@ -110,6 +111,7 @@ services:
       - backend
     networks:
       - supplymind_net
+      - dokploy
 
   # -------------------------------------------------------------------------
   # 5. Consolidated Worker (All Queues + Beat)
@@ -184,3 +186,5 @@ volumes:
 networks:
   supplymind_net:
     driver: bridge
+  dokploy:
+    external: true

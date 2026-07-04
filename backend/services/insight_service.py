@@ -188,11 +188,9 @@ def _assemble_context(product_id: str, stats: dict[str, Any], shap_features: lis
 # ---------------------------------------------------------------------------
 def _invoke_llm(context: str) -> dict[str, Any]:
     """Call the LLM for supply chain reasoning. Raises if LLM not configured."""
-    import time as _time
-
     from backend.llm.client import get_llm
     from backend.llm.executive_prompts import SUPPLY_CHAIN_INSIGHTS_PROMPT
-    from backend.llm.monitor import llm_monitor
+    from backend.llm.limits import get_input_budget, truncate_to_budget
     from langchain_core.messages import HumanMessage, SystemMessage
 
     llm = get_llm(temperature=0.1)
@@ -201,56 +199,22 @@ def _invoke_llm(context: str) -> dict[str, Any]:
             "AI Insights requires an LLM. Configure OPENROUTER_API_KEY or LLM_REASONING_API_KEY."
         )
 
+    # Truncate context to token budget
+    budget = get_input_budget("ai_insights")
+    context = truncate_to_budget(context, budget, label="ai_insights")
+
     system_msg = SystemMessage(content=SUPPLY_CHAIN_INSIGHTS_PROMPT.format(context=context))
     human_msg = HumanMessage(content="Analyze the supply chain data provided in the system message. Return JSON only.")
 
-    t0 = _time.perf_counter()
+    from backend.llm.monitor import monitor_llm_call
+
     try:
-        response = llm.invoke([system_msg, human_msg])
-        latency_ms = (_time.perf_counter() - t0) * 1000
+        with monitor_llm_call(feature="ai_insights", model=llm.model_name if hasattr(llm, "model_name") else "unknown", provider="openrouter") as ctx:
+            response = llm.invoke([system_msg, human_msg])
+            ctx["record_tokens"](response, input_len=len(context), output_len=0)
         content = response.content if hasattr(response, "content") else str(response)
 
-        # Extract token usage from LangChain response metadata
-        usage = {}
-        if hasattr(response, "response_metadata"):
-            usage = response.response_metadata.get("token_usage", {})
-        input_tokens = usage.get("prompt_tokens", 0) or usage.get("input_tokens", 0) or 0
-        output_tokens = usage.get("completion_tokens", 0) or usage.get("output_tokens", 0) or 0
-
-        # Determine model and provider
-        model_name = llm.model_name if hasattr(llm, "model_name") else "unknown"
-        provider = "openrouter"
-        if hasattr(llm, "openai_api_base") and llm.openai_api_base:
-            base = llm.openai_api_base
-            if "nvidia" in base:
-                provider = "nvidia"
-            elif "openai.com" in base:
-                provider = "openai"
-
-        # Record successful call
-        llm_monitor.record_call(
-            feature="ai_insights",
-            model=model_name,
-            provider=provider,
-            latency_ms=latency_ms,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            success=True,
-            context_length=len(context),
-            response_length=len(str(content)),
-        )
-
     except Exception as exc:
-        latency_ms = (_time.perf_counter() - t0) * 1000
-        llm_monitor.record_call(
-            feature="ai_insights",
-            model=llm.model_name if hasattr(llm, "model_name") else "unknown",
-            provider="unknown",
-            latency_ms=latency_ms,
-            success=False,
-            error=str(exc),
-            context_length=len(context),
-        )
         raise
 
     LOGGER.debug("LLM raw response (first 500 chars): %.500s", content)

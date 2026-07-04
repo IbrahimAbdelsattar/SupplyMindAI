@@ -15,12 +15,13 @@ from backend.llm.executive_prompts import (
     HIGH_RISK_INSIGHT_PROMPT,
     REVENUE_INSIGHT_PROMPT,
 )
+from backend.llm.limits import get_input_budget, get_output_limit, truncate_to_budget
 
 LOGGER = logging.getLogger(__name__)
 
 from backend.llm.client import get_llm
 
-def _get_reasoning_llm():
+def _get_reasoning_llm(max_tokens: int = 1_024):
     return get_llm(temperature=0.1)
 
 
@@ -38,8 +39,8 @@ def _safe_parse_json(text: str) -> dict[str, Any]:
         return {"summary": text, "risks": [], "recommendations": [], "revenue_opportunities": []}
 
 
-def _invoke_llm(system: str, human: str) -> dict[str, Any]:
-    llm = _get_reasoning_llm()
+def _invoke_llm(system: str, human: str, feature: str = "forecast_reasoning") -> dict[str, Any]:
+    llm = _get_reasoning_llm(max_tokens=get_output_limit(feature))
     if llm is None:
         LOGGER.warning("Reasoning LLM is not configured or disabled.")
         return {
@@ -48,12 +49,22 @@ def _invoke_llm(system: str, human: str) -> dict[str, Any]:
             "recommendations": [],
             "revenue_opportunities": [],
         }
+
+    # Truncate context to token budget
+    budget = get_input_budget(feature)
+    system = truncate_to_budget(system, budget, label=feature)
+
+    from backend.llm.monitor import monitor_llm_call
+    from backend.llm.client import _PROVIDER
+
     messages = [
         SystemMessage(content=system),
         HumanMessage(content=human),
     ]
     try:
-        response = llm.invoke(messages)
+        with monitor_llm_call(feature=feature, model="reasoning", provider=_PROVIDER or "unknown") as ctx:
+            response = llm.invoke(messages)
+            ctx["record_tokens"](response, input_len=len(system), output_len=0)
         content = response.content if hasattr(response, "content") else str(response)
         return _safe_parse_json(str(content))
     except Exception as exc:
@@ -75,7 +86,7 @@ def generate_executive_insights(
         context_str = build_multi_product_context(product_forecasts)
 
     system = EXECUTIVE_SYSTEM_PROMPT.format(context=context_str)
-    return _invoke_llm(system, EXECUTIVE_INSIGHT_PROMPT)
+    return _invoke_llm(system, EXECUTIVE_INSIGHT_PROMPT, feature="executive_insights")
 
 
 def generate_high_risk_insights(
@@ -86,6 +97,7 @@ def generate_high_risk_insights(
     return _invoke_llm(
         EXECUTIVE_SYSTEM_PROMPT.format(context=context),
         HIGH_RISK_INSIGHT_PROMPT,
+        feature="high_risk_insights",
     )
 
 
@@ -97,6 +109,7 @@ def generate_revenue_insights(
     return _invoke_llm(
         EXECUTIVE_SYSTEM_PROMPT.format(context=context),
         REVENUE_INSIGHT_PROMPT,
+        feature="revenue_insights",
     )
 
 
@@ -106,4 +119,5 @@ def generate_product_insight(product_id: str, forecasts: list[dict[str, Any]]) -
     return _invoke_llm(
         EXECUTIVE_SYSTEM_PROMPT.format(context=context),
         EXECUTIVE_INSIGHT_PROMPT,
+        feature="executive_insights",
     )

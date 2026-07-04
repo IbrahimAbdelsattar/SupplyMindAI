@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import os
+import logging
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
-from backend.agents.state import AgentState
+from backend.agents.state import MAX_TOOL_ROUNDS, AgentState
 from backend.tools.forecasting_tools import generate_forecast
 from backend.tools.inventory_tools import analyze_inventory
 from backend.tools.knowledge_tools import (
@@ -21,6 +20,8 @@ from backend.tools.knowledge_tools import (
 )
 from backend.tools.mlops_tools import get_mlops_metrics
 from backend.tools.rag_tools import query_inventory_knowledge
+
+LOGGER = logging.getLogger(__name__)
 
 _copilot_tools = [
     search_forecast_knowledge,
@@ -52,6 +53,7 @@ _COPILOT_SYSTEM = """You are SupplyMind Copilot — a supply chain intelligence 
 Use tools to retrieve historical forecasts, inventory incidents, insights, and MLOps events.
 Never invent SKU metrics, dates, or percentages not returned by tools or operational data.
 If tools return no data, say so and suggest running forecast/inventory/insights to populate the knowledge base.
+Limit yourself to at most 3 tool calls, then synthesize a final answer.
 """
 
 
@@ -66,9 +68,21 @@ def copilot_agent_node(state: AgentState):
 
 def _route_after_copilot(state: AgentState):
     last = state["messages"][-1]
+    tool_count = state.get("tool_call_count", 0)
+
+    if tool_count >= MAX_TOOL_ROUNDS:
+        LOGGER.info("Copilot hit max tool rounds (%d), forcing END", MAX_TOOL_ROUNDS)
+        return END
+
     if hasattr(last, "tool_calls") and last.tool_calls:
         return "tools"
     return END
+
+
+def _increment_tool_count(state: AgentState):
+    """Wrap tool node to track iteration count."""
+    new_count = state.get("tool_call_count", 0) + 1
+    return {"tool_call_count": new_count}
 
 
 _copilot_workflow = StateGraph(AgentState)
@@ -90,7 +104,9 @@ def run_copilot_graph(question: str, product_id: str = "") -> dict:
             "messages": [HumanMessage(content=question)],
             "product_id": product_id,
             "current_intent": "copilot",
-        }
+            "tool_call_count": 0,
+        },
+        config={"recursion_limit": 20},
     )
     final = result["messages"][-1]
     answer = final.content if isinstance(final, AIMessage) else str(final)

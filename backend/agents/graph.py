@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
-from backend.agents.state import AgentState
+from backend.agents.state import MAX_TOOL_ROUNDS, AgentState
 from backend.agents.nodes import (
     supervisor_node, forecasting_node, inventory_node, rag_node, mlops_node, insights_node
 )
@@ -15,6 +15,10 @@ from backend.tools.knowledge_tools import (
     search_mlops_knowledge,
 )
 
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
 tools = [
     generate_forecast,
     analyze_inventory,
@@ -25,7 +29,16 @@ tools = [
     search_insights_knowledge,
     search_mlops_knowledge,
 ]
-tool_node = ToolNode(tools)
+_tool_node = ToolNode(tools)
+
+
+def tool_node_with_count(state: AgentState):
+    """Run tools and increment tool_call_count."""
+    result = _tool_node.invoke(state)
+    new_count = state.get("tool_call_count", 0) + 1
+    result["tool_call_count"] = new_count
+    return result
+
 
 def router(state: AgentState):
     intent = state.get("current_intent", "").lower()
@@ -48,7 +61,7 @@ workflow.add_node("forecasting", forecasting_node)
 workflow.add_node("inventory", inventory_node)
 workflow.add_node("rag", rag_node)
 workflow.add_node("mlops", mlops_node)
-workflow.add_node("tools", tool_node)
+workflow.add_node("tools", tool_node_with_count)
 
 workflow.set_entry_point("supervisor")
 
@@ -57,6 +70,12 @@ workflow.add_conditional_edges("supervisor", router)
 def agent_router(state: AgentState):
     messages = state["messages"]
     last_message = messages[-1]
+    tool_count = state.get("tool_call_count", 0)
+
+    if tool_count >= MAX_TOOL_ROUNDS:
+        LOGGER.info("Multi-agent hit max tool rounds (%d), forcing END", MAX_TOOL_ROUNDS)
+        return END
+
     if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
         return "tools"
     return END

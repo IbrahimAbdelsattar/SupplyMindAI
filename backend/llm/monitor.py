@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from threading import Lock
@@ -198,3 +199,52 @@ class LLMMonitor:
 # Global singleton
 # ---------------------------------------------------------------------------
 llm_monitor = LLMMonitor()
+
+
+# ---------------------------------------------------------------------------
+# Context manager for easy instrumentation
+# ---------------------------------------------------------------------------
+@contextmanager
+def monitor_llm_call(feature: str, model: str = "unknown", provider: str = "unknown"):
+    """Context manager that records LLM call metrics on exit.
+
+    Usage:
+        with monitor_llm_call("ai_insights", "nvidia/nemotron-3-super-120b-a12b:free", "openrouter"):
+            response = llm.invoke(messages)
+            # Optional: pass token counts after the call
+            monitor_llm_call.record_tokens(response)
+    """
+    start = time.monotonic()
+    ctx = {"success": True, "error": None, "input_tokens": 0, "output_tokens": 0, "context_length": 0, "response_length": 0}
+
+    def record_tokens(response, input_len: int = 0, output_len: int = 0):
+        """Extract token counts from a LangChain response object."""
+        if hasattr(response, "usage_metadata"):
+            usage = response.usage_metadata or {}
+            ctx["input_tokens"] = usage.get("input_tokens", 0)
+            ctx["output_tokens"] = usage.get("output_tokens", 0)
+        ctx["context_length"] = input_len
+        ctx["response_length"] = output_len
+
+    ctx["record_tokens"] = record_tokens
+
+    try:
+        yield ctx
+    except Exception as exc:
+        ctx["success"] = False
+        ctx["error"] = str(exc)[:200]
+        raise
+    finally:
+        elapsed_ms = (time.monotonic() - start) * 1000
+        llm_monitor.record_call(
+            feature=feature,
+            model=model,
+            provider=provider,
+            latency_ms=elapsed_ms,
+            input_tokens=ctx["input_tokens"],
+            output_tokens=ctx["output_tokens"],
+            success=ctx["success"],
+            error=ctx["error"],
+            context_length=ctx["context_length"],
+            response_length=ctx["response_length"],
+        )

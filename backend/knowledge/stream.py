@@ -50,6 +50,7 @@ async def stream_copilot_chat(
                     "messages": [HumanMessage(content=enriched)],
                     "product_id": product_id or "",
                     "current_intent": "copilot",
+                    "tool_call_count": 0,
                 },
                 version="v2"
             ):
