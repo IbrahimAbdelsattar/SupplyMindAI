@@ -119,8 +119,7 @@ services:
       context: .
       dockerfile: worker/Dockerfile
     # -Q default,ml,rag  -> listens to all three task queues
-    # -B                 -> embeds the beat scheduler (cron/retry logic)
-    command: ["celery", "-A", "worker.celery_app", "worker", "-Q", "default,ml,rag", "-B", "--loglevel=info", "--concurrency=2"]
+    command: ["celery", "-A", "worker.celery_app", "worker", "-Q", "default,ml,rag", "--loglevel=info", "--concurrency=2"]
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
@@ -140,6 +139,28 @@ services:
     networks:
       - supplymind_net
 
+  # -------------------------------------------------------------------------
+  # 6. Celery Beat Scheduler
+  # -------------------------------------------------------------------------
+  beat:
+    image: ${WORKER_IMAGE:-supplymind-worker:latest}
+    container_name: supplymind-beat-prod
+    restart: unless-stopped
+    command: ["celery", "-A", "worker.celery_app", "beat", "--loglevel=info", "-s", "/data/celerybeat-schedule"]
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - beat_data:/data
+    networks:
+      - supplymind_net
+
 # ──────────────────────────────────────────────────────────────────────────
 # Volumes
 # ──────────────────────────────────────────────────────────────────────────
@@ -153,6 +174,8 @@ volumes:
   reports_data:
     driver: local
   models_data:
+    driver: local
+  beat_data:
     driver: local
 
 networks:

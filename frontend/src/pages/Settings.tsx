@@ -47,7 +47,7 @@ const Settings = () => {
       try {
         const { fetchApi } = await import('@/lib/api');
         const [settingsRes, userRes] = await Promise.all([
-          fetchApi('/system/settings'),
+          fetchApi('/settings'),
           fetchApi('/system/user'),
         ]);
         const s = (settingsRes as { settings: Record<string, unknown> })?.settings || {};
@@ -67,7 +67,7 @@ const Settings = () => {
     setIsSaving(true);
     try {
       const { fetchApi } = await import('@/lib/api');
-      await fetchApi('/system/settings', {
+      await fetchApi('/settings', {
         method: 'PUT',
         body: JSON.stringify({
           theme,

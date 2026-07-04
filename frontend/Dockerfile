@@ -6,7 +6,7 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm install --legacy-peer-deps
 
-COPY . .
+COPY frontend/ ./
 ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build

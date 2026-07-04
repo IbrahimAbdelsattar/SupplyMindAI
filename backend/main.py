@@ -44,7 +44,7 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
 
 # In development, allow all hosts so the browser can reach /docs on any port.
 # In production, restrict to the configured list.
-_raw_allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
+_raw_allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver,*")
 if ENVIRONMENT != "production":
     ALLOWED_HOSTS = ["*"]
 else:
@@ -75,6 +75,125 @@ from backend.globals import STORE, ML_MODEL, FORECAST_INTELLIGENCE
 
 
 
+from contextlib import asynccontextmanager
+
+# Define lifespan first so it can be passed to FastAPI
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global ML_MODEL, FORECAST_INTELLIGENCE
+    import backend.globals as bg
+    from backend.bootstrap import init_ml_model, load_environment
+
+    load_environment()
+
+    # Required Environment Variables Validation
+    required_vars = ["DATABASE_URL", "REDIS_URL"]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    if missing_vars:
+        logger.error("❌ CRITICAL: Missing required environment variables: %s", missing_vars)
+        if ENVIRONMENT == "production":
+            raise RuntimeError(f"Missing required environment variables: {missing_vars}")
+
+    # ── Database ─────────────────────────────────────────────────────────────
+    db_ok = False
+    try:
+        _run_migrations()
+        create_tables()
+        from backend.db import seed_database
+        seed_database()
+        db_ok = True
+        logger.info("[DB] ✅ Database connected and schema up to date")
+    except Exception as exc:
+        logger.error("[DB] ❌ Database connection or migration failed: %s. Continuing without DB.", exc)
+
+    # ── ML Model ─────────────────────────────────────────────────────────────
+    ml_ok = False
+    ml_trained = False
+    try:
+        ML_MODEL = init_ml_model(STORE)
+        bg.ML_MODEL = ML_MODEL
+        ml_ok = True
+        ml_trained = bool(getattr(ML_MODEL, "is_trained_model_loaded", False))
+        if ml_trained:
+            logger.info("[ML]  ✅ Demand forecast model loaded (trained pickle)")
+        else:
+            logger.info("[ML]  ℹ️  Demand forecast model ready (CSV-based, no trained pickle found)")
+    except Exception as exc:
+        logger.error("[ML]  ❌ ML model initialization failed: %s", exc)
+
+    # ── RAG Service ──────────────────────────────────────────────────────────
+    rag_ok = False
+    try:
+        from backend.knowledge.client import is_knowledge_available
+        if is_knowledge_available():
+            rag_ok = True
+            logger.info("[RAG] ✅ Native knowledge service registered")
+        else:
+            logger.warning("[RAG] ⚠️  Native knowledge service unavailable")
+    except Exception as exc:
+        logger.error("[RAG] ❌ Native knowledge service initialization failed: %s", exc)
+
+    # ── Forecast Intelligence ─────────────────────────────────────────────────
+    fi_ok = False
+    try:
+        from backend.services.forecast_intelligence_service import ForecastIntelligenceService
+        csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "ml_platform" / "models" / "future_forecast.csv")))
+        FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
+        bg.FORECAST_INTELLIGENCE = FORECAST_INTELLIGENCE
+        fi_ok = True
+        logger.info("[FI]  ✅ Forecast Intelligence service loaded (csv=%s)", csv_path.name)
+    except Exception as exc:
+        logger.error("[FI]  ❌ Forecast Intelligence initialization failed: %s", exc)
+
+    # ── LLM / AI Config ──────────────────────────────────────────────────────
+    try:
+        from backend.llm.client import get_llm_info, is_copilot_enabled, is_rag_enabled, is_forecast_insights_enabled
+        llm_info = get_llm_info()
+        llm_ok = llm_info.get("api_key_configured", False)
+        llm_model = llm_info.get("model", "unknown")
+        llm_base_url = llm_info.get("base_url", "")
+        if llm_ok:
+            logger.info("[LLM] ✅ LLM configured — model=%s  base_url=%s", llm_model, llm_base_url)
+        else:
+            logger.warning("[LLM] ⚠️  LLM API key not configured — AI chat/insights will be disabled")
+        logger.info(
+            "[LLM] Feature flags — copilot=%s  rag=%s  forecast_insights=%s",
+            is_copilot_enabled(), is_rag_enabled(), is_forecast_insights_enabled(),
+        )
+    except Exception as exc:
+        logger.warning("[LLM] ⚠️  Could not read LLM config: %s", exc)
+
+    # ── Data Files ───────────────────────────────────────────────────────────
+    required_csvs = ["products.csv", "sales_daily.csv", "inventory.csv"]
+    optional_csvs = ["suppliers.csv", "contracts.csv", "bom.csv", "raw_materials.csv", "production_schedule.csv"]
+    for csv_name in required_csvs:
+        p = DATA_DIR / csv_name
+        if p.exists():
+            logger.info("[DATA] ✅ %s (%s KB)", csv_name, p.stat().st_size // 1024)
+        else:
+            logger.error("[DATA] ❌ MISSING required file: %s", csv_name)
+    for csv_name in optional_csvs:
+        p = DATA_DIR / csv_name
+        if not p.exists():
+            logger.debug("[DATA] ℹ️  Optional file not found: %s", csv_name)
+
+    # ── Startup Summary ──────────────────────────────────────────────────────
+    port = int(os.getenv("PORT", "8001"))
+    logger.info("=" * 60)
+    logger.info("  SupplyMindAI Backend — READY")
+    logger.info("  Environment : %s", ENVIRONMENT.upper())
+    logger.info("  DB          : %s", "✅ connected" if db_ok else "❌ FAILED")
+    logger.info("  ML Model    : %s", "✅ trained pkl" if ml_trained else ("✅ CSV mode" if ml_ok else "❌ FAILED"))
+    logger.info("  RAG Service : %s", "✅ ready" if rag_ok else "⚠️  unavailable")
+    logger.info("  Forecast AI : %s", "✅ loaded" if fi_ok else "⚠️  unavailable")
+    logger.info("  Docs        : http://localhost:%s/docs", port)
+    logger.info("  Health      : http://localhost:%s/api/v1/health", port)
+    logger.info("=" * 60)
+    
+    yield
+    
+    logger.info("Shutting down SupplyMindAI Backend...")
+
 # -----------------------------------------------------------------------------
 # App
 # -----------------------------------------------------------------------------
@@ -82,6 +201,7 @@ app = FastAPI(
     title="SupplyMindAI API",
     version="1.0.0",
     description="AI-powered supply chain demand forecasting and inventory optimization platform.",
+    lifespan=lifespan,
     docs_url="/docs" if ENVIRONMENT != "production" else None,
     redoc_url="/redoc" if ENVIRONMENT != "production" else None,
     openapi_url="/openapi.json" if ENVIRONMENT != "production" else None,
@@ -149,101 +269,21 @@ for module_name, router_attr in _ROUTERS_TO_LOAD:
     except Exception as exc:
         logger.warning("Failed to load router %s: %s", module_name, exc)
 
-from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
 
-
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/", include_in_schema=False)
 def read_root():
     """
-    Show a friendly HTML page so users who accidentally hit the backend URL
-    see helpful information instead of a blank page or JSON blob.
+    Root endpoint returning basic structured information.
     """
-    return """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SupplyMindAI API</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0a0a0f;
-      color: #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
+    return {
+        "name": "SupplyMindAI API",
+        "version": "1.0.0",
+        "status": "online",
+        "environment": ENVIRONMENT,
+        "docs": "/docs",
+        "health": "/api/v1/health"
     }
-    .card {
-      background: #14141f;
-      border: 1px solid #2a2a3a;
-      border-radius: 12px;
-      padding: 48px 40px;
-      max-width: 520px;
-      width: 90%;
-      text-align: center;
-    }
-    h1 {
-      font-size: 24px;
-      margin-bottom: 8px;
-      color: #fff;
-    }
-    .badge {
-      display: inline-block;
-      background: #00c85322;
-      color: #00c853;
-      font-size: 12px;
-      padding: 4px 12px;
-      border-radius: 20px;
-      margin-bottom: 24px;
-      border: 1px solid #00c85344;
-    }
-    p { color: #888; line-height: 1.6; margin-bottom: 16px; }
-    .url-box {
-      background: #1a1a2e;
-      border: 1px solid #2a2a3a;
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-family: monospace;
-      font-size: 14px;
-      margin: 16px 0;
-      color: #7c7cff;
-    }
-    hr { border: none; border-top: 1px solid #2a2a3a; margin: 24px 0; }
-    a { color: #7c7cff; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .footer { font-size: 12px; color: #555; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="badge">SupplyMindAI API</div>
-    <h1>Backend API is running</h1>
-    <p>This is the backend server. The frontend application runs on a different port.</p>
-
-    <p>Open the frontend at:</p>
-    <div class="url-box">
-      <a href="http://localhost:5173">http://localhost:5173</a>
-    </div>
-
-    <hr />
-    <p>API documentation (Swagger UI):</p>
-    <div class="url-box">
-      <a href="http://localhost:8081/docs" target="_blank">http://localhost:8081/docs</a>
-    </div>
-    <div class="url-box" style="margin-top:8px">
-      <a href="http://localhost:8081/redoc" target="_blank">http://localhost:8081/redoc</a>
-    </div>
-    <hr />
-    <p class="footer">
-      Health check: <a href="http://localhost:8081/api/v1/health">http://localhost:8081/api/v1/health</a>
-    </p>
-  </div>
-</body>
-</html>
-"""
-
 
 @app.get("/api/v1", include_in_schema=False)
 def read_api_root():
@@ -423,100 +463,6 @@ def _run_migrations() -> None:
         logger.info("Alembic migrations up to date")
     except Exception as exc:
         logger.warning("Alembic migration failed (%s), falling back to create_tables()", exc)
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    global ML_MODEL, FORECAST_INTELLIGENCE
-    import backend.globals as bg
-
-    from backend.bootstrap import init_ml_model, load_environment
-
-    load_environment()
-
-    # ── Database ─────────────────────────────────────────────────────────────
-    db_ok = False
-    try:
-        _run_migrations()
-        create_tables()
-        from backend.db import seed_database
-        seed_database()
-        db_ok = True
-        logger.info("[DB] ✅ Database connected and schema up to date")
-    except Exception as exc:
-        logger.error("[DB] ❌ Database connection or migration failed: %s. Continuing without DB.", exc)
-
-    # ── ML Model ─────────────────────────────────────────────────────────────
-    ml_ok = False
-    ml_trained = False
-    try:
-        ML_MODEL = init_ml_model(STORE)
-        bg.ML_MODEL = ML_MODEL
-        ml_ok = True
-        ml_trained = bool(getattr(ML_MODEL, "is_trained_model_loaded", False))
-        if ml_trained:
-            logger.info("[ML]  ✅ Demand forecast model loaded (trained pickle)")
-        else:
-            logger.info("[ML]  ℹ️  Demand forecast model ready (CSV-based, no trained pickle found)")
-    except Exception as exc:
-        logger.error("[ML]  ❌ ML model initialization failed: %s", exc)
-
-    # ── RAG Service ──────────────────────────────────────────────────────────
-    rag_ok = False
-    try:
-        from backend.knowledge.client import is_knowledge_available
-        if is_knowledge_available():
-            rag_ok = True
-            logger.info("[RAG] ✅ Native knowledge service registered")
-        else:
-            logger.warning("[RAG] ⚠️  Native knowledge service unavailable")
-    except Exception as exc:
-        logger.error("[RAG] ❌ Native knowledge service initialization failed: %s", exc)
-
-    # ── Forecast Intelligence ─────────────────────────────────────────────────
-    fi_ok = False
-    try:
-        from backend.services.forecast_intelligence_service import ForecastIntelligenceService
-        csv_path = Path(os.getenv("FORECAST_CSV_PATH", str(PROJECT_ROOT / "ml_platform" / "models" / "future_forecast.csv")))
-        FORECAST_INTELLIGENCE = ForecastIntelligenceService(csv_path)
-        bg.FORECAST_INTELLIGENCE = FORECAST_INTELLIGENCE
-        fi_ok = True
-        logger.info("[FI]  ✅ Forecast Intelligence service loaded (csv=%s)", csv_path.name)
-    except Exception as exc:
-        logger.error("[FI]  ❌ Forecast Intelligence initialization failed: %s", exc)
-
-    # ── LLM / AI Config ──────────────────────────────────────────────────────
-    try:
-        from backend.llm.client import get_llm_info, is_copilot_enabled, is_rag_enabled, is_forecast_insights_enabled
-        llm_info = get_llm_info()
-        llm_ok = llm_info.get("api_key_configured", False)
-        llm_model = llm_info.get("model", "unknown")
-        llm_base_url = llm_info.get("base_url", "")
-        if llm_ok:
-            logger.info("[LLM] ✅ LLM configured — model=%s  base_url=%s", llm_model, llm_base_url)
-        else:
-            logger.warning("[LLM] ⚠️  LLM API key not configured — AI chat/insights will be disabled")
-        logger.info(
-            "[LLM] Feature flags — copilot=%s  rag=%s  forecast_insights=%s",
-            is_copilot_enabled(), is_rag_enabled(), is_forecast_insights_enabled(),
-        )
-    except Exception as exc:
-        logger.warning("[LLM] ⚠️  Could not read LLM config: %s", exc)
-
-    # ── Data Files ───────────────────────────────────────────────────────────
-    required_csvs = ["products.csv", "sales_daily.csv", "inventory.csv"]
-    optional_csvs = ["suppliers.csv", "contracts.csv", "bom.csv", "raw_materials.csv", "production_schedule.csv"]
-    for csv_name in required_csvs:
-        p = DATA_DIR / csv_name
-        if p.exists():
-            logger.info("[DATA] ✅ %s (%s KB)", csv_name, p.stat().st_size // 1024)
-        else:
-            logger.error("[DATA] ❌ MISSING required file: %s", csv_name)
-    for csv_name in optional_csvs:
-        p = DATA_DIR / csv_name
-        if not p.exists():
-            logger.debug("[DATA] ℹ️  Optional file not found: %s", csv_name)
-
     # ── Startup Summary ──────────────────────────────────────────────────────
     port = int(os.getenv("PORT", "8001"))
     logger.info("=" * 60)

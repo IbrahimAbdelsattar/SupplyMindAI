@@ -21,6 +21,15 @@ const MLOps = lazy(() => import("./pages/MLOps"));
 
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Login = lazy(() => import("./pages/Login"));
+
+import { ClerkProvider } from '@clerk/clerk-react';
+import { ProtectedRoute } from './components/ProtectedRoute';
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+if (!PUBLISHABLE_KEY) {
+  console.warn("Missing Publishable Key for Clerk");
+}
 
 
 const queryClient = new QueryClient();
@@ -35,15 +44,16 @@ const AppRoutes = () => (
   <SuspenseWrapper>
     <Routes>
       <Route path="/" element={<Index />} />
+      <Route path="/login" element={<Login />} />
 
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/forecasting" element={<Forecasting />} />
-      <Route path="/inventory" element={<Inventory />} />
-      <Route path="/insights" element={<AIInsights />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route path="/mlops" element={<MLOps />} />
-
-      <Route path="/settings" element={<Settings />} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/forecasting" element={<ProtectedRoute><Forecasting /></ProtectedRoute>} />
+      <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+      <Route path="/insights" element={<ProtectedRoute><AIInsights /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+      <Route path="/mlops" element={<ProtectedRoute><MLOps /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      
       <Route path="*" element={<NotFound />} />
     </Routes>
   </SuspenseWrapper>
@@ -56,19 +66,21 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <CurrencyProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <AppRoutes />
-              </BrowserRouter>
-            </TooltipProvider>
-          </CurrencyProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <CurrencyProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <AppRoutes />
+                </BrowserRouter>
+              </TooltipProvider>
+            </CurrencyProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </ClerkProvider>
     </ErrorBoundary>
   );
 };

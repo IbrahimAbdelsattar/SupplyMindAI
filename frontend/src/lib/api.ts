@@ -11,8 +11,20 @@ export function getApiBaseUrl(): string {
 export async function fetchApi(endpoint: string, options: ApiFetchOptions = {}) {
   const { responseType = 'json', headers: optionHeaders, ...fetchOptions } = options;
 
+  let token = null;
+  // @ts-ignore - window.Clerk is injected by ClerkProvider
+  if (window.Clerk?.session) {
+    try {
+      // @ts-ignore
+      token = await window.Clerk.session.getToken();
+    } catch (e) {
+      console.warn("Failed to get Clerk token", e);
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(optionHeaders as Record<string, string> | undefined),
   };
 

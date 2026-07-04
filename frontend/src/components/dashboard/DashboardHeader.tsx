@@ -17,17 +17,7 @@ interface DashboardHeaderProps {
 
 export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const { t } = useTranslation();
-  const dateRangeContext = (() => {
-    try {
-      return useDateRange();
-    } catch {
-      return null;
-    }
-  })();
-  const dateRange = dateRangeContext?.label ?? t('common:dateRange.last7days');
-  const setPeriodDays = dateRangeContext?.setPeriodDays;
-
-
+  const { label: dateRange, setPeriodDays } = useDateRange();
 
   return (
     <motion.header

@@ -83,56 +83,7 @@ def system_alerts_active(user: dict = Depends(lambda: {"id":"public","email":"pu
         return {"alerts": [], "total": 0, "error": str(exc)}
 
 
-# ── MLOps ──
-
-@router.get("/mlops/metrics")
-def system_mlops_metrics(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
-    try:
-        from datetime import timedelta
-        import random
-        now = datetime.now()
-        accuracy_data = []
-        for i in range(14, -1, -1):
-            date_str = (now - timedelta(days=i)).strftime("%b %d")
-            accuracy_data.append({"date": date_str, "accuracy": 92.0 + random.uniform(-2, 3)})
-
-        return {
-            "modelAccuracy": accuracy_data,
-            "dataDrift": [
-                {"feature": "sales_volume", "status": "warning", "drift": 0.08},
-                {"feature": "price_index", "status": "healthy", "drift": 0.02},
-                {"feature": "seasonality", "status": "healthy", "drift": 0.01},
-            ],
-            "retrainingHistory": [
-                {
-                    "date": (now - timedelta(days=2)).strftime("%b %d, %Y"),
-                    "trigger": "Scheduled Bi-weekly",
-                    "status": "healthy",
-                    "improvement": "+1.2% Accuracy",
-                },
-                {
-                    "date": (now - timedelta(days=16)).strftime("%b %d, %Y"),
-                    "trigger": "Drift Alert (sales_volume)",
-                    "status": "healthy",
-                    "improvement": "+2.5% Accuracy",
-                }
-            ],
-            "system": {"cpu": 45, "memory": 62, "gpu": 28},
-        }
-    except Exception as exc:
-        return {"error": str(exc)}
-
-
-@router.get("/mlops/langsmith")
-def system_mlops_langsmith(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
-    try:
-        from backend.services.langsmith_tracing_service import fetch_tracing_data
-        tracing = fetch_tracing_data()
-        return {"tracing": tracing}
-    except ImportError:
-        return {"tracing": [], "note": "LangSmith tracing service not available"}
-    except Exception as exc:
-        return {"tracing": [], "note": str(exc)}
+# ── MLOps (Moved to mlops.py) ──
 
 
 # ── Reports ──
@@ -299,70 +250,7 @@ def system_reports_download(filename: str, user: dict = Depends(lambda: {"id":"p
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-# ── Settings ──
-
-@router.get("/settings")
-def system_get_settings(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
-    db = SessionLocal()
-    try:
-        row = db.query(UserSettings).filter(UserSettings.user_id == user["id"]).first()
-        return {"settings": row.settings_json if row else {}}
-    finally:
-        db.close()
-
-
-@router.put("/settings")
-def system_save_settings(payload: UserSettingsPayload, user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
-    from loguru import logger
-    logger.info("system_save_settings called with payload=%s, user=%s", payload, user)
-
-    try:
-        new_settings = payload.model_dump(exclude_none=True)
-    except AttributeError:
-        new_settings = payload.dict(exclude_none=True)
-
-    db = SessionLocal()
-    try:
-        # Ensure local user record exists to satisfy ForeignKey constraint
-        local_user = db.query(User).filter(User.id == user["id"]).first()
-        if not local_user:
-            local_user = User(
-                id=user["id"],
-                name=user["user_metadata"].get("name", user["email"].split("@")[0] if user["email"] else "User"),
-                email=user["email"] or f"{user['id']}@supplymind.ai",
-                role=user["app_metadata"].get("role", "admin"),
-                is_active=True,
-                created_at=_utc_now(),
-                updated_at=_utc_now(),
-            )
-            db.add(local_user)
-            db.flush()
-
-        row = db.query(UserSettings).filter(UserSettings.user_id == user["id"]).first()
-
-        if row:
-            merged = {**(row.settings_json or {}), **new_settings}
-            row.settings_json = merged
-            row.updated_at = _utc_now()
-        else:
-            merged = new_settings
-            row = UserSettings(
-                id=str(uuid.uuid4()),
-                user_id=user["id"],
-                settings_json=merged,
-                created_at=_utc_now(),
-                updated_at=_utc_now(),
-            )
-            db.add(row)
-
-        db.commit()
-        return {"settings": merged, "message": "Settings saved"}
-    except Exception as exc:
-        db.rollback()
-        logger.error("save_settings error for user %s: %s", user["id"], exc, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to save settings") from exc
-    finally:
-        db.close()
+# ── Settings (Moved to settings.py) ──
 
 @router.get("/user")
 def system_get_user(user=Depends(_get_current_user)):

@@ -43,6 +43,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /data && chown -R app:app /data
+
 COPY --from=builder /opt/venv /opt/venv
 
 COPY --chown=app:app backend/ ./backend/

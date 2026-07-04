@@ -86,7 +86,15 @@ class GuardrailsMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
 
-            if response.status_code < 400:
+            # Only run output guardrails for endpoints that are explicitly
+            # guardrailed (POST/PUT/PATCH to AI-facing routes).  GET data
+            # endpoints (e.g. /api/v1/data/*) must not be intercepted —
+            # consuming the body iterator and reconstructing a Response
+            # drops the Content-Type header, causing 500s on the frontend.
+            if (
+                response.status_code < 400
+                and request.url.path in self.GUARDRAILED_ENDPOINTS
+            ):
                 response_body = b""
                 async for chunk in response.body_iterator:
                     response_body += chunk

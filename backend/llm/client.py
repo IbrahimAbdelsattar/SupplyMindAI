@@ -107,6 +107,9 @@ def _safe_create_chat_openai(
             )
 
 
+from functools import lru_cache
+
+@lru_cache(maxsize=1)
 def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     """
     Unified client factory. Returns a ChatOpenAI instance or None.
@@ -169,6 +172,7 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
     return None
 
 
+@lru_cache(maxsize=1)
 def get_llm_info() -> dict:
     """Returns resolved LLM configuration for diagnostics."""
     from dotenv import load_dotenv
