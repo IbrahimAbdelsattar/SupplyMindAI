@@ -101,12 +101,13 @@ OPERATIONAL_SNAPSHOT:
             async for chunk in llm.astream(
                 [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
             ):
-            if chunk and hasattr(chunk, "content") and chunk.content:
-                full_response.append(chunk.content)
-                yield sse_event("token", {"text": chunk.content})
+                if chunk and hasattr(chunk, "content") and chunk.content:
+                    full_response.append(chunk.content)
+                    yield sse_event("token", {"text": chunk.content})
         
         # Save assistant turn
         assistant_text = "".join(full_response)
+        ctx["record_tokens"](None, input_len=len(user_content), output_len=len(assistant_text))
         _save_conversation_turn(
             user_id=user_id,
             session_id=session_id,

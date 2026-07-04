@@ -13,6 +13,7 @@ from langchain_openai import ChatOpenAI
 from backend.knowledge.config import get_knowledge_settings
 from backend.knowledge.langsmith_tracing import configure_langsmith, trace_run
 from backend.knowledge.search import semantic_search
+from backend.llm.cache import cached_llm_call, is_cache_enabled
 from backend.llm.limits import truncate_to_budget, get_input_budget
 
 LOGGER = logging.getLogger(__name__)

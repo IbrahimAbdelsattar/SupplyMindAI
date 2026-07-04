@@ -11,8 +11,7 @@ from backend.db import Conversation
 from backend.knowledge.client import is_knowledge_available, knowledge_session
 from backend.knowledge.langsmith_tracing import configure_langsmith, trace_run
 from backend.knowledge.memory import recall_memory, upsert_memory
-from backend.knowledge.rag import get_operational_snapshot, rag_query
-from backend.knowledge.search import semantic_search
+from backend.knowledge.rag import rag_query
 
 LOGGER = logging.getLogger(__name__)
 
@@ -91,29 +90,16 @@ def copilot_chat(
             metadata={"product_id": product_id, "mode": mode},
         )
 
-        # Broad retrieval across knowledge types
-        all_hits: list[dict[str, Any]] = []
-        for st in (None, "forecast", "inventory", "insight", "report", "mlops"):
-            all_hits.extend(
-                semantic_search(message, source_type=st, product_id=product_id, user_id=user_id, match_count=3)
-            )
-        # Deduplicate by document_id, keep best similarity
-        by_doc: dict[str, dict[str, Any]] = {}
-        for h in all_hits:
-            did = str(h.get("document_id", ""))
-            if did and (did not in by_doc or h.get("similarity", 0) > by_doc[did].get("similarity", 0)):
-                by_doc[did] = h
-        top_hits = sorted(by_doc.values(), key=lambda x: x.get("similarity", 0), reverse=True)[:8]
-
-        memories = recall_memory(message, agent_type="copilot", user_id=user_id, limit=3)
-        snapshot = get_operational_snapshot(product_id)
-
+        # Broad retrieval across knowledge types — delegate to rag_query which already
+        # calls semantic_search() + operational snapshot. Avoid duplicate DB queries.
         rag_result = rag_query(
             enriched,
             product_id=product_id,
             user_id=user_id,
             operational_context=True,
         )
+
+        memories = recall_memory(message, agent_type="copilot", user_id=user_id, limit=3)
 
         if memories:
             mem_text = "\n".join(f"- {m.get('content', '')[:400]}" for m in memories)
@@ -122,12 +108,6 @@ def copilot_chat(
                 + "\n\nRelevant agent memory:\n"
                 + mem_text
             )
-
-        if top_hits and not rag_result.get("sources"):
-            rag_result["sources"] = [
-                {"title": h.get("title"), "source_type": h.get("source_type"), "similarity": h.get("similarity")}
-                for h in top_hits
-            ]
 
         _save_conversation_turn(
             user_id=user_id,
@@ -150,5 +130,4 @@ def copilot_chat(
             "sources": rag_result.get("sources", []),
             "session_id": session_id,
             "grounded": rag_result.get("grounded", False),
-            "operational_snapshot_included": bool(snapshot),
         }
