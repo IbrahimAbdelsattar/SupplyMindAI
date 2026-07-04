@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuthContext } from '@/contexts/AuthContext';
 
-const ALLOWED_DOMAIN = 'supplymind.tech';
 
 const ROLE_HIERARCHY: Record<string, number> = {
   admin: 4,
@@ -29,13 +28,7 @@ export const ProtectedRoute = ({
 
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
-      // Domain check
-      const email = user.primaryEmailAddress?.emailAddress || '';
-      const domain = email.split('@')[1];
-      if (domain !== ALLOWED_DOMAIN) {
-        navigate('/unauthorized', { replace: true });
-        return;
-      }
+
     }
   }, [isLoaded, isSignedIn, user, navigate]);
 

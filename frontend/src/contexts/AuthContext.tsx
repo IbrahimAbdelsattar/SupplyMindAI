@@ -20,7 +20,6 @@ interface AuthContextType {
   setRole: (role: AppRole) => void;
 }
 
-const ALLOWED_DOMAIN = 'supplymind.tech';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -40,21 +39,12 @@ export const AuthContextProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [internalUser, setInternalUser] = React.useState<AuthUser | null>(null);
   const [internalRole, setInternalRole] = React.useState<AppRole | null>(null);
 
-  // Domain validation from Clerk email
-  const email = clerkUser?.primaryEmailAddress?.emailAddress || '';
-  const domain = email.split('@')[1] || '';
-  const isDomainValid = !isSignedIn || domain === ALLOWED_DOMAIN;
+  const isDomainValid = true;
 
   // Sync Clerk user -> internal state on mount / user change
   useEffect(() => {
     if (isSignedIn && clerkUser && !internalUser) {
       const clerkEmail = clerkUser.primaryEmailAddress?.emailAddress || '';
-      const clerkDomain = clerkEmail.split('@')[1];
-
-      if (clerkDomain !== ALLOWED_DOMAIN) {
-        // Don't create auth user for non-corporate domains
-        return;
-      }
 
       // Determine role from Clerk publicMetadata if available
       const metaRole = (clerkUser.publicMetadata as Record<string, unknown>)?.role;

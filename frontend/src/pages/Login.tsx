@@ -1,7 +1,7 @@
 import { SignIn } from '@clerk/clerk-react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react'; // Can be removed if completely unused, but I'll just leave or remove carefully
 
 const Login = () => {
   const { t } = useTranslation();
@@ -57,14 +57,6 @@ const Login = () => {
         </div>
 
         <div className="neu-card p-6 sm:p-8 rounded-3xl bg-card w-full shadow-2xl relative">
-          {/* Corporate-only notice */}
-          <div className="mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20 text-foreground flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 text-primary" />
-            <p className="text-sm font-medium leading-relaxed text-muted-foreground">
-              This platform is restricted to <strong className="font-bold text-foreground">@supplymind.tech</strong> corporate accounts only.
-              Contact your administrator for access.
-            </p>
-          </div>
 
           <div className="w-full">
             <SignIn 
