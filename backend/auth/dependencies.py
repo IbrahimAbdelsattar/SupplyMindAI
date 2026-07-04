@@ -100,6 +100,44 @@ def _find_jwk_by_kid(kid: str) -> Optional[dict]:
     return None
 
 
+def _fetch_clerk_user_email(user_id: str) -> tuple[str, str]:
+    """Query Clerk Backend API to get email+name for a user_id.
+
+    Returns (email, name) or ("", "").
+    Requires CLERK_SECRET_KEY env var.
+    """
+    secret_key = os.getenv("CLERK_SECRET_KEY", "")
+    if not secret_key or not user_id or user_id == "unknown":
+        return "", ""
+
+    try:
+        resp = requests.get(
+            f"https://api.clerk.com/v1/users/{user_id}",
+            headers={
+                "Authorization": f"Bearer {secret_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            email = ""
+            email_addresses = data.get("email_addresses", [])
+            if email_addresses:
+                # Prefer the primary email
+                primary = [e for e in email_addresses if e.get("id") == data.get("primary_email_address_id")]
+                email = primary[0]["email_address"] if primary else email_addresses[0]["email_address"]
+            name = data.get("username") or data.get("first_name", "") or ""
+            logger.info("Clerk API resolved user %s -> email=%s name=%s", user_id, email, name)
+            return email, name
+        else:
+            logger.warning("Clerk API returned %d for user %s: %s", resp.status_code, user_id, resp.text[:200])
+            return "", ""
+    except Exception as exc:
+        logger.warning("Clerk API call failed for user %s: %s", user_id, exc)
+        return "", ""
+
+
 def _verify_token(token: str) -> dict:
     """Verify a Clerk JWT via JWKS. Falls back to unverified decode in dev."""
     try:
@@ -174,7 +212,7 @@ async def _get_current_user(request: Request) -> AuthUser:
         raise
 
     user_id = claims.get("sub", "unknown")
-    email = claims.get("email", "")
+    email = claims.get("email", "") or claims.get("username", "") or claims.get("preferred_username", "")
 
     # Step 2: DB lookup — try email first, then clerk_user_id
     from backend.db import get_db
@@ -183,6 +221,7 @@ async def _get_current_user(request: Request) -> AuthUser:
         from backend.db import User
 
         user = None
+        clerk_name = ""
 
         # Try email lookup first
         if email:
@@ -195,10 +234,15 @@ async def _get_current_user(request: Request) -> AuthUser:
                 email = user.email  # Use stored email from DB
                 logger.info("Resolved email from DB via clerk_user_id=%s -> %s", user_id, email)
 
+        # No user found in DB — try Clerk Backend API to get email
+        if user is None and not email:
+            logger.info("No DB user and no email in JWT — querying Clerk API for user %s", user_id)
+            email, clerk_name = _fetch_clerk_user_email(user_id)
+
         # No user found anywhere — need email to proceed
         if user is None and not email:
-            log_login_failure("No email in JWT claims and no matching DB user", ip_address=ip)
-            raise HTTPException(status_code=401, detail="Token missing email claim and no matching user in database")
+            log_login_failure("No email in JWT claims, no matching DB user, and Clerk API returned nothing", ip_address=ip)
+            raise HTTPException(status_code=401, detail="Unable to resolve user identity. Please contact an administrator.")
 
         if user is None:
             # Auto-create first user as admin; subsequent users as analyst
@@ -209,7 +253,7 @@ async def _get_current_user(request: Request) -> AuthUser:
             user = User(
                 id=user_id,
                 email=email,
-                name=claims.get("name", email.split("@")[0]),
+                name=clerk_name or claims.get("name", email.split("@")[0]),
                 role=role.value,
                 is_active=True,
                 department=None,
