@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 from backend.llm.client import get_llm
 
 def _get_reasoning_llm(max_tokens: int = 1_024):
-    return get_llm(temperature=0.1)
+    return get_llm(temperature=0.1, max_tokens=max_tokens)
 
 
 

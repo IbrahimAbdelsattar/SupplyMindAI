@@ -79,15 +79,15 @@ def _route_after_copilot(state: AgentState):
     return END
 
 
-def _increment_tool_count(state: AgentState):
-    """Wrap tool node to track iteration count."""
-    new_count = state.get("tool_call_count", 0) + 1
-    return {"tool_call_count": new_count}
+def _copilot_tool_node_with_count(state: AgentState):
+    """Wrap ToolNode to increment tool_call_count each time tools execute."""
+    result = _copilot_tool_node.invoke(state)
+    return {**result, "tool_call_count": state.get("tool_call_count", 0) + 1}
 
 
 _copilot_workflow = StateGraph(AgentState)
 _copilot_workflow.add_node("copilot", copilot_agent_node)
-_copilot_workflow.add_node("tools", _copilot_tool_node)
+_copilot_workflow.add_node("tools", _copilot_tool_node_with_count)
 _copilot_workflow.set_entry_point("copilot")
 _copilot_workflow.add_conditional_edges("copilot", _route_after_copilot)
 _copilot_workflow.add_edge("tools", "copilot")

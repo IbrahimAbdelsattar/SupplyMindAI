@@ -58,6 +58,9 @@ services:
   # -------------------------------------------------------------------------
   backend:
     image: ${BACKEND_IMAGE:-supplymind-backend:latest}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: supplymind-backend-prod
     restart: unless-stopped
     expose:

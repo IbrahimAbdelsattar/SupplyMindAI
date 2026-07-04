@@ -4,6 +4,7 @@ import json
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from backend.dependencies import _get_current_user
 from backend.globals import STORE, load_ml_model
@@ -153,6 +154,35 @@ def forecast_insights(payload: dict, user: dict = Depends(_get_current_user)):
         return {"insights": result}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/insights/stream")
+async def forecast_insights_stream(
+    payload: dict,
+    user: dict = Depends(_get_current_user),
+):
+    """Stream forecast-based AI insights as SSE events."""
+    from backend.services.streaming import stream_insights
+
+    product_id = payload.get("product_id")
+    if not product_id:
+        raise HTTPException(status_code=400, detail="product_id is required")
+    generator = stream_insights(product_id)
+    return StreamingResponse(generator, media_type="text/event-stream")
+
+
+@router.post("/reasoning/stream")
+async def forecast_reasoning_stream(
+    payload: dict,
+    user: dict = Depends(_get_current_user),
+):
+    """Stream forecast reasoning analysis as SSE events."""
+    from backend.services.streaming import stream_forecast_reasoning
+
+    forecasts = payload.get("forecasts", [])
+    question = payload.get("question")
+    generator = stream_forecast_reasoning(forecasts=forecasts, question=question)
+    return StreamingResponse(generator, media_type="text/event-stream")
 
 
 @router.get("/intelligence/analyze")

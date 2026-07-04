@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 
 from backend.dependencies import _get_current_user
 from backend.schemas.insights import InsightsGeneratePayload, ChatPayload
@@ -25,6 +26,18 @@ def insights_generate(
     except Exception as exc:
         LOGGER.error("Insight generation failed for %s: %s", payload.product_id, exc)
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/generate/stream")
+async def insights_generate_stream(
+    payload: InsightsGeneratePayload,
+    user: dict = Depends(_get_current_user),
+):
+    """Stream AI insights generation as SSE events (reduces perceived latency)."""
+    from backend.services.streaming import stream_insights
+
+    generator = stream_insights(payload.product_id)
+    return StreamingResponse(generator, media_type="text/event-stream")
 
 
 # ---------------------------------------------------------------------------
@@ -54,3 +67,14 @@ def llm_monitor_recent(
         "records": llm_monitor.get_recent(limit=limit, feature=feature),
         "count": len(llm_monitor.get_recent(limit=limit, feature=feature)),
     }
+
+
+@router.get("/monitor/cache")
+def llm_cache_stats(user: dict = Depends(_get_current_user)):
+    """Return LLM response cache statistics."""
+    from backend.llm.cache import get_cache, is_cache_enabled
+
+    if not is_cache_enabled():
+        return {"enabled": False, "message": "Cache disabled via LLM_CACHE_ENABLED=false"}
+    cache = get_cache()
+    return {"enabled": True, **cache.stats}

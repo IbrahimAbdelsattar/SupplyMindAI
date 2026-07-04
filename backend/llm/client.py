@@ -109,8 +109,8 @@ def _safe_create_chat_openai(
 
 from functools import lru_cache
 
-@lru_cache(maxsize=1)
-def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
+@lru_cache(maxsize=8)
+def get_llm(temperature: float = 0.1, max_tokens: int = 4096) -> ChatOpenAI | None:
     """
     Unified client factory. Returns a ChatOpenAI instance or None.
     Auto-detects provider, model, base_url and configuration, applying fallbacks.
@@ -162,7 +162,8 @@ def get_llm(temperature: float = 0.1) -> ChatOpenAI | None:
                 temperature=temperature,
                 extra_headers=extra_headers,
                 timeout=timeout,
-                max_retries=max_retries
+                max_retries=max_retries,
+                max_tokens=max_tokens,
             )
             return client
         except Exception as exc:

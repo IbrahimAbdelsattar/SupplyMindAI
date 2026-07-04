@@ -209,10 +209,10 @@ def monitor_llm_call(feature: str, model: str = "unknown", provider: str = "unkn
     """Context manager that records LLM call metrics on exit.
 
     Usage:
-        with monitor_llm_call("ai_insights", "nvidia/nemotron-3-super-120b-a12b:free", "openrouter"):
+        with monitor_llm_call("ai_insights", "nvidia/nemotron-3-super-120b-a12b:free", "openrouter") as ctx:
             response = llm.invoke(messages)
-            # Optional: pass token counts after the call
-            monitor_llm_call.record_tokens(response)
+            # Optional: extract token counts after the call
+            ctx["record_tokens"](response)
     """
     start = time.monotonic()
     ctx = {"success": True, "error": None, "input_tokens": 0, "output_tokens": 0, "context_length": 0, "response_length": 0}

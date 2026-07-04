@@ -411,6 +411,26 @@ flowchart TD
 
 ---
 
+## ⚡ LLM Optimizations
+
+The platform implements 6 optimization strategies to reduce token usage, latency, and costs:
+
+| Strategy | Impact | Key Files |
+|----------|--------|-----------|
+| **Duplicate context removal** | ~50% fewer input tokens | `forecast_reasoning.py`, `executive_prompts.py` |
+| **RAG consolidation** | Eliminated duplicate DB queries | `knowledge/rag.py`, `knowledge/copilot.py` |
+| **Token budget enforcement** | Prevents runaway context | `llm/limits.py` (per-feature budgets) |
+| **Agent iteration limits** | Caps tool-call loops at 4 rounds | `agents/state.py`, `agents/graph.py` |
+| **Response caching** | 1hr TTL, SHA-256 keyed | `llm/cache.py` (applied to RAG) |
+| **LLM observability** | Full call tracking | `llm/monitor.py` (stats, recent, cache endpoints) |
+
+**Monitoring endpoints:**
+- `GET /api/v1/insights/monitor/stats` — Aggregated LLM call statistics
+- `GET /api/v1/insights/monitor/recent` — Recent LLM call records
+- `GET /api/v1/insights/monitor/cache` — Response cache hit/miss stats
+
+---
+
 ## 🗄️ Database Schema
 
 ```mermaid

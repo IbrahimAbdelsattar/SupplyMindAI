@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
@@ -35,11 +35,13 @@ import {
   Send,
   Bot,
   User,
+  Loader2,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
+import { consumeSSE } from '@/lib/stream';
 import { Button } from '@/components/ui/button';
 
 type Product = { product_id: string; product_name: string };

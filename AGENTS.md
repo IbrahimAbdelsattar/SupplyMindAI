@@ -102,3 +102,52 @@ Use these utility classes for consistent neumorphism:
 - i18n translation files live in `locales/{en,ar}/*.json` — 12 namespaces per locale
 - RTL is handled automatically via `i18n.on("languageChanged")` setting `document.dir`
 
+## LLM Optimizations
+
+### Token & Context Management
+- **`backend/llm/limits.py`**: `approx_tokens()` (~4 chars/token), `truncate_to_budget()` (line-boundary safe), per-feature budgets via `TOKEN_BUDGETS` dict, output caps via `OUTPUT_TOKEN_LIMITS` dict
+- Per-feature input budgets: copilot 6K, forecast 8K, insights 10K, RAG 6K, platform_guide 4K
+- Output token limits: copilot 512, forecast_reasoning 1024, ai_insights 2048, RAG 512
+- Context only in system prompt (not duplicated in human message) — ~50% input token savings
+
+### Prompt Compression
+- Executive prompts compressed ~40-60% (removed verbose boilerplate, kept essential instructions)
+- RAG prompt reduced to 1 sentence: `GROUNDED_SYSTEM`
+- Copilot system prompt compressed to 5 short rules
+
+### Agent Iteration Limits
+- `backend/agents/state.py`: `MAX_TOOL_ROUNDS = 4`, `tool_call_count: int` in state
+- `copilot_graph.py`: `_route_after_copilot()` forces END at max rounds
+- `graph.py`: `tool_node_with_count()` wrapper increments count; `agent_router()` checks limit
+- `copilot_graph.py`: System prompt instructs "Limit yourself to at most 3 tool calls"
+- `recursion_limit=20` on `copilot_graph.invoke()` to prevent infinite loops
+
+### Response Caching
+- `backend/llm/cache.py`: Thread-safe in-memory LLM response cache with TTL (default 1hr)
+- Cache key = SHA-256(feature + messages + extra context)
+- Disabled via `LLM_CACHE_ENABLED=false`
+- Stats endpoint: `GET /api/v1/insights/monitor/cache`
+- Applied to RAG queries (most repeated call site)
+
+### LLM Observability
+- `backend/llm/monitor.py`: `LLMMonitor` class with per-feature stats, `monitor_llm_call()` context manager
+- Endpoints: `GET /api/v1/insights/monitor/stats`, `/monitor/recent`, `/monitor/cache`
+- All LLM calls wrapped with monitoring: forecast_reasoning, insight_service, rag, copilot_service, copilot_graph
+
+### Duplicate Cleanup
+- `backend/services/rag_service.py` deleted (dead code; `knowledge/rag.py` is canonical)
+- `knowledge/copilot.py`: Removed redundant 6-source semantic_search calls (already done by `rag_query()`)
+
+### Key Files
+- `backend/llm/cache.py` — Response cache
+- `backend/llm/limits.py` — Token budgets & truncation
+- `backend/llm/monitor.py` — LLM call monitoring
+- `backend/llm/forecast_reasoning.py` — Forecast LLM reasoning (optimized)
+- `backend/llm/executive_prompts.py` — Compressed system prompts
+- `backend/agents/state.py` — Agent state with iteration counter
+- `backend/agents/graph.py` — Agent graph with iteration limits
+- `backend/agents/copilot_graph.py` — Copilot graph with iteration limits
+- `backend/knowledge/rag.py` — Canonical RAG (with caching)
+- `backend/knowledge/copilot.py` — Copilot with cleaned-up fallback
+- `backend/knowledge/stream.py` — Streaming with monitoring
+
