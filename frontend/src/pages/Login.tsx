@@ -18,12 +18,12 @@ const Login = () => {
       card: 'bg-transparent shadow-none w-full max-w-md p-0',
       headerTitle: 'hidden',
       headerSubtitle: 'hidden',
-      socialButtonsBlockButton: 'neu-btn border-none bg-muted hover:bg-muted/80 text-foreground transition-all duration-200',
+      socialButtonsBlockButton: 'neu-btn border-none bg-muted text-foreground transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-muted/80 active:scale-[0.97]',
       dividerLine: 'bg-border',
-      dividerText: 'text-muted-foreground',
-      formFieldLabel: 'text-foreground font-semibold',
-      formFieldInput: 'neu-basin border-none bg-background text-foreground focus:ring-1 focus:ring-primary',
-      formButtonPrimary: 'neu-btn neu-glow bg-primary hover:bg-primary/90 text-primary-foreground font-bold transition-all duration-200',
+      dividerText: 'text-muted-foreground font-medium',
+      formFieldLabel: 'text-foreground font-semibold text-sm',
+      formFieldInput: 'neu-basin border-none bg-background text-foreground focus:ring-1 focus:ring-primary transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
+      formButtonPrimary: 'neu-btn neu-glow text-primary-foreground font-bold transition-all duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97]',
       footerActionText: 'hidden',
       footerActionLink: 'hidden',
       footer: 'hidden',
@@ -39,9 +39,12 @@ const Login = () => {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ 
+          duration: 0.4, 
+          ease: [0.23, 1, 0.32, 1] 
+        }}
         className="z-10 flex flex-col items-center w-full max-w-[440px]"
       >
         <div className="mb-8 text-center">

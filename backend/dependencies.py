@@ -11,4 +11,6 @@ from backend.auth.dependencies import (
     _utc_now,
 )
 
-__all__ = ["get_current_user", "require_permission", "require_role", "_utc_now"]
+_get_current_user = get_current_user
+
+__all__ = ["get_current_user", "_get_current_user", "require_permission", "require_role", "_utc_now"]

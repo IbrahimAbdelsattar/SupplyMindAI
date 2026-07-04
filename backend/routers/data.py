@@ -7,7 +7,7 @@ from datetime import date
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.dependencies import _get_current_user
+from backend.dependencies import get_current_user
 from backend.globals import PROJECT_ROOT, STORE
 from backend.db import SessionLocal, ForecastResult
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/v1/data", tags=["data"])
 
 
 @router.get("/products")
-def data_products(user: dict = Depends(_get_current_user)):
+def data_products(user: dict = Depends(get_current_user)):
     try:
         prods = STORE.products()
         inv = STORE.inventory()
@@ -61,7 +61,7 @@ def data_products(user: dict = Depends(_get_current_user)):
 
 
 @router.get("/kpis")
-def data_kpis(period_days: int = 90, user: dict = Depends(_get_current_user)):
+def data_kpis(period_days: int = 90, user: dict = Depends(get_current_user)):
     try:
         from datetime import timedelta
         cutoff = date.today() - timedelta(days=period_days)
@@ -208,7 +208,7 @@ def data_kpis(period_days: int = 90, user: dict = Depends(_get_current_user)):
 
 
 @router.get("/heatmap")
-def data_heatmap(user: dict = Depends(_get_current_user)):
+def data_heatmap(user: dict = Depends(get_current_user)):
     """
     Returns product demand intensity data in a flat format suitable for
     a product × store heatmap grid.

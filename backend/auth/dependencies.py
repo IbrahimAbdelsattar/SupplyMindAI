@@ -27,7 +27,6 @@ import jwt
 import requests
 from fastapi import Request, HTTPException, Depends
 
-from backend.auth.domain import ALLOWED_DOMAIN, extract_domain, is_valid_domain
 from backend.auth.rbac import (
     Role,
     ROLE_PERMISSIONS,
@@ -62,7 +61,10 @@ def _extract_clerk_domain() -> Optional[str]:
         padding = 4 - len(encoded_domain) % 4
         if padding != 4:
             encoded_domain += "=" * padding
-        return base64.b64decode(encoded_domain).decode()
+        domain = base64.b64decode(encoded_domain).decode()
+        # Strip any trailing non-DNS chars (e.g. '$') from base64 decode artifacts
+        domain = domain.rstrip("$\x00")
+        return domain
     except Exception:
         return None
 
@@ -174,28 +176,29 @@ async def _get_current_user(request: Request) -> AuthUser:
     user_id = claims.get("sub", "unknown")
     email = claims.get("email", "")
 
-    if not email:
-        log_login_failure("No email in JWT claims", ip_address=ip)
-        raise HTTPException(status_code=401, detail="Token missing email claim")
-
-    # Step 2: Domain check
-    domain = extract_domain(email)
-    if not domain or not is_valid_domain(email):
-        log_domain_rejected(email, ip_address=ip)
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                f"Email domain '{domain or 'unknown'}' is not authorized. "
-                f"Only @{ALLOWED_DOMAIN} corporate emails are permitted."
-            ),
-        )
-
-    # Step 3: DB lookup
+    # Step 2: DB lookup — try email first, then clerk_user_id
     from backend.db import get_db
     db = next(get_db())
     try:
         from backend.db import User
-        user = db.query(User).filter(User.email == email).first()
+
+        user = None
+
+        # Try email lookup first
+        if email:
+            user = db.query(User).filter(User.email == email).first()
+
+        # Fallback: look up by Clerk user ID (sub claim)
+        if user is None and user_id and user_id != "unknown":
+            user = db.query(User).filter(User.clerk_user_id == user_id).first()
+            if user:
+                email = user.email  # Use stored email from DB
+                logger.info("Resolved email from DB via clerk_user_id=%s -> %s", user_id, email)
+
+        # No user found anywhere — need email to proceed
+        if user is None and not email:
+            log_login_failure("No email in JWT claims and no matching DB user", ip_address=ip)
+            raise HTTPException(status_code=401, detail="Token missing email claim and no matching user in database")
 
         if user is None:
             # Auto-create first user as admin; subsequent users as analyst
@@ -210,6 +213,7 @@ async def _get_current_user(request: Request) -> AuthUser:
                 role=role.value,
                 is_active=True,
                 department=None,
+                clerk_user_id=user_id,
                 created_at=now,
                 updated_at=now,
             )
@@ -217,11 +221,15 @@ async def _get_current_user(request: Request) -> AuthUser:
             db.commit()
             db.refresh(user)
             logger.info("Auto-created user %s with role %s", email, role.value)
-        else:
-            # Sync clerk_user_id if not set
-            if not user.clerk_user_id:
-                user.clerk_user_id = user_id
-                db.commit()
+
+        # Sync clerk_user_id if not set
+        if not user.clerk_user_id and user_id and user_id != "unknown":
+            user.clerk_user_id = user_id
+            db.commit()
+
+        email = user.email  # Ensure email is always the stored value
+
+        # Domain check removed to allow public users
 
         # Step 4: Active check
         if not user.is_active:

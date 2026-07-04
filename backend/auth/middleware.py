@@ -63,7 +63,21 @@ class AuthMiddleware(BaseHTTPMiddleware):
             claims = _decode_token(token)
             if claims:
                 request.state.user_id = claims.get("sub")
-                request.state.user_email = claims.get("email")
+                # email may not be in Clerk JWT — resolve from DB if needed
+                email = claims.get("email", "")
+                if not email and request.state.user_id:
+                    try:
+                        from backend.db import get_db, User
+                        db = next(get_db())
+                        try:
+                            db_user = db.query(User).filter(User.clerk_user_id == request.state.user_id).first()
+                            if db_user:
+                                email = db_user.email
+                        finally:
+                            db.close()
+                    except Exception:
+                        pass
+                request.state.user_email = email
                 request.state.user_role = claims.get("role")
         except Exception:
             pass  # Let endpoint-level deps handle auth errors
@@ -121,6 +135,9 @@ def _extract_clerk_domain() -> Optional[str]:
         padding = 4 - len(encoded_domain) % 4
         if padding != 4:
             encoded_domain += "=" * padding
-        return base64.b64decode(encoded_domain).decode()
+        domain = base64.b64decode(encoded_domain).decode()
+        # Strip any trailing non-DNS chars (e.g. '$') from base64 decode artifacts
+        domain = domain.rstrip("$\x00")
+        return domain
     except Exception:
         return None
