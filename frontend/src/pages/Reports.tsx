@@ -34,30 +34,14 @@ type ReportItem = {
   title: string;
   description: string;
   type: string;
-  date: string;
+  format?: string;
+  date?: string;
+  generated_at?: string;
   status: string;
+  file_size?: number;
   download_url?: string;
-};
-
-type InvRec = {
-  product_id: string;
-  product_name: string;
-  currentStock: number;
-  reorderPoint: number;
-  reorderQty: number;
-  safetyStock: number;
-  leadTime: number;
-  costSavings: number;
-  riskLevel: string;
-};
-
-type InvSummary = {
-  totalProducts: number;
-  criticalProducts: number;
-  lowProducts: number;
-  healthyProducts: number;
-  totalUnits: number;
-  activeProducts: number;
+  period_start?: string;
+  period_end?: string;
 };
 
 const typeColors: Record<string, string> = {
@@ -86,12 +70,12 @@ const Reports = () => {
 
   const { data: invData } = useQuery({
     queryKey: ['inventory-list'],
-    queryFn: () => apiFetch<{ summary: InvSummary; items: unknown[] }>('/inventory'),
+    queryFn: () => apiFetch<{ summary: { totalProducts: number; healthyProducts: number }; items: unknown[] }>('/inventory'),
   });
 
   const { data: recommendations = [] } = useQuery({
     queryKey: ['inventory-optimize', 100],
-    queryFn: () => apiFetch<InvRec[]>('/inventory/optimize?limit=100'),
+    queryFn: () => apiFetch<{ costSavings: number; riskLevel: string }[]>('/inventory/optimize?limit=100'),
   });
 
   const generateMutation = useMutation({
@@ -107,40 +91,17 @@ const Reports = () => {
   const healthyPct = totalProducts > 0 ? Math.round((summary?.healthyProducts ?? 0) / totalProducts * 100) : 0;
   const issuesCount = recommendations.filter(r => r.riskLevel === 'high' || r.riskLevel === 'medium').length;
 
-  const buildInventoryCsv = (recs: InvRec[]): string => {
-    const header = ['product_id', 'product_name', 'currentStock', 'reorderPoint', 'reorderQty', 'safetyStock', 'leadTimeDays', 'costSavings', 'riskLevel'];
-    const rows = recs.map(r => [
-      r.product_id,
-      `"${r.product_name}"`,
-      r.currentStock,
-      r.reorderPoint,
-      r.reorderQty,
-      r.safetyStock,
-      r.leadTime,
-      r.costSavings.toFixed(2),
-      r.riskLevel,
-    ].join(','));
-    return [header.join(','), ...rows].join('\n');
-  };
-
   const handlePreview = async (report: ReportItem) => {
     setIsPreviewLoading(true);
     setPreviewTitle(report.title);
 
     try {
-      let text: string;
+      const downloadPath = report.download_url || `/system/reports/download/${report.id}.csv`;
+      const text = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
 
-      if (report.type === 'inventory') {
-        const data = await apiFetch<InvRec[]>('/inventory/optimize?limit=100');
-        text = buildInventoryCsv(data);
-      } else {
-        const downloadPath = report.download_url || `/system/reports/download/report_${report.id}.json`;
-        text = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
-      }
-
-      const rows = text.split('\n').map(row => {
-        return row.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
-      }).filter(row => row.length > 0 && row.some(cell => cell !== ''));
+      const rows = text.split('\n').map(row =>
+        row.split(',').map(cell => cell.trim().replace(/^"|"$/g, ''))
+      ).filter(row => row.length > 0 && row.some(cell => cell !== ''));
 
       if (rows.length > 0) {
         setPreviewHeaders(rows[0]);
@@ -156,26 +117,13 @@ const Reports = () => {
 
   const handleDownload = async (report: ReportItem) => {
     try {
-      let csv: string;
-      let filename = 'report.csv';
+      const downloadPath = report.download_url || `/system/reports/download/${report.id}.csv`;
+      const text = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
 
-      if (report.type === 'inventory') {
-        const data = await apiFetch<InvRec[]>('/inventory/optimize?limit=100');
-        csv = buildInventoryCsv(data);
-        filename = 'inventory_recommendations.csv';
-      } else {
-        const downloadPath = report.download_url || `/system/reports/download/report_${report.id}.json`;
-        csv = await fetchApi(downloadPath, { auth: true, responseType: 'text' }) as string;
+      const ext = report.format === 'csv' ? 'csv' : 'csv';
+      const filename = `${report.title.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase()}.${ext}`;
 
-        if (report.type === 'daily') filename = 'daily_operations_report.csv';
-        else if (report.type === 'weekly') filename = 'weekly_performance_report.csv';
-        else if (report.type === 'monthly') filename = 'monthly_performance_report.csv';
-        else if (report.type === 'quarterly') filename = 'quarterly_business_review.csv';
-        else if (report.type === 'yearly') filename = 'yearly_strategic_report.csv';
-        else if (report.type === 'forecast') filename = 'forecast_export.csv';
-      }
-
-      const blob = new Blob([csv], { type: 'text/csv' });
+      const blob = new Blob([text], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = filename;
@@ -183,6 +131,13 @@ const Reports = () => {
     } catch (err) {
       console.error('Failed to download report:', err);
     }
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -271,10 +226,15 @@ const Reports = () => {
                         <h4 className="font-semibold text-sm sm:text-base truncate">{report.title}</h4>
                         <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{report.description}</p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <Badge variant="outline" className={`${typeColors[report.type]} text-xs`}>
+                          <Badge variant="outline" className={`${typeColors[report.type] || 'bg-muted text-muted-foreground'} text-xs`}>
                             {report.type}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">{report.date}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {report.generated_at ? new Date(report.generated_at).toLocaleDateString() : report.date || ''}
+                          </span>
+                          {report.file_size ? (
+                            <span className="text-xs text-muted-foreground">{formatFileSize(report.file_size)}</span>
+                          ) : null}
                         </div>
                       </div>
                     </div>

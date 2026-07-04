@@ -23,7 +23,7 @@ os.makedirs(INVENTORY_REPORTS_DIR, exist_ok=True)
 # GET / — list all inventory items with product info
 # ---------------------------------------------------------------------------
 @router.get("/")
-def list_inventory(user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})) -> dict[str, Any]:
+def list_inventory(user: dict = Depends(_get_current_user)) -> dict[str, Any]:
     try:
         inv = STORE.inventory()
         prods = STORE.products()
@@ -59,7 +59,7 @@ def list_inventory(user: dict = Depends(lambda: {"id":"public","email":"public@e
 # POST /update — update stock with full payload
 # ---------------------------------------------------------------------------
 @router.post("/update")
-def inventory_update(payload: dict, user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_update(payload: dict, user: dict = Depends(_get_current_user)):
     try:
         product_id = payload.get("product_id")
         quantity = payload.get("quantity", 0)
@@ -76,7 +76,7 @@ def inventory_update(payload: dict, user: dict = Depends(lambda: {"id":"public",
 # GET /optimize — list optimizations for all products (frontend uses ?limit=N)
 # ---------------------------------------------------------------------------
 @router.get("/optimize")
-def inventory_optimize_list(limit: int = Query(20, ge=1, le=500), user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_optimize_list(limit: int = Query(20, ge=1, le=500), user: dict = Depends(_get_current_user)):
 
     try:
         prods = STORE.products()
@@ -126,7 +126,7 @@ def inventory_optimize_list(limit: int = Query(20, ge=1, le=500), user: dict = D
 # GET /optimize/{product_id} — single product optimization
 # ---------------------------------------------------------------------------
 @router.get("/optimize/{product_id}")
-def inventory_optimize_get(product_id: str, user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_optimize_get(product_id: str, user: dict = Depends(_get_current_user)):
     try:
         from backend.services.optimization_service import calculate_optimization
 
@@ -137,7 +137,7 @@ def inventory_optimize_get(product_id: str, user: dict = Depends(lambda: {"id":"
 
 
 @router.post("/optimize")
-def inventory_optimize(payload: dict, user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_optimize(payload: dict, user: dict = Depends(_get_current_user)):
     try:
         product_id = payload.get("product_id")
         from backend.services.optimization_service import calculate_optimization
@@ -149,7 +149,7 @@ def inventory_optimize(payload: dict, user: dict = Depends(lambda: {"id":"public
 
 
 @router.post("/adjust")
-def inventory_adjust(payload: dict, user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_adjust(payload: dict, user: dict = Depends(_get_current_user)):
     try:
         product_id = payload.get("product_id")
         quantity = payload.get("quantity", 0)
@@ -163,7 +163,7 @@ def inventory_adjust(payload: dict, user: dict = Depends(lambda: {"id":"public",
 
 
 @router.get("/summary")
-def inventory_summary(user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_summary(user: dict = Depends(_get_current_user)):
     try:
         prods = STORE.products()
         inv = STORE.inventory()
@@ -173,7 +173,7 @@ def inventory_summary(user: dict = Depends(lambda: {"id":"public","email":"publi
 
 
 @router.get("/health")
-def inventory_health(user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_health(user: dict = Depends(_get_current_user)):
     try:
         inv = STORE.inventory()
         latest = inv.sort_values("date").groupby("product_id").last().reset_index()
@@ -191,7 +191,7 @@ def inventory_health(user: dict = Depends(lambda: {"id":"public","email":"public
 
 
 @router.get("/abc-analysis")
-def inventory_abc_analysis(user: dict = Depends(lambda: {"id":"public","email":"public@example.com"})):
+def inventory_abc_analysis(user: dict = Depends(_get_current_user)):
     try:
         from backend.services.analysis_service import abc_analysis
 

@@ -226,6 +226,10 @@ from backend.guardrails.middleware import GuardrailsMiddleware
 guardrail_monitor = GuardrailMonitor(GuardrailsConfig())
 app.add_middleware(GuardrailsMiddleware, monitor=guardrail_monitor)
 app.state.guardrail_monitor = guardrail_monitor
+
+# ── Auth Middleware ─────────────────────────────────────────────────────────────
+from backend.auth.middleware import AuthMiddleware
+app.add_middleware(AuthMiddleware)
 # -----------------------------------------------------------------------------
 
 # Mount local storage router
@@ -245,13 +249,10 @@ except Exception as exc:
     logger.warning("Knowledge router not loaded: %s", exc)
 
 _ROUTERS_TO_LOAD = [
-    ("backend.routers.ai_chat", "router"),
+    ("backend.routers.auth", "router"),
     ("backend.routers.system", "router"),
-
     ("backend.routers.mlops", "router"),
-    ("backend.routers.security", "router"),
     ("backend.routers.insights", "router"),
-    ("backend.routers.alerts", "router"),
     ("backend.routers.settings", "router"),
     ("backend.routers.inventory_domain", "router"),
     ("backend.routers.data", "router"),
@@ -336,6 +337,19 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "An unexpected server error occurred.", "error_type": type(exc).__name__, "error_msg": str(exc)}
     )
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if ENVIRONMENT == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+    return response
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -463,18 +477,6 @@ def _run_migrations() -> None:
         logger.info("Alembic migrations up to date")
     except Exception as exc:
         logger.warning("Alembic migration failed (%s), falling back to create_tables()", exc)
-    # ── Startup Summary ──────────────────────────────────────────────────────
-    port = int(os.getenv("PORT", "8001"))
-    logger.info("=" * 60)
-    logger.info("  SupplyMindAI Backend — READY")
-    logger.info("  Environment : %s", ENVIRONMENT.upper())
-    logger.info("  DB          : %s", "✅ connected" if db_ok else "❌ FAILED")
-    logger.info("  ML Model    : %s", "✅ trained pkl" if ml_trained else ("✅ CSV mode" if ml_ok else "❌ FAILED"))
-    logger.info("  RAG Service : %s", "✅ ready" if rag_ok else "⚠️  unavailable")
-    logger.info("  Forecast AI : %s", "✅ loaded" if fi_ok else "⚠️  unavailable")
-    logger.info("  Docs        : http://localhost:%s/docs", port)
-    logger.info("  Health      : http://localhost:%s/api/v1/health", port)
-    logger.info("=" * 60)
 
 # -----------------------------------------------------------------------------
 # Entry point

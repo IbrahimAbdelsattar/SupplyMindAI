@@ -1,4 +1,4 @@
-﻿import { motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
@@ -83,7 +83,7 @@ function HeatmapSkeleton({ storeCount }: { storeCount: number }) {
 
 export const HeatmapChart = () => {
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
-  const [apiStores, setApiStores] = useState<Store[]>([{ id: 's1', name: 'Store 1' }]);
+  const [apiStores, setApiStores] = useState<Store[]>([]);
   const [apiData, setApiData] = useState<HeatmapCell[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +92,6 @@ export const HeatmapChart = () => {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
       setError(null);
       try {
         const [prods, heat] = await Promise.all([

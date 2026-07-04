@@ -6,6 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LanguageSwitcher } from '@/components/language/LanguageSwitcher';
 import { SupplyMindLogo } from '@/components/brand/SupplyMindLogo';
+import { useAuthContext } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -24,14 +25,23 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import React, { useState } from 'react';
 
-const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: string; path: string }[] = [
+type NavRole = 'admin' | 'manager' | 'analista' | 'vendedor';
+
+const ROLE_HIERARCHY: Record<NavRole, number> = {
+  admin: 4,
+  manager: 3,
+  analista: 2,
+  vendedor: 1,
+};
+
+const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: string; path: string; minRole?: NavRole }[] = [
   { icon: LayoutDashboard, labelKey: 'common:nav.dashboard', path: '/dashboard' },
-  { icon: TrendingUp, labelKey: 'common:nav.forecasting', path: '/forecasting' },
+  { icon: TrendingUp, labelKey: 'common:nav.forecasting', path: '/forecasting', minRole: 'manager' },
   { icon: Package, labelKey: 'common:nav.inventory', path: '/inventory' },
   { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
-  { icon: FileText, labelKey: 'common:nav.reports', path: '/reports' },
-  { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops' },
-  { icon: Settings, labelKey: 'common:nav.settings', path: '/settings' },
+  { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'manager' },
+  { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops', minRole: 'admin' },
+  { icon: Settings, labelKey: 'common:nav.settings', path: '/settings', minRole: 'admin' },
 ];
 
 const SidebarContent = ({
@@ -46,6 +56,15 @@ const SidebarContent = ({
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const { userRole } = useAuthContext();
+
+  // Filter nav items by role
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.minRole) return true;
+    const userLevel = ROLE_HIERARCHY[userRole as NavRole] ?? 0;
+    const requiredLevel = ROLE_HIERARCHY[item.minRole];
+    return userLevel >= requiredLevel;
+  });
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -77,7 +96,7 @@ const SidebarContent = ({
 
       {/* Navigation — Neumorphic items */}
       <nav className="flex-1 px-4 space-y-2 overflow-y-auto pb-4 scrollbar-none">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link

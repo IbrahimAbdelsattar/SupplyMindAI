@@ -1,39 +1,47 @@
+
+
 # SupplyMind AI Diagrams
+
 
 This document combines:
 
-- the implemented frontend in `src/`
+- the implemented frontend in `frontend/src/`
 - the real business datasets in `data/*.csv`
-- the planned backend, ML, RAG, MLOps, and infrastructure layers from `plans/implementation_plan.md`
+- the fully implemented backend, ML, RAG, MLOps, and infrastructure layers
+- the `plans/implementation_plan.md` future roadmap
 
-`Current` means already present in the repo today. `Planned` means defined in the implementation plan but not yet implemented in this codebase.
+> **Status Key:** All layers below are **Current** (implemented in the repo). Future roadmap items are noted separately.
 
 ## 1. Full Project Architecture
-![alt text](docs/Gemini_Generated_Image_f8d28mf8d28mf8d2.png)
+
 ```mermaid
 flowchart LR
     user[Manager / Analyst User]
 
     subgraph FE["Frontend SPA (Current)"]
         app[React + Vite + React Router]
-        providers[Providers\nQueryClientProvider\nAuthProvider\nThemeProvider]
-        pages[Pages\nLanding, Login, Dashboard,\nForecasting, Inventory,\nAI Insights, Reports,\nMLOps, Settings]
-        shared[Shared UI\nDashboardSidebar\nDashboardHeader\nCharts\nAIChatbot]
-        mock[mockData.ts + local component state]
+        providers[Providers\nQueryClientProvider\nClerkProvider\nThemeProvider\nCurrencyProvider\nDateRangeProvider]
+        pages[Pages\nLanding, Login, Dashboard,\nForecasting, Inventory,\nAI Insights, Reports,\nMLOps, Settings, 404]
+        shared[Shared UI\nDashboardSidebar\nDashboardHeader\nCharts (Recharts)\nAIChatbot\nLanguageSwitcher]
+        i18n[i18n\nEN / AR + RTL\n12 namespaces]
+        apiClient[API Layer\n@tanstack/react-query\nsrc/lib/api.ts\nsrc/lib/knowledgeApi.ts]
 
         app --> providers --> pages --> shared
-        pages -. current data source .-> mock
+        pages --> apiClient
+        i18n -.-> pages
     end
 
-    subgraph API["Application Backend (Planned)"]
+    subgraph API["Application Backend (Current)"]
         gateway[FastAPI App /api/v1]
-        auth[Auth Router + JWT]
+        auth[Security Router + JWT\nClerk Token Validation]
         dataSvc[Data Router]
-        forecastSvc[Forecast Service]
-        inventorySvc[Inventory + Alert Services]
-        insightSvc[Insights + Chat Services]
+        forecastSvc[Forecast Service\nML Adapter + Intelligence]
+        inventorySvc[Inventory + RAG + Alert Services]
+        insightSvc[Insights + Chat + Copilot Services]
         mlopsSvc[MLOps + Reports Services]
+        settingsSvc[Settings + Storage Services]
         cache[(Redis)]
+        guardrails[AI Guardrails\nInput, Output, RAG,\nForecast, Agent,\nTenant, Rate Limiter]
 
         gateway --> auth
         gateway --> dataSvc
@@ -41,84 +49,87 @@ flowchart LR
         gateway --> inventorySvc
         gateway --> insightSvc
         gateway --> mlopsSvc
+        gateway --> settingsSvc
+        gateway --> guardrails
         gateway <--> cache
     end
 
-    subgraph DATA["Data and ML Platform (Planned)"]
-        raw[Local CSVs / Azure Blob Storage\nproducts, sales, inventory,\nproduction, suppliers,\ncontracts, raw_materials, bom]
-        ingest[Ingestion + Validation\npandas + Great Expectations]
-        features[Feature Engineering\nfeatures_daily.parquet]
-        postgres[(PostgreSQL)]
-        training[Training Pipeline\nXGBoost / LSTM / TFT]
+    subgraph DATA["Data and ML Platform (Current)"]
+        raw[CSV Datasets\nproducts, sales, inventory,\nproduction, suppliers,\ncontracts, raw_materials, bom]
+        postgres[(PostgreSQL / Supabase)]
+        training[Training Pipeline\nXGBoost / scikit-learn]
         registry[MLflow Tracking + Model Registry]
         drift[Drift Detection + Retraining]
         optimizer[Inventory Optimizer\nEOQ / ROP / Safety Stock]
-        vector[(ChromaDB / Azure AI Search)]
+        vector[(ChromaDB Vector Store)]
+        embeddings[sentence-transformers\nall-MiniLM-L6-v2]
+        agentGraph[LangGraph Agents\nSupervisor, Forecasting,\nInventory, MLOps, RAG]
+        llmClient[LLM Client\nOpenAI / OpenRouter / NVIDIA]
 
-        raw --> ingest --> features
-        ingest --> postgres
-        features --> postgres
-        features --> training --> registry
-        features --> drift
-        raw --> vector
+        raw --> postgres
+        raw --> training --> registry
+        training --> drift
+        vector --> embeddings
+        agentGraph --> vector
+        agentGraph --> llmClient
         optimizer --> postgres
     end
 
-    subgraph EXT["External / Infrastructure (Planned)"]
-        llm[OpenAI / Azure OpenAI]
-        monitor[Azure Monitor / App Insights]
-        deploy[Docker + GitHub Actions + AKS]
+    subgraph INFRA["Infrastructure (Current)"]
+        docker[Docker + Docker Compose]
+        nginx[Nginx Reverse Proxy\n+ API Gateway]
+        langsmith[LangSmith Tracing]
+        otel[OpenTelemetry Collector]
+        prom[Prometheus Metrics]
+        ci[GitHub Actions CI/CD]
     end
 
     user --> app
-    pages -. planned API integration .-> gateway
+    apiClient <--> gateway
 
     dataSvc <--> postgres
-    auth <--> postgres
+    auth --> postgres
     forecastSvc --> postgres
     forecastSvc --> registry
+    forecastSvc --> agentGraph
     inventorySvc --> postgres
     inventorySvc --> optimizer
     inventorySvc --> vector
     inventorySvc --> forecastSvc
     insightSvc --> postgres
     insightSvc --> forecastSvc
-    insightSvc --> llm
+    insightSvc --> llmClient
+    insightSvc --> agentGraph
     mlopsSvc --> registry
     mlopsSvc --> drift
     mlopsSvc --> postgres
+    settingsSvc --> postgres
 
-    deploy --> app
-    deploy --> gateway
-    monitor --> gateway
-    monitor --> registry
+    docker --> app
+    docker --> gateway
+    docker --> postgres
+    nginx --> app
+    nginx --> gateway
+    langsmith --> gateway
+    otel --> gateway
+    prom --> gateway
+    ci --> docker
 ```
 
 ## 2. ER Diagram
-![alt text](<ChatGPT Image 11 أبريل 2026، 04_48_30 م.png>)
-Notes:
 
-- `PRODUCTS`, `SALES_DAILY`, `INVENTORY`, `PRODUCTION_SCHEDULE`, `SUPPLIERS`, `CONTRACTS`, `RAW_MATERIALS`, and `BOM` come from the current CSV data.
-- `USERS`, `USER_SETTINGS`, `FORECASTS`, `ALERTS`, `MODEL_RUNS`, `DRIFT_REPORTS`, and `REPORTS` come from the implementation plan DDL.
-- The `MODEL_RUNS -> FORECASTS` relationship is logical rather than an explicit foreign key in the current plan.
+The database schema reflects the business domain with products, sales, inventory, production, suppliers, contracts, raw materials, bills of materials, users, forecasts, alerts, model runs, drift reports, and system reports.
 
 ```mermaid
 erDiagram
     USERS {
         uuid id PK
         string email
-        string password_hash
         string name
         string role
         datetime created_at
-    }
-
-    USER_SETTINGS {
-        uuid user_id PK, FK
-        string theme
-        json notifications
-        string region
-        string currency
+        json preferences
+        json clerk_metadata
     }
 
     PRODUCTS {
@@ -126,91 +137,78 @@ erDiagram
         string product_name
         string category
         string type
-        string size
-        decimal min_price
-        decimal max_price
+        decimal unit_price
+        decimal unit_cost
     }
 
     SALES_DAILY {
-        int sale_id PK
-        date date
+        uuid id PK
         string product_id FK
-        string contract_id FK
-        int qty
-        decimal price
+        date date
+        int units_sold
         decimal revenue
+        string contract_id FK
     }
 
     INVENTORY {
-        int id PK
-        date date
+        uuid id PK
         string product_id FK
-        int stock_level
+        date snapshot_date
+        int stock_on_hand
+        int reorder_point
+        int safety_stock
+        int lead_time_days
+        string status
     }
 
     PRODUCTION_SCHEDULE {
-        int id PK
-        date date
+        uuid id PK
         string product_id FK
-        int planned
-        int actual
-        float utilization
-        int delay
-    }
-
-    CONTRACTS {
-        string contract_id PK
-        string client
-        string product_id FK
-        date start
-        date end
-        int monthly_qty
-        decimal price
+        date planned_date
+        int quantity
+        string status
     }
 
     SUPPLIERS {
         string supplier_id PK
         string supplier_name
-        string region
-        float reliability
-        int lead_time_days
+        string contact_info
+        decimal reliability_score
+    }
+
+    CONTRACTS {
+        string contract_id PK
+        string product_id FK
+        string supplier_id FK
+        date start_date
+        date end_date
+        decimal contract_value
     }
 
     RAW_MATERIALS {
         string material_id PK
+        string supplier_id FK
         string material_name
         decimal unit_cost
-        string supplier_id FK
+        int lead_time_days
     }
 
     BOM {
+        uuid id PK
         string product_id FK
         string material_id FK
-        int qty
+        decimal quantity_per_unit
     }
 
     FORECASTS {
-        int id PK
-        string product_id FK
-        date forecast_date
-        date target_date
-        int horizon
-        decimal forecast_value
-        decimal lower_bound
-        decimal upper_bound
-        string model_name
-        string model_version
-    }
-
-    ALERTS {
         uuid id PK
-        string type
-        string severity
         string product_id FK
-        uuid acknowledged_by FK
-        string title
-        string message
-        boolean acknowledged
+        uuid model_run_id FK
+        date forecast_date
+        int horizon_days
+        json predictions
+        json confidence_intervals
+        decimal accuracy
         datetime created_at
     }
 
@@ -218,13 +216,31 @@ erDiagram
         uuid id PK
         string model_name
         string model_version
-        string mlflow_run_id
-        decimal rmse
-        decimal mape
-        decimal wape
-        string trigger
         string status
+        decimal accuracy
+        datetime trained_at
+        string artifact_path
+        json hyperparameters
+    }
+
+    ALERTS {
+        uuid id PK
+        string product_id FK
+        uuid user_id FK
+        string type
+        string severity
+        string message
+        boolean acknowledged
         datetime created_at
+    }
+
+    USER_SETTINGS {
+        uuid user_id PK, FK
+        string theme
+        string currency
+        json notifications
+        json display_preferences
+        datetime updated_at
     }
 
     DRIFT_REPORTS {
@@ -266,62 +282,76 @@ erDiagram
     MODEL_RUNS ||--o{ FORECASTS : generates
 ```
 
+
 ## 3. Sequence Diagram
-![alt text](<ChatGPT Image 11 أبريل 2026، 04_48_29 م.png>)
-This sequence models the target end-to-end user flow for the core product experience: forecast generation, inventory optimization, and AI insight retrieval from the frontend.
+
+This sequence models the end-to-end user flow for the core product experience: forecast generation, inventory optimization, AI insight retrieval, and copilot interaction.
 
 ```mermaid
 sequenceDiagram
     actor U as User
     participant FE as React Frontend
-    participant AUTH as Auth API
+    participant CLERK as Clerk Auth
     participant API as FastAPI Gateway
     participant DB as PostgreSQL
     participant FC as Forecast Service
     participant MR as MLflow Registry
     participant INV as Inventory Service
-    participant VS as Vector Store
-    participant AI as Insights Service
-    participant LLM as OpenAI / Azure OpenAI
+    participant VS as ChromaDB Vector Store
+    participant AI as Insights / Copilot Service
+    participant LLM as OpenRouter / OpenAI
+    participant LS as LangSmith
 
-    U->>FE: Sign in and open product view
-    FE->>AUTH: POST /api/v1/auth/login
-    AUTH->>DB: Validate user + role
-    DB-->>AUTH: User record
-    AUTH-->>FE: JWT + profile
+    U->>FE: Access application
+    FE->>CLERK: Sign in / Sign up
+    CLERK-->>FE: JWT + user profile
+    FE->>API: Requests with Bearer JWT
 
-    U->>FE: Select product and horizon
+    U->>FE: Select product and forecast horizon
 
     par Forecast request
         FE->>API: POST /api/v1/forecast/predict
         API->>FC: Build prediction request
-        FC->>DB: Load product history and engineered features
-        DB-->>FC: Sales / inventory / production context
+        FC->>DB: Load product history and features
+        DB-->>FC: Sales / inventory context
         FC->>MR: Resolve production model version
-        MR-->>FC: Model metadata / artifact location
-        FC-->>API: Forecast + confidence interval + feature importance
+        MR-->>FC: Model metadata / artifact
+        FC-->>API: Forecast + confidence intervals
         API-->>FE: Forecast payload
+        LS-->>LS: Trace prediction run
+
     and Inventory optimization
-        FE->>API: GET /api/v1/inventory/optimize?product_id=...
+        FE->>API: GET /api/v1/inventory/optimize
         API->>INV: Start optimization
-        INV->>DB: Load stock, BOM, supplier lead times
-        DB-->>INV: Inventory + supplier context
-        INV->>FC: Request forecast horizon for demand input
+        INV->>DB: Load stock, BOM, supplier data
+        DB-->>INV: Inventory context
+        INV->>FC: Request demand forecast
         FC-->>INV: Forecast demand series
-        INV->>VS: Retrieve product and inventory knowledge context
-        VS-->>INV: Ranked supporting documents
-        INV-->>API: EOQ + reorder point + safety stock + alerts
+        INV->>VS: Query knowledge context
+        VS-->>INV: Ranked documents
+        INV-->>API: EOQ + reorder point + safety stock
         API-->>FE: Optimization result
+
     and AI insight generation
         FE->>API: POST /api/v1/insights/generate
         API->>AI: Generate business explanation
-        AI->>DB: Read latest forecast/business context
-        DB-->>AI: Structured context
-        AI->>LLM: Prompt with forecast + SHAP + inventory context
-        LLM-->>AI: JSON insights + recommendations
+        AI->>DB: Read latest context
+        DB-->>AI: Structured data
+        AI->>LLM: Prompt with forecast + SHAP + inventory
+        LLM-->>AI: Insights + recommendations
         AI-->>API: Insight response
-        API-->>FE: Insight cards + executive summary
+        API-->>FE: Insight cards + summary
+
+    and Copilot chat
+        FE->>API: POST /api/v1/copilot/chat
+        API->>AI: Route to LangGraph agent
+        AI->>VS: Retrieve knowledge context
+        AI->>LLM: Generate grounded answer
+        LLM-->>AI: Response
+        AI-->>API: Answer + sources
+        API-->>FE: Chat response
     end
 
-    FE-->>U: Render charts, recommendations, alerts, and narrative insights
+    FE-->>U: Render charts, recommendations, insights, and chat
 ```
+

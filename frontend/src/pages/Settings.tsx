@@ -19,8 +19,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 
-import { Palette, Globe, Shield, User, Save } from 'lucide-react';
+import { Palette, Globe, Shield, User, Save, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { SignOutButton } from '@clerk/clerk-react';
 
 const Settings = () => {
   const { t } = useTranslation();
@@ -117,19 +118,28 @@ const Settings = () => {
                 <CardDescription className="text-xs sm:text-sm">{t('settings:profileDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 sm:gap-6">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xl sm:text-2xl font-bold text-primary">
-                      {(user?.name ?? user?.email ?? '?').charAt(0)}
-                    </span>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 sm:gap-6">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xl sm:text-2xl font-bold text-primary">
+                        {(user?.name ?? user?.email ?? '?').charAt(0)}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-base sm:text-lg font-semibold truncate">{user?.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
+                      <p className="text-xs sm:text-sm text-primary capitalize mt-0.5 sm:mt-1">
+                        {t('settings:roleAccount', { role: user?.role })}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-base sm:text-lg font-semibold truncate">{user?.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
-                    <p className="text-xs sm:text-sm text-primary capitalize mt-0.5 sm:mt-1">
-                      {t('settings:roleAccount', { role: user?.role })}
-                    </p>
-                  </div>
+                  
+                  <SignOutButton>
+                    <Button variant="destructive" className="w-full sm:w-auto gap-2">
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </Button>
+                  </SignOutButton>
                 </div>
               </CardContent>
             </Card>

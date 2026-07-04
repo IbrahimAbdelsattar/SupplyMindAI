@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/v1/data", tags=["data"])
 
 
 @router.get("/products")
-def data_products(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
+def data_products(user: dict = Depends(_get_current_user)):
     try:
         prods = STORE.products()
         inv = STORE.inventory()
@@ -61,11 +61,20 @@ def data_products(user: dict = Depends(lambda: {"id":"public","email":"public@ex
 
 
 @router.get("/kpis")
-def data_kpis(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
+def data_kpis(period_days: int = 90, user: dict = Depends(_get_current_user)):
     try:
+        from datetime import timedelta
+        cutoff = date.today() - timedelta(days=period_days)
+
         inventory = STORE.inventory()
         sales = STORE.sales_daily()
         purchases = STORE.purchases()
+
+        # Filter by period
+        if not inventory.empty and "date" in inventory.columns:
+            inventory = inventory[inventory["date"].astype(str) >= str(cutoff)]
+        if not sales.empty and "date" in sales.columns:
+            sales = sales[sales["date"].astype(str) >= str(cutoff)]
 
         total_stockout_days = 0
         total_days = 0
@@ -199,7 +208,7 @@ def data_kpis(user: dict = Depends(lambda: {"id":"public","email":"public@exampl
 
 
 @router.get("/heatmap")
-def data_heatmap(user: dict = Depends(lambda: {"id":"public","email":"public@example.com","user_metadata":{},"app_metadata":{}})):
+def data_heatmap(user: dict = Depends(_get_current_user)):
     """
     Returns product demand intensity data in a flat format suitable for
     a product × store heatmap grid.

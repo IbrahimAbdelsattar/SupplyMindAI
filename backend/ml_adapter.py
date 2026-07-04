@@ -96,8 +96,11 @@ class DemandForecastService:
             std = 0.0
         else:
             qty = sub["qty"] if "qty" in sub.columns else sub["total_qty"]
-            base = float(qty.tail(30).mean()) if len(qty) else 0.0
-            std = qty.tail(30).std(ddof=0) if len(qty) > 1 else 0.0
+            qty = pd.to_numeric(qty, errors='coerce')
+            base_mean = qty.tail(30).mean()
+            base = float(base_mean) if pd.notna(base_mean) else 0.0
+            std_val = qty.tail(30).std(ddof=0) if len(qty) > 1 else 0.0
+            std = float(std_val) if pd.notna(std_val) else 0.0
 
         monthly = max(0, int(round(base * 30)))
         rows = []

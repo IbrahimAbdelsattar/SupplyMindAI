@@ -84,10 +84,15 @@ const Inventory = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { mutateAsync: applyMutation, isPending: isApplying } = useMutation({
-    mutationFn: async (payload: InventoryRecommendation) => {
-      return apiFetch<InventoryRecommendation>('/inventory/update', {
+    mutationFn: async (item: InventoryRecommendation) => {
+      const body = {
+        product_id: item.product_id,
+        quantity: item.reorderQty,
+        reason: `restock_to_optimal (${item.currentStock} -> ${item.reorderQty})`,
+      };
+      return apiFetch<{ success: boolean }>('/inventory/update', {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
     },
     onSuccess: () => {

@@ -10,6 +10,9 @@ WORKDIR /build
 ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 # Copy configuration and package files
 COPY package*.json ./
 COPY tsconfig*.json ./

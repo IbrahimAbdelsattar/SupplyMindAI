@@ -59,54 +59,6 @@ type InsightsResponse = {
   recommendations: string[];
 };
 
-const defaultFactors = [
-  { key: 'seasonality', name: 'Seasonality', weight: 35, icon: Sun, color: 'primary' },
-  { key: 'historicalTrends', name: 'Historical Trends', weight: 25, icon: TrendingUp, color: 'accent' },
-  { key: 'promotions', name: 'Promotions', weight: 20, icon: Tag, color: 'success' },
-  { key: 'externalFactors', name: 'External Factors', weight: 12, icon: Calendar, color: 'warning' },
-  { key: 'other', name: 'Other', weight: 8, icon: Lightbulb, color: 'muted' },
-];
-
-/* ── Circular SVG ring for factor weights ── */
-function FactorRing({
-  weight,
-  color,
-  animate: doAnimate,
-}: {
-  weight: number;
-  color: string;
-  animate: boolean;
-}) {
-  const r = 22;
-  const circ = 2 * Math.PI * r;
-  const fill = doAnimate ? (weight / 100) * circ : 0;
-
-  const colorMap: Record<string, string> = {
-    primary: 'var(--color-primary, #6366f1)',
-    accent: 'var(--color-accent, #8b5cf6)',
-    success: '#22c55e',
-    warning: '#f59e0b',
-    muted: '#6b7280',
-  };
-
-  return (
-    <svg width={56} height={56} className="mx-auto -rotate-90">
-      <circle cx={28} cy={28} r={r} stroke="currentColor" strokeWidth={4} className="text-border" fill="none" />
-      <circle
-        cx={28}
-        cy={28}
-        r={r}
-        stroke={colorMap[color] ?? colorMap.primary}
-        strokeWidth={4}
-        fill="none"
-        strokeDasharray={circ}
-        strokeDashoffset={circ - fill}
-        strokeLinecap="round"
-        style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-      />
-    </svg>
-  );
-}
 
 /* ── Single Key Insight Card ── */
 function InsightCard({
@@ -335,11 +287,6 @@ function InsightCard({
 const AIInsights = () => {
   const { t } = useTranslation();
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  const [ringsVisible, setRingsVisible] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { data: products } = useQuery({
     queryKey: ['products'],
@@ -354,50 +301,11 @@ const AIInsights = () => {
         method: 'POST',
         body: JSON.stringify({ product_id: productId }),
       }),
-    onSuccess: () => setRingsVisible(true),
   });
-
-  // Trigger ring animation on mount too
-  useEffect(() => {
-    const t = setTimeout(() => setRingsVisible(true), 400);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, isChatLoading]);
 
   const insights = insightsMutation.data?.insights ?? [];
   const summary = insightsMutation.data?.executive_summary;
   const recommendations = insightsMutation.data?.recommendations ?? [];
-
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || isChatLoading) return;
-
-    const question = chatInput.trim();
-    setChatMessages((prev) => [...prev, { role: 'user', content: question }]);
-    setChatInput('');
-    setIsChatLoading(true);
-
-    try {
-      const res = await apiFetch<{ response: string }>('/insights/chat', {
-        method: 'POST',
-        body: JSON.stringify({ message: question, selected_sku: productId }),
-      });
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: res.response }]);
-    } catch (err) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: err instanceof Error ? err.message : t('insights:chat.error'),
-        },
-      ]);
-    } finally {
-      setIsChatLoading(false);
-    }
-  };
 
   /* ─── Insight summary stats ─── */
   const highCount = insights.filter((i) => i.impact === 'high').length;
@@ -489,50 +397,6 @@ const AIInsights = () => {
             </Card>
           </motion.div>
 
-          {/* ── Demand Factor Weights (ring charts) ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-          >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-5">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  <CardTitle className="text-base sm:text-lg">{t('insights:factors.title')}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm">
-                  {t('insights:factors.description')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
-                  {defaultFactors.map((factor, index) => (
-                    <motion.div
-                      key={factor.name}
-                      initial={{ opacity: 0, scale: 0.85 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.08 }}
-                      className="flex flex-col items-center text-center p-3 sm:p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/30 transition-all duration-200 cursor-default"
-                    >
-                      <div className="relative mb-2">
-                        <FactorRing weight={factor.weight} color={factor.color} animate={ringsVisible} />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <factor.icon
-                            className={cn('w-4 h-4', `text-${factor.color}`)}
-                          />
-                        </div>
-                      </div>
-                      <p className="text-base sm:text-xl font-bold text-primary">{factor.weight}%</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">
-                        {t(`insights:factors.${factor.key}`, factor.name)}
-                      </p>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
 
           {/* ── Key Insights (power section) ── */}
           <motion.div
@@ -614,108 +478,7 @@ const AIInsights = () => {
             </Card>
           </motion.div>
 
-          {/* ── Strategic Insights Chat ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-5">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <Bot className="w-4 h-4 text-primary" />
-                  <CardTitle className="text-base sm:text-lg">{t('insights:chat.title')}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm">
-                  {t('insights:chat.description')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col h-80 space-y-3">
-                  {/* Message area */}
-                  <div className="flex-1 overflow-y-auto space-y-3 rounded-xl border border-border bg-muted/20 p-4">
-                    {chatMessages.length === 0 && (
-                      <div className="flex flex-col items-center justify-center h-full text-center gap-2">
-                        <Bot className="w-8 h-8 text-muted-foreground/50" />
-                        <p className="text-sm text-muted-foreground max-w-xs">
-                          {t('insights:chat.placeholder')}
-                        </p>
-                      </div>
-                    )}
 
-                    {chatMessages.map((msg, i) => (
-                      <div
-                        key={i}
-                        className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-                      >
-                        {msg.role === 'assistant' && (
-                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Bot className="w-3.5 h-3.5 text-primary" />
-                          </div>
-                        )}
-                        <div
-                          className={cn(
-                            'max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm',
-                            msg.role === 'user'
-                              ? 'bg-primary text-primary-foreground rounded-br-sm'
-                              : 'bg-card border border-border rounded-bl-sm'
-                          )}
-                        >
-                          {msg.role === 'user' ? (
-                            msg.content
-                          ) : (
-                            <FormattedMessage content={msg.content} />
-                          )}
-                        </div>
-                        {msg.role === 'user' && (
-                          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <User className="w-3.5 h-3.5 text-primary-foreground" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {isChatLoading && (
-                      <div className="flex gap-2 justify-start">
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Bot className="w-3.5 h-3.5 text-primary animate-pulse" />
-                        </div>
-                        <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
-                          <div className="flex gap-1 items-center">
-                            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0ms]" />
-                            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:150ms]" />
-                            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:300ms]" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  {/* Input row */}
-                  <form onSubmit={handleChatSubmit} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder={t('insights:chat.inputPlaceholder')}
-                      className="flex-1 rounded-xl border border-input bg-background px-4 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
-                      disabled={isChatLoading}
-                    />
-                    <button
-                      type="submit"
-                      disabled={isChatLoading || !chatInput.trim()}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 disabled:opacity-50 transition-all"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      {t('insights:chat.send')}
-                    </button>
-                  </form>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
         </main>
       </div>
 

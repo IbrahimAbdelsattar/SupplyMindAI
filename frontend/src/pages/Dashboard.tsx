@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardKPIGrid } from '@/components/dashboard/DashboardKPIGrid';
-import { DemandChart } from '@/components/dashboard/DemandChart';
 import { HeatmapChart } from '@/components/dashboard/HeatmapChart';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
@@ -53,7 +52,7 @@ const DashboardInner = () => {
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="flex-1 p-6 space-y-6 max-w-[1600px] mx-auto w-full"
+          className="flex-1 p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto w-full min-w-0"
         >
           {/* KPI Section (first to ensure visibility/debuggability) */}
           <motion.div variants={itemVariants}>
@@ -69,9 +68,6 @@ const DashboardInner = () => {
           </motion.div>
 
 
-          <motion.div variants={itemVariants}>
-            <DemandChart />
-          </motion.div>
 
           <motion.div variants={itemVariants} className="pb-12">
             <HeatmapChart />

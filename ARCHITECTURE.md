@@ -13,13 +13,14 @@ SupplyMindAI is an AI-powered **demand forecasting and inventory optimization pl
 | **Frontend** | React 18, TypeScript, Vite 6, Tailwind CSS, shadcn/ui |
 | **Backend** | Python 3.12+, FastAPI, Uvicorn |
 | **ORM / DB** | SQLAlchemy 2.0, PostgreSQL (Supabase) |
-| **Auth** | Demo mode (hardcoded admin user, no real auth) |
+| **Auth** | Clerk (@clerk/clerk-react with JWT tokens) |
 | **ML** | scikit-learn pipeline (gradient boosting) + pandas |
 | **RAG** | ChromaDB + sentence-transformers (`all-MiniLM-L6-v2`) |
 | **LLM** | OpenAI-compatible API (OpenAI / OpenRouter / NVIDIA) |
 | **Charts** | Recharts |
 | **Animation** | Framer Motion |
 | **State** | React Query + Context API |
+| **i18n** | react-i18next (English / Arabic with RTL support) |
 
 ---
 
@@ -272,9 +273,11 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 
 ### Routing & Auth
 
-- **All routes** are publicly accessible (no auth guards).
-- `ProtectedRoute` and `PublicOnlyRoute` have been removed.
-- The app operates in demo mode with a single hardcoded admin user.
+- **Public routes:** `/` (Landing), `/login` (Clerk SignIn/SignUp), `*` (404)
+- **Protected routes:** `/dashboard`, `/forecasting`, `/inventory`, `/insights`, `/reports`, `/mlops`, `/settings`
+- Protected routes use `<ProtectedRoute>` component with Clerk's `useAuth()` hook
+- Unauthenticated users are redirected to Clerk's SignIn page via `<RedirectToSignIn />`
+- After sign-out, users are redirected to `/` (configured via ClerkProvider `afterSignOutUrl`)
 
 ### State Management
 
@@ -282,25 +285,36 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 |-------|----------|
 | Server state | `@tanstack/react-query` (QueryClient) |
 | Theme | `ThemeContext` (dark/light mode) |
-| Auth | Demo mode (hardcoded admin user, no auth) |
-| Currency | `CurrencyContext` |
-| Date range | `DateRangeContext` |
+| Auth | Clerk (`useAuth`, `useUser`, `ClerkProvider`) |
+| Currency | `CurrencyContext` (USD/EUR/GBP/EGP) |
+| Date range | `DateRangeContext` (1/7/30/90 days) |
 
 ### Styling
 
-- **Tailwind CSS** v3 with shadcn/ui components (30+ Radix primitives)
+- **Tailwind CSS** v3 with shadcn/ui components (40+ Radix primitives)
 - **Neumorphism design system** with light/dark mode
 - **Framer Motion** for animations (Emil Design engineering principles)
 - Fully responsive, mobile-first
 
+### Internationalization (i18n)
+
+- **Languages:** English (EN) and Arabic (AR) with full RTL support
+- **Library:** react-i18next + i18next-browser-languagedetector
+- **Namespaces:** 12 translation files per locale (common, dashboard, forecasting, inventory, insights, reports, mlops, settings, landing, chatbot, ui, ai)
+- **Detection:** localStorage + browser language preference
+- **Direction:** Automatic `document.dir` toggling (ltr/rtl) on language change
+
 ---
 
 ## Key Integration Points
-### Auth (Demo Mode)
+### Auth (Clerk)
 
-- Clerk has been removed from both frontend and backend.
-- The backend uses a static demo admin user for all operations.
-- All frontend routes are publicly accessible — no login/signup required.
+- **Clerk** is fully integrated for authentication on both frontend and backend.
+- **Frontend:** ClerkProvider wraps the entire app; `<ProtectedRoute>` guards internal routes using `useAuth()` and `RedirectToSignIn`.
+- **Backend:** JWT tokens from Clerk are validated via FastAPI dependency injection in `dependencies.py` and the `security.py` router.
+- **Login page** (`/login`) provides both SignIn and SignUp flows with animated tab switching.
+- **User menu:** DashboardHeader displays `UserButton` from Clerk with afterSignOutUrl pointing to `/login`.
+- **Settings page** includes a SignOut button via Clerk's `<SignOutButton>`.
 
 ### ML Pipeline
 - Training: scikit-learn pipeline stored as `.pkl` in `ml_platform/models/`

@@ -49,7 +49,7 @@ function KPISkeletonGrid() {
   );
 
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i}>{skeleton}</div>
       ))}
@@ -67,6 +67,14 @@ export const DashboardKPIGrid = ({ periodDays }: { periodDays: 1 | 7 | 30 | 90 }
     retry: false,
     staleTime: 10_000,
     refetchOnWindowFocus: false,
+    placeholderData: {
+      totalDemand: 12500,
+      inventoryCost: 450000,
+      stockoutRisk: 12.5,
+      overstockRisk: 8.2,
+      revenue: 850000,
+      accuracy: 94.5,
+    },
   });
 
   if (isLoading) return <KPISkeletonGrid />;
@@ -79,13 +87,14 @@ export const DashboardKPIGrid = ({ periodDays }: { periodDays: 1 | 7 | 30 | 90 }
   const kpi = data;
 
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 overflow-hidden">
       <KPICard
         title={t('dashboard:kpi.totalDemand')}
         value={normalizeNumber(kpi?.totalDemand)}
         suffix={t('dashboard:kpi.unitsSuffix')}
         icon={TrendingUp}
         color="primary"
+        index={0}
       />
 
       <KPICard
@@ -94,6 +103,7 @@ export const DashboardKPIGrid = ({ periodDays }: { periodDays: 1 | 7 | 30 | 90 }
         prefix={currencySymbol}
         icon={DollarSign}
         color="success"
+        index={1}
       />
 
       <KPICard
@@ -102,6 +112,7 @@ export const DashboardKPIGrid = ({ periodDays }: { periodDays: 1 | 7 | 30 | 90 }
         suffix={t('dashboard:kpi.percentSuffix')}
         icon={AlertTriangle}
         color="warning"
+        index={2}
       />
 
       <KPICard
@@ -110,6 +121,7 @@ export const DashboardKPIGrid = ({ periodDays }: { periodDays: 1 | 7 | 30 | 90 }
         suffix={t('dashboard:kpi.percentSuffix')}
         icon={Package}
         color="accent"
+        index={3}
       />
     </div>
   );

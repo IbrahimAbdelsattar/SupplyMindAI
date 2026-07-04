@@ -144,17 +144,20 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    """Lightweight local user record.
+    """Internal user record — Clerk-linked, domain-restricted, RBAC-enforced.
 
-    This table exists so that app-specific relations (e.g. UserSettings) can
-    reference a stable user_id via FK.
+    This table is the single source of truth for authorization. Authentication
+    is handled by Clerk (JWT), but authorization (role, department, is_active)
+    lives here. Every request verifies JWT → domain → this table → RBAC.
     """
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    clerk_user_id: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="analyst")
+    department: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

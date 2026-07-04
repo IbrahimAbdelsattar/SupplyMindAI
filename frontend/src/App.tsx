@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { DateRangeProvider } from "@/contexts/DateRangeContext";
+import { AuthContextProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -23,6 +24,7 @@ const MLOps = lazy(() => import("./pages/MLOps"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/Login"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 
 import { ClerkProvider } from '@clerk/clerk-react';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -46,14 +48,20 @@ const AppRoutes = () => (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
+      {/* Protected routes — any authenticated @supplymind.tech user */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/forecasting" element={<ProtectedRoute><Forecasting /></ProtectedRoute>} />
       <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
       <Route path="/insights" element={<ProtectedRoute><AIInsights /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-      <Route path="/mlops" element={<ProtectedRoute><MLOps /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+      {/* Manager+ required */}
+      <Route path="/forecasting" element={<ProtectedRoute requiredRole="manager"><Forecasting /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute requiredRole="manager"><Reports /></ProtectedRoute>} />
+
+      {/* Admin only */}
+      <Route path="/mlops" element={<ProtectedRoute requiredRole="admin"><MLOps /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -68,21 +76,23 @@ const App = () => {
   return (
     <ErrorBoundary>
       <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <CurrencyProvider>
-              <DateRangeProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <BrowserRouter>
-                    <AppRoutes />
-                  </BrowserRouter>
-                </TooltipProvider>
-              </DateRangeProvider>
-            </CurrencyProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
+        <AuthContextProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              <CurrencyProvider>
+                <DateRangeProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
+                      <AppRoutes />
+                    </BrowserRouter>
+                  </TooltipProvider>
+                </DateRangeProvider>
+              </CurrencyProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </AuthContextProvider>
       </ClerkProvider>
     </ErrorBoundary>
   );

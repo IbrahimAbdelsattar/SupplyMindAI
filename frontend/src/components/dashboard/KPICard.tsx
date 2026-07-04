@@ -48,19 +48,19 @@ export const KPICard = ({
         transition: { type: 'spring', stiffness: 300, damping: 22 }
       }}
       whileTap={{ scale: 0.98 }}
-      className="rounded-3xl p-5 sm:p-7 flex flex-col justify-between h-full cursor-default relative overflow-hidden neu-card"
+      className="rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-full cursor-default relative overflow-hidden neu-card min-w-0"
     >
       {/* Decorative background glow based on the KPI color */}
       <motion.div 
-        className="absolute -right-6 -top-6 w-32 h-32 rounded-full blur-[40px] opacity-10 pointer-events-none"
+        className="absolute -right-6 -top-6 w-28 h-28 rounded-full blur-[40px] opacity-10 pointer-events-none"
         style={{ backgroundColor: colorMap[color] }}
         whileHover={{ opacity: 0.25 }}
         transition={{ duration: 0.3 }}
       />
 
-      <div className="flex items-start justify-between mb-4 sm:mb-6 relative z-10">
+      <div className="flex items-start justify-between mb-3 sm:mb-4 relative z-10">
         <motion.div 
-          className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl neu-basin flex items-center justify-center"
+          className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl neu-basin flex items-center justify-center shrink-0"
           whileHover={{ scale: 1.12, rotate: 5 }}
           whileTap={{ scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 400, damping: 20 }}
@@ -69,40 +69,41 @@ export const KPICard = ({
             whileHover={{ rotate: 10, scale: 1.1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
-            <Icon className="w-5 h-5 sm:w-7 sm:h-7 drop-shadow-sm" style={{ color: colorMap[color] }} />
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow-sm" style={{ color: colorMap[color] }} />
           </motion.div>
         </motion.div>
         
         {change !== undefined && (
           <motion.div
-            className="flex items-center justify-center w-fit h-fit gap-1 text-[12px] sm:text-[13px] font-bold whitespace-nowrap px-1.5 py-0.5 rounded-lg bg-transparent"
+            className="flex items-center justify-center w-fit h-fit gap-1 text-[11px] sm:text-[12px] font-bold whitespace-nowrap px-1.5 py-0.5 rounded-lg bg-transparent"
             style={{ color: changeColor }}
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 + index * 0.08 }}
           >
             {isPositive ? (
-              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={3} />
+              <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={3} />
             ) : (
-              <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={3} />
+              <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={3} />
             )}
             <span>{Math.abs(change)}%</span>
           </motion.div>
         )}
       </div>
 
-      <div className="space-y-1.5 relative z-10">
-        <p className="text-sm font-semibold text-muted-foreground tracking-tight">{title}</p>
-        <div className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight flex items-baseline">
+      <div className="space-y-1 relative z-10 min-w-0">
+        <p className="text-xs sm:text-sm font-semibold text-muted-foreground tracking-tight truncate">{title}</p>
+        <div className="text-xl sm:text-3xl font-extrabold text-foreground tracking-tight flex items-baseline min-w-0 overflow-hidden">
           <AnimatedCounter
             value={value}
             prefix={prefix}
             suffix={suffix}
             duration={1.5}
+            className="truncate block min-w-0"
           />
         </div>
         {changeLabel && (
-          <p className="text-[13px] font-medium text-muted-foreground/80 mt-1">{changeLabel}</p>
+          <p className="text-[12px] sm:text-[13px] font-medium text-muted-foreground/80 mt-0.5 truncate">{changeLabel}</p>
         )}
       </div>
     </motion.div>

@@ -1,4 +1,4 @@
-# SupplyMindAI — Agent Guidelines
+# Agent Guidelines for SupplyMind AI
 
 ## Project Overview
 SupplyMind AI is an AI-powered demand forecasting and inventory optimization platform. It features a Neumorphism Design System with a professional dark mode and premium animations following Emil Design Engineering principles.
@@ -9,8 +9,9 @@ SupplyMind AI is an AI-powered demand forecasting and inventory optimization pla
 - **Animation:** Framer Motion (Emil Design principles)
 - **State:** React Query + Context API
 - **Router:** React Router DOM
-- **Auth:** None (demo mode — all users are admin)
+- **Auth:** Clerk (@clerk/clerk-react with JWT)
 - **Charts:** Recharts
+- **i18n:** react-i18next (EN / AR with RTL support)
 
 ## Design System
 
@@ -42,6 +43,7 @@ Use these utility classes for consistent neumorphism:
 - **prefers-reduced-motion:** All animations respect this media query
 - **Touch devices:** Hover effects are gated behind `@media (hover: hover)`
 - **Color contrast:** All text passes WCAG AA in both light and dark modes
+- **RTL support:** Arabic language direction is handled via `document.dir`
 
 ## Animation Principles (Emil Design)
 - **Easing:**
@@ -72,15 +74,23 @@ Use these utility classes for consistent neumorphism:
 - Button components include `active:scale-[0.97]` for press feedback
 - Card components use `.neu-card` for consistent shadow
 - Form inputs use `.neu-basin` for inset appearance in light mode
+- Protected pages use `<ProtectedRoute>` wrapper with Clerk `useAuth`
 
 ## File Structure
 - `src/components/ui/` — shadcn/ui base components
 - `src/components/landing/` — Landing page sections
 - `src/components/dashboard/` — Dashboard widgets
 - `src/components/brand/` — Brand assets (logo, etc.)
-- `src/contexts/` — React contexts (Theme, Auth, Currency)
+- `src/components/ai/` — AI-related components (summary, formatted messages)
+- `src/components/chatbot/` — Floating chatbot widget
+- `src/components/inventory/` — Inventory-specific components
+- `src/components/mlops/` — MLOps monitoring components
+- `src/components/language/` — Language switcher
+- `src/contexts/` — React contexts (Theme, Currency, DateRange)
 - `src/lib/animations.ts` — Animation utilities and constants
-- `src/pages/` — Route-level pages
+- `src/lib/api.ts` — API client with Clerk JWT integration
+- `src/lib/knowledgeApi.ts` — RAG/Copilot API client
+- `src/pages/` — Route-level pages (10 pages)
 
 ## Important Notes
 - **index.css** is the central style file containing the Neumorphism system, CSS variables, and animations
@@ -89,3 +99,6 @@ Use these utility classes for consistent neumorphism:
 - Chart gradients: use `hsl(var(--primary))` for consistent theme
 - Always test both light and dark modes when making UI changes
 - Always test with `prefers-reduced-motion: reduce` enabled
+- i18n translation files live in `locales/{en,ar}/*.json` — 12 namespaces per locale
+- RTL is handled automatically via `i18n.on("languageChanged")` setting `document.dir`
+

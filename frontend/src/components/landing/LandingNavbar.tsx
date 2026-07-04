@@ -94,11 +94,11 @@ export const LandingNavbar = () => {
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
             <Link
-              to="/dashboard"
+              to="/login"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-muted-foreground transition-all duration-150"
               style={{ boxShadow: '4px 4px 10px rgba(163,177,198,0.5), -4px -4px 10px rgba(255,255,255,0.8)', background: 'var(--background)' }}
             >
-              Go to Dashboard
+              Login
             </Link>
           </motion.div>
           <motion.div
@@ -107,7 +107,7 @@ export const LandingNavbar = () => {
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
             <Link
-              to="/dashboard"
+              to="/login"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_4px_14px_rgba(37,99,235,0.4)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.5)] transition-shadow"
             >
               {t('navbar.getStarted')}
@@ -175,14 +175,14 @@ export const LandingNavbar = () => {
               ))}
               <div className="pt-3 border-t border-border mt-2">
                 <Link
-                  to="/dashboard"
+                  to="/login"
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border text-foreground text-sm font-bold mb-2"
                 >
-                  Go to Dashboard
+                  Login
                 </Link>
                 <Link
-                  to="/dashboard"
+                  to="/login"
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-white text-sm font-bold"
                 >
