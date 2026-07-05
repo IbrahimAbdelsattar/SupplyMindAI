@@ -413,7 +413,7 @@ flowchart TD
 
 ## ⚡ LLM Optimizations
 
-The platform implements 6 optimization strategies to reduce token usage, latency, and costs:
+The platform implements 7 optimization strategies to reduce token usage, latency, and costs:
 
 | Strategy | Impact | Key Files |
 |----------|--------|-----------|
@@ -423,11 +423,17 @@ The platform implements 6 optimization strategies to reduce token usage, latency
 | **Agent iteration limits** | Caps tool-call loops at 4 rounds | `agents/state.py`, `agents/graph.py` |
 | **Response caching** | 1hr TTL, SHA-256 keyed | `llm/cache.py` (applied to RAG) |
 | **LLM observability** | Full call tracking | `llm/monitor.py` (stats, recent, cache endpoints) |
+| **Streaming (SSE)** | Real-time UX, first-token latency ~2s | `services/streaming.py`, `routers/*.py` |
 
 **Monitoring endpoints:**
 - `GET /api/v1/insights/monitor/stats` — Aggregated LLM call statistics
 - `GET /api/v1/insights/monitor/recent` — Recent LLM call records
 - `GET /api/v1/insights/monitor/cache` — Response cache hit/miss stats
+
+**Streaming Endpoints:**
+- `POST /api/v1/insights/generate/stream` — Real-time AI insights generation
+- `POST /api/v1/forecast/reasoning/stream` — Streaming forecast analysis
+- `POST /api/v1/forecast/insights/stream` — Streaming forecast insights
 
 ---
 

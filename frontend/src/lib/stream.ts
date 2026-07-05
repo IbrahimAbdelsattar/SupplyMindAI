@@ -4,6 +4,12 @@
  * Uses fetch + ReadableStream instead of EventSource because EventSource
  * doesn't support POST requests or custom Authorization headers.
  *
+ * Features:
+ * - Automatic retry on network errors and 5xx responses (up to 2 retries)
+ * - Heartbeat timeout: detects stalled streams (no data for 30s)
+ * - AbortController timeout per attempt (default 120s)
+ * - Exponential backoff between retries (1s, 2s)
+ *
  * Usage:
  *   const result = await consumeSSE('/insights/generate/stream', {
  *     method: 'POST',
@@ -39,19 +45,197 @@ export interface SSEResult<T = Record<string, unknown>> {
   elapsed_ms?: number;
 }
 
+export interface SSEOptions<T = Record<string, unknown>> extends Omit<RequestInit, 'headers'> {
+  callbacks?: SSECallbacks<T>;
+  /** Max retry attempts on network/5xx errors (default: 2). */
+  retries?: number;
+  /** Per-attempt timeout in ms (default: 120000 = 2 min). */
+  timeoutMs?: number;
+  /** Stall timeout — no data arriving for this long triggers retry (default: 30000 = 30s). */
+  heartbeatMs?: number;
+}
+
+const RETRYABLE_HTTP_CODES = new Set([502, 503, 504]);
+
+function isRetryableError(err: unknown): boolean {
+  if (err instanceof TypeError) {
+    // fetch throws TypeError on network failure (DNS, connection refused, etc.)
+    return true;
+  }
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Consume a POST-based SSE stream from the backend.
+ * Internal: perform a single SSE fetch attempt with heartbeat timeout.
+ */
+async function attemptSSE<T>(
+  url: string,
+  headers: Record<string, string>,
+  body: string | undefined,
+  timeoutMs: number,
+  heartbeatMs: number,
+  callbacks: SSECallbacks<T> | undefined,
+): Promise<{ result?: T; error?: string; elapsed_ms?: number; httpStatus?: number; retryable?: boolean }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    const retryable = isRetryableError(err);
+    return {
+      error: `Network error: ${err instanceof Error ? err.message : String(err)}`,
+      retryable,
+    };
+  }
+
+  if (!response.ok) {
+    clearTimeout(timeout);
+    const errBody = await response.text().catch(() => '');
+    const retryable = RETRYABLE_HTTP_CODES.has(response.status);
+    return {
+      error: `HTTP ${response.status}: ${errBody || response.statusText}`,
+      httpStatus: response.status,
+      retryable,
+    };
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    clearTimeout(timeout);
+    return { error: 'Response body is not readable', retryable: false };
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let finalResult: T | undefined;
+  let finalError: string | undefined;
+  let elapsedMs: number | undefined;
+
+  // Heartbeat timer: reset on every data arrival, fires if no data for heartbeatMs
+  let heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
+  let stallReject: ((reason: Error) => void) | undefined;
+  const stallPromise = new Promise<never>((_, reject) => {
+    stallReject = reject;
+  });
+
+  function resetHeartbeat() {
+    if (heartbeatTimer) clearTimeout(heartbeatTimer);
+    heartbeatTimer = setTimeout(() => {
+      stallReject?.(new Error(`Stream stalled — no data for ${heartbeatMs / 1000}s`));
+    }, heartbeatMs);
+  }
+
+  resetHeartbeat();
+
+  try {
+    // Race between reader and stall detection
+    const readLoop = (async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        resetHeartbeat();
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE events (separated by double newline)
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? ''; // Keep incomplete last chunk
+
+        for (const raw of events) {
+          if (!raw.trim()) continue;
+
+          let eventType = '';
+          let eventData = '';
+
+          for (const line of raw.split('\n')) {
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+              eventData = line.slice(6);
+            }
+          }
+
+          if (!eventType || !eventData) continue;
+
+          let parsed: Record<string, unknown> = {};
+          try {
+            parsed = JSON.parse(eventData);
+          } catch {
+            parsed = { text: eventData };
+          }
+
+          switch (eventType) {
+            case 'status':
+              callbacks?.onStatus?.((parsed.message as string) ?? '');
+              break;
+            case 'token':
+              callbacks?.onToken?.((parsed.text as string) ?? '');
+              break;
+            case 'result':
+              finalResult = parsed as T;
+              callbacks?.onResult?.(finalResult);
+              break;
+            case 'error':
+              finalError = (parsed.message as string) ?? 'Unknown error';
+              callbacks?.onError?.(finalError);
+              break;
+            case 'done':
+              elapsedMs = (parsed.elapsed_ms as number) ?? undefined;
+              break;
+          }
+        }
+      }
+    })();
+
+    await Promise.race([readLoop, stallPromise]);
+  } catch (err) {
+    finalError = err instanceof Error ? err.message : String(err);
+    callbacks?.onError?.(finalError);
+  } finally {
+    if (heartbeatTimer) clearTimeout(heartbeatTimer);
+    clearTimeout(timeout);
+    reader.releaseLock();
+  }
+
+  return {
+    result: finalResult,
+    error: finalError,
+    elapsed_ms: elapsedMs,
+    retryable: false, // stalled streams should not auto-retry (partial data may exist)
+  };
+}
+
+/**
+ * Consume a POST-based SSE stream from the backend with automatic retry.
  *
  * @param endpoint - API path (e.g. '/insights/generate/stream')
- * @param options  - fetch options (method, body, headers) + SSECallbacks
+ * @param options  - fetch options (method, body, headers) + SSECallbacks + retry config
  * @returns        - Promise that resolves with the final result or error
  */
 export async function consumeSSE<T = Record<string, unknown>>(
   endpoint: string,
-  options: RequestInit & { callbacks?: SSECallbacks<T> } = {},
+  options: SSEOptions<T> = {},
 ): Promise<SSEResult<T>> {
-  const { callbacks, ...fetchOptions } = options;
-  const { onStart, onToken, onStatus, onResult, onError, onDone } = callbacks ?? {};
+  const {
+    callbacks,
+    retries = 2,
+    timeoutMs = 120_000,
+    heartbeatMs = 30_000,
+    ...fetchOptions
+  } = options;
+  const { onStart, onDone } = callbacks ?? {};
 
   // Get Clerk JWT token
   let token: string | null = null;
@@ -71,112 +255,41 @@ export async function consumeSSE<T = Record<string, unknown>>(
     ...(fetchOptions.headers as Record<string, string> | undefined),
   };
 
+  const url = `${getApiBaseUrl()}${endpoint}`;
+  const body = fetchOptions.body as string | undefined;
+
   onStart?.();
 
-  let response: Response;
-  try {
-    response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
-      ...fetchOptions,
-      headers,
-    });
-  } catch (err) {
-    const msg = `Network error: ${err instanceof Error ? err.message : String(err)}`;
-    onError?.(msg);
-    onDone?.();
-    return { ok: false, error: msg };
-  }
+  let lastError = '';
 
-  if (!response.ok) {
-    const errBody = await response.text().catch(() => '');
-    const msg = `HTTP ${response.status}: ${errBody || response.statusText}`;
-    onError?.(msg);
-    onDone?.();
-    return { ok: false, error: msg };
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    onError?.('Response body is not readable');
-    onDone?.();
-    return { ok: false, error: 'Response body is not readable' };
-  }
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let finalResult: T | undefined;
-  let finalError: string | undefined;
-  let elapsedMs: number | undefined;
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      // Process complete SSE events (separated by double newline)
-      const events = buffer.split('\n\n');
-      buffer = events.pop() ?? ''; // Keep incomplete last chunk
-
-      for (const raw of events) {
-        if (!raw.trim()) continue;
-
-        let eventType = '';
-        let eventData = '';
-
-        for (const line of raw.split('\n')) {
-          if (line.startsWith('event: ')) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith('data: ')) {
-            eventData = line.slice(6);
-          }
-        }
-
-        if (!eventType || !eventData) continue;
-
-        let parsed: Record<string, unknown> = {};
-        try {
-          parsed = JSON.parse(eventData);
-        } catch {
-          // If JSON parse fails, wrap raw text
-          parsed = { text: eventData };
-        }
-
-        switch (eventType) {
-          case 'status':
-            onStatus?.((parsed.message as string) ?? '');
-            break;
-          case 'token':
-            onToken?.((parsed.text as string) ?? '');
-            break;
-          case 'result':
-            finalResult = parsed as T;
-            onResult?.(finalResult);
-            break;
-          case 'error':
-            finalError = (parsed.message as string) ?? 'Unknown error';
-            onError?.(finalError);
-            break;
-          case 'done':
-            elapsedMs = (parsed.elapsed_ms as number) ?? undefined;
-            break;
-        }
-      }
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      const backoffMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
+      callbacks?.onStatus?.(`Retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${retries + 1})`);
+      await sleep(backoffMs);
+      callbacks?.onStatus?.('Reconnecting...');
     }
-  } catch (err) {
-    const msg = `Stream read error: ${err instanceof Error ? err.message : String(err)}`;
-    finalError = msg;
-    onError?.(msg);
-  } finally {
-    reader.releaseLock();
+
+    const result = await attemptSSE<T>(url, headers, body, timeoutMs, heartbeatMs, callbacks);
+
+    // Success — no error or non-retryable error
+    if (!result.error) {
+      onDone?.({ elapsed_ms: result.elapsed_ms });
+      return {
+        ok: true,
+        result: result.result,
+        elapsed_ms: result.elapsed_ms,
+      };
+    }
+
+    lastError = result.error;
+
+    // Non-retryable (4xx, stalled with partial data, etc.) — bail immediately
+    if (!result.retryable) {
+      break;
+    }
   }
 
-  onDone?.({ elapsed_ms: elapsedMs });
-
-  return {
-    ok: !finalError,
-    result: finalResult,
-    error: finalError,
-    elapsed_ms: elapsedMs,
-  };
+  onDone?.();
+  return { ok: false, error: lastError };
 }

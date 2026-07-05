@@ -313,18 +313,19 @@ const AIInsights = () => {
     setElapsedMs(null);
     setIsStreaming(true);
 
-    consumeSSE<InsightsResponse>({
-      url: `/api/v1/insights/generate/stream`,
+    consumeSSE<InsightsResponse>('/insights/generate/stream', {
       method: 'POST',
       body: JSON.stringify({ product_id: productId }),
-      onStart: () => setStreamStatus('Starting generation…'),
-      onStatus: (msg) => setStreamStatus(msg),
-      onToken: (tok) => setStreamTokens((prev) => prev + tok),
-      onResult: (res) => setStreamResult(res),
-      onError: (msg) => setStreamError(msg),
-      onDone: (ms) => {
-        setIsStreaming(false);
-        setElapsedMs(ms);
+      callbacks: {
+        onStart: () => setStreamStatus('Starting generation…'),
+        onStatus: (msg) => setStreamStatus(msg),
+        onToken: (tok) => setStreamTokens((prev) => prev + tok),
+        onResult: (res) => setStreamResult(res),
+        onError: (msg) => setStreamError(msg),
+        onDone: (meta) => {
+          setIsStreaming(false);
+          setElapsedMs(meta?.elapsed_ms ?? null);
+        },
       },
     });
   }, [productId]);
@@ -504,7 +505,7 @@ const AIInsights = () => {
               </CardHeader>
 
               <CardContent className="space-y-3 sm:space-y-4">
-                {insights.length === 0 && !insightsMutation.isPending && (
+                {insights.length === 0 && !isStreaming && (
                   <div className="flex flex-col items-center justify-center py-14 gap-4 text-center">
                     <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
                       <Lightbulb className="w-7 h-7 text-muted-foreground" />
@@ -518,12 +519,15 @@ const AIInsights = () => {
                   </div>
                 )}
 
-                {insightsMutation.isPending && (
+                {isStreaming && !streamResult && (
                   <div className="flex flex-col items-center justify-center py-14 gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
                       <Brain className="w-6 h-6 text-primary" />
                     </div>
                     <p className="text-sm text-muted-foreground">{t('insights:actions.generating')}</p>
+                    {streamStatus && (
+                      <p className="text-xs text-primary">{streamStatus}</p>
+                    )}
                   </div>
                 )}
 

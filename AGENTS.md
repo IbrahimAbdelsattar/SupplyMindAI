@@ -138,6 +138,20 @@ Use these utility classes for consistent neumorphism:
 - `backend/services/rag_service.py` deleted (dead code; `knowledge/rag.py` is canonical)
 - `knowledge/copilot.py`: Removed redundant 6-source semantic_search calls (already done by `rag_query()`)
 
+### Streaming (SSE)
+- `backend/services/streaming.py`: Shared SSE streaming module
+  - `stream_insights()`: CSV stats → SHAP features → LLM astream → `status`/`token`/`result`/`done` events
+  - `stream_forecast_reasoning()`: Forecast context → LLM astream → `status`/`token`/`result`/`done` events
+  - `_safe_parse_insights()` / `_safe_parse_forecast()`: Robust JSON extraction with markdown fence stripping
+- Backend endpoints:
+  - `POST /api/v1/insights/generate/stream` → `StreamingResponse(stream_insights())`
+  - `POST /api/v1/forecast/reasoning/stream` → `StreamingResponse(stream_forecast_reasoning())`
+- Frontend:
+  - `frontend/src/lib/stream.ts`: `consumeSSE<T>(endpoint, { method, body, callbacks })` — fetch+ReadableStream consumer with Clerk JWT auth
+  - `AIInsights.tsx`: `useCallback` + `consumeSSE('/insights/generate/stream', ...)`
+  - `Forecasting.tsx`: `useCallback` + `consumeSSE('/forecast/reasoning/stream', ...)`
+- SSE event types: `status` (progress), `token` (incremental text), `result` (final JSON), `error`, `done`
+
 ### Key Files
 - `backend/llm/cache.py` — Response cache
 - `backend/llm/limits.py` — Token budgets & truncation
@@ -150,4 +164,5 @@ Use these utility classes for consistent neumorphism:
 - `backend/knowledge/rag.py` — Canonical RAG (with caching)
 - `backend/knowledge/copilot.py` — Copilot with cleaned-up fallback
 - `backend/knowledge/stream.py` — Streaming with monitoring
+- `backend/services/streaming.py` — Shared SSE streaming module
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
@@ -34,11 +34,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, Calendar, Package } from 'lucide-react';
+import { Download, Calendar, Package, Brain, Loader2, Sparkles } from 'lucide-react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
+import { consumeSSE } from '@/lib/stream';
 import { useCurrency } from '@/contexts/CurrencyContext';
+
+// Types for forecast reasoning
+interface ForecastReasoningResult {
+  summary: string;
+  risks: string[];
+  recommendations: string[];
+  revenue_opportunities: string[];
+}
 
 type Product = { product_id: string; product_name: string; category?: string };
 type ForecastPoint = { date: string; actual?: number | null; forecast: number; lower: number; upper: number };
@@ -54,6 +63,15 @@ const HORIZON_OPTIONS = [
 const Forecasting = () => {
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
+
+  /* ── Forecast reasoning streaming state ── */
+  const [streamStatus, setStreamStatus] = useState<string | null>(null);
+  const [streamTokens, setStreamTokens] = useState('');
+  const [streamResult, setStreamResult] = useState<ForecastReasoningResult | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: () => apiFetch<Product[]>('/data/products'),
@@ -75,6 +93,41 @@ const Forecasting = () => {
       });
     },
   });
+
+  /* ── Forecast reasoning stream ── */
+  const generateForecastAnalysis = useCallback(() => {
+    if (!forecastMutation.data?.monthly_summary?.length) {
+      return;
+    }
+
+    setStreamStatus(null);
+    setStreamTokens('');
+    setStreamResult(null);
+    setStreamError(null);
+    setElapsedMs(null);
+    setIsStreaming(true);
+
+    // Build forecasts array from monthly_summary
+    const monthlyData = forecastMutation.data.monthly_summary ?? [];
+
+    consumeSSE<ForecastReasoningResult>('/forecast/reasoning/stream', {
+      method: 'POST',
+      body: JSON.stringify({
+        forecasts: monthlyData,
+      }),
+      callbacks: {
+        onStart: () => setStreamStatus('Starting forecast analysis...'),
+        onStatus: (msg) => setStreamStatus(msg),
+        onToken: (tok) => setStreamTokens((prev) => prev + tok),
+        onResult: (res) => setStreamResult(res),
+        onError: (msg) => setStreamError(msg),
+        onDone: (meta) => {
+          setIsStreaming(false);
+          setElapsedMs(meta?.elapsed_ms ?? null);
+        },
+      },
+    });
+  }, [forecastMutation.data]);
 
   const chartData = useMemo(() => forecastMutation.data?.series ?? [], [forecastMutation.data]);
   const monthlyData = useMemo(() => forecastMutation.data?.monthly_summary ?? [], [forecastMutation.data]);
@@ -315,7 +368,122 @@ const Forecasting = () => {
             </Card>
           </motion.div>
 
-          {/* Monthly Forecast Table */}
+          {/* ── AI Analysis (streaming) ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+          >
+            <Card className="border-primary/30 bg-primary/[0.02] overflow-hidden">
+              <CardHeader className="pb-3 sm:pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Brain className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-base sm:text-lg">AI Forecast Analysis</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Deep-dive LLM analysis of forecast trends, risks, and opportunities
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={generateForecastAnalysis}
+                  disabled={isStreaming || !forecastMutation.data?.monthly_summary?.length}
+                  className="flex items-center gap-2 flex-shrink-0"
+                  size="sm"
+                >
+                  {isStreaming ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  {isStreaming ? 'Analyzing...' : 'Generate AI Analysis'}
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Streaming status */}
+                {isStreaming && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                    <span className="text-xs text-primary font-medium">{streamStatus}</span>
+                  </div>
+                )}
+                {isStreaming && streamTokens && (
+                  <div className="p-3 rounded-lg bg-muted/50 border border-border max-h-40 overflow-y-auto">
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                      {streamTokens}
+                    </p>
+                  </div>
+                )}
+                {streamError && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-xs text-destructive">{streamError}</p>
+                  </div>
+                )}
+                {elapsedMs != null && (
+                  <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full inline-block">
+                    {(elapsedMs / 1000).toFixed(1)}s
+                  </span>
+                )}
+
+                {/* Result sections */}
+                {streamResult?.summary && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-foreground">Executive Summary</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                      {streamResult.summary}
+                    </p>
+                  </div>
+                )}
+                {streamResult?.risks && streamResult.risks.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-foreground">Key Risks</h4>
+                    <ul className="space-y-1">
+                      {streamResult.risks.map((risk, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <span className="w-5 h-5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
+                          {risk}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {streamResult?.recommendations && streamResult.recommendations.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-foreground">Recommendations</h4>
+                    <ul className="space-y-1">
+                      {streamResult.recommendations.map((rec, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <span className="w-5 h-5 rounded-full bg-success/10 text-success text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {streamResult?.revenue_opportunities && streamResult.revenue_opportunities.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-foreground">Revenue Opportunities</h4>
+                    <ul className="space-y-1">
+                      {streamResult.revenue_opportunities.map((opp, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
+                          {opp}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* ── Monthly Forecast Table ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
