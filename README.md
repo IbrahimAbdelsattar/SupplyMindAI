@@ -373,7 +373,7 @@ flowchart TD
     style VIEWER fill:#6B7280,color:#fff
 ```
 
-**Role Hierarchy:** `admin` > `manager` > `analyst` > `viewer`
+**Role Hierarchy:** admin > manager > analyst > viewer
 
 | Role | Dashboard | Inventory | Insights | Forecasting | Reports | MLOps | Settings |
 |------|:---------:|:---------:|:--------:|:-----------:|:-------:|:-----:|:--------:|
