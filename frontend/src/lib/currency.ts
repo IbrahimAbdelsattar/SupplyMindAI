@@ -25,15 +25,33 @@ export function convertToCurrency(amountUsd: number, target: Currency): number {
 
 /**
  * Format a monetary amount according to the selected currency.
- * Returns a string like "$1,234.56" or "€1,234.56" (simple locale formatting).
+ * If compact is true, it uses '1.2M' format for large numbers.
  */
-export function formatCurrency(amountUsd: number, currency: Currency): string {
+export function formatCurrency(amountUsd: number, currency: Currency, compact: boolean = false): string {
   const converted = convertToCurrency(amountUsd, currency);
   const symbol = currencySymbols[currency] ?? '';
-  // Use Intl.NumberFormat for locale-aware formatting (fallback to en-US).
-  const formattedNumber = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(converted);
+  
+  const options: Intl.NumberFormatOptions = {
+    minimumFractionDigits: compact ? 0 : 2,
+    maximumFractionDigits: compact ? 1 : 2,
+  };
+  
+  if (compact) {
+    options.notation = 'compact';
+    options.compactDisplay = 'short';
+  }
+
+  const formattedNumber = new Intl.NumberFormat('en-US', options).format(converted);
   return `${symbol}${formattedNumber}`;
+}
+
+/**
+ * Format a regular number compactly (e.g. 1,200,000 -> 1.2M)
+ */
+export function formatCompactNumber(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1,
+  }).format(value);
 }

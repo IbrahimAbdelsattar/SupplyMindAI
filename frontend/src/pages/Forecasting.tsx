@@ -39,6 +39,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { consumeSSE } from '@/lib/stream';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { formatCurrency, formatCompactNumber } from '@/lib/currency';
 
 // Types for forecast reasoning
 interface ForecastReasoningResult {
@@ -61,7 +62,7 @@ const HORIZON_OPTIONS = [
 
 const Forecasting = () => {
   const { t } = useTranslation();
-  const { formatCurrency } = useCurrency();
+
 
   /* ── Forecast reasoning streaming state ── */
   const [streamStatus, setStreamStatus] = useState<string | null>(null);
@@ -232,42 +233,42 @@ const Forecasting = () => {
               transition={{ duration: 0.4, delay: 0.05 }}
               className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
             >
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">{t('forecasting:kpi.forecastDemand')}</CardDescription>
-                  <CardTitle className="text-xl sm:text-2xl">
-                    {summary.totalDemand.toLocaleString()}
+              <Card className="flex flex-col min-h-[110px]">
+                <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
+                  <CardDescription className="text-xs truncate">{t('forecasting:kpi.forecastDemand')}</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl truncate" title={summary.totalDemand.toLocaleString()}>
+                    {formatCompactNumber(summary.totalDemand)}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">{t('forecasting:kpi.units')}</p>
+                  <p className="text-xs text-muted-foreground truncate">{t('forecasting:kpi.units')}</p>
                 </CardHeader>
               </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">{t('forecasting:kpi.confidenceLevel')}</CardDescription>
-                  <CardTitle className="text-xl sm:text-2xl">
+              <Card className="flex flex-col min-h-[110px]">
+                <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
+                  <CardDescription className="text-xs truncate">{t('forecasting:kpi.confidenceLevel')}</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl truncate">
                     {Math.round(summary.avgConfidence)}%
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">{t('forecasting:kpi.confidenceLevelDesc')}</p>
+                  <p className="text-xs text-muted-foreground truncate">{t('forecasting:kpi.confidenceLevelDesc')}</p>
                 </CardHeader>
               </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">{t('forecasting:kpi.demandTrend')}</CardDescription>
-                  <CardTitle className="text-xl sm:text-2xl capitalize">
+              <Card className="flex flex-col min-h-[110px]">
+                <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
+                  <CardDescription className="text-xs truncate">{t('forecasting:kpi.demandTrend')}</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl capitalize truncate">
                     {summary.latestTrend}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">{t('forecasting:kpi.demandTrendDesc')}</p>
+                  <p className="text-xs text-muted-foreground truncate">{t('forecasting:kpi.demandTrendDesc')}</p>
                 </CardHeader>
               </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs">{t('forecasting:kpi.revenueForecast')}</CardDescription>
-                  <CardTitle className="text-xl sm:text-2xl">
+              <Card className="flex flex-col min-h-[110px]">
+                <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
+                  <CardDescription className="text-xs truncate">{t('forecasting:kpi.revenueForecast')}</CardDescription>
+                  <CardTitle className="text-xl sm:text-2xl truncate" title={summary.totalRevenue > 0 ? formatCurrency(summary.totalRevenue) : ''}>
                     {summary.totalRevenue > 0
-                      ? formatCurrency(summary.totalRevenue)
+                      ? formatCurrency(summary.totalRevenue, 'usd', true) // Using true for compact format
                       : '—'}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {summary.totalRevenue > 0 ? t('forecasting:kpi.revenueForecastDesc') : t('forecasting:kpi.revenueForecastNa')}
                   </p>
                 </CardHeader>

@@ -58,21 +58,21 @@ export function BusinessHealth({ metrics }: BusinessHealthProps) {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASE, delay: i * 0.05 }}
-            className="neu-card p-4"
+            className="neu-card p-4 flex flex-col min-h-[110px]"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={m.label}>
                 {m.label}
               </span>
               <StatusPill status={m.status} />
             </div>
 
             <div className="flex items-end justify-between gap-2 mb-2">
-              <div>
-                <span className="text-2xl font-bold text-slate-900 dark:text-white">
+              <div className="min-w-0">
+                <span className="text-2xl font-bold text-slate-900 dark:text-white truncate block" title={String(m.value)}>
                   {m.value}
                 </span>
-                <span className="text-sm font-normal text-slate-400 dark:text-slate-500">
+                <span className="text-sm font-normal text-slate-400 dark:text-slate-500 truncate block" title={m.unit}>
                   {m.unit}
                 </span>
               </div>

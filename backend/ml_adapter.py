@@ -91,30 +91,72 @@ class DemandForecastService:
     def _predict_from_csv(self, product_id: str, n_months: int) -> pd.DataFrame:
         sales = self._store.sales_daily()
         sub = sales[sales["product_id"] == product_id].copy()
+        
+        products = self._store.products()
+        prod = products[products["product_id"] == product_id]
+        if not prod.empty:
+            min_p = float(prod.iloc[0].get("min_price", 1500))
+            max_p = float(prod.iloc[0].get("max_price", 2500))
+            avg_price = (min_p + max_p) / 2.0
+        else:
+            avg_price = 1500.0
+
         if sub.empty:
-            base = 0.0
+            base_monthly = 0.0
             std = 0.0
+            slope = 0.0
         else:
             qty = sub["qty"] if "qty" in sub.columns else sub["total_qty"]
-            qty = pd.to_numeric(qty, errors='coerce')
-            base_mean = qty.tail(30).mean()
-            base = float(base_mean) if pd.notna(base_mean) else 0.0
-            std_val = qty.tail(30).std(ddof=0) if len(qty) > 1 else 0.0
-            std = float(std_val) if pd.notna(std_val) else 0.0
+            qty = pd.to_numeric(qty, errors='coerce').fillna(0)
+            
+            # Use last 90 days to determine base and trend
+            last_90 = qty.tail(90)
+            if len(last_90) > 1:
+                base_daily = float(last_90.mean())
+                std = float(last_90.std(ddof=0))
+                # Simple linear slope per day
+                x = np.arange(len(last_90))
+                slope_daily = float(np.polyfit(x, last_90.values, 1)[0])
+            else:
+                base_daily = float(qty.mean())
+                std = 0.0
+                slope_daily = 0.0
 
-        monthly = max(0, int(round(base * 30)))
+            base_monthly = base_daily * 30
+            slope = slope_daily * 30  # Monthly slope
+
         rows = []
         today = date.today()
+        
+        # Determine base confidence
+        base_confidence = min(95.0, max(70.0, 88.0 - (std / (base_daily + 1)) * 10)) if base_daily > 0 else 70.0
+
+        current_forecast = base_monthly
         for i in range(max(1, n_months)):
             period = (today.replace(day=1) + timedelta(days=32 * i)).strftime("%Y-%m")
-            trend = "stable" if std < base * 0.1 else ("up" if i % 2 == 0 else "down")
-            confidence = min(95, max(70, int(88 - (std / (base + 1)) * 10)))
+            
+            # Apply trend
+            current_forecast = max(0, current_forecast + slope)
+            predicted_demand = int(round(current_forecast))
+            
+            # Determine trend string
+            if abs(slope) < (base_monthly * 0.02):
+                trend_str = "stable"
+            else:
+                trend_str = "increasing" if slope > 0 else "decreasing"
+                
+            # Confidence decays slightly over time
+            confidence = max(50, int(base_confidence - (i * 2)))
+
             rows.append(
                 {
                     "period": period,
-                    "predicted_demand": monthly,
-                    "demand_trend": trend,
+                    "predicted_demand": predicted_demand,
+                    "demand_trend": trend_str,
                     "confidence_level": confidence,
+                    "revenue_forecast": round(predicted_demand * avg_price, 2)
                 }
             )
+            
         return pd.DataFrame(rows)
+
