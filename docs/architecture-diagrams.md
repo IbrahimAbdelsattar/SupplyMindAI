@@ -162,7 +162,8 @@ flowchart LR
     otel --> gateway
     prom --> gateway
 
-    ci --> docker```
+    ci --> docker
+```
 
 ## 2. ER Diagram
 
