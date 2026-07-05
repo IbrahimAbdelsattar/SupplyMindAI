@@ -411,19 +411,69 @@ flowchart TD
 
 ---
 
-## ⚡ LLM Optimizations
+## 🧠 AI Architecture & LLM Optimizations
 
-The platform implements 7 optimization strategies to reduce token usage, latency, and costs:
+SupplyMind AI uses an **Enterprise AI Orchestration Layer** to coordinate all conversational inputs, safety guardrails, and agent executions.
+
+```mermaid
+graph TD
+    User([User Client]) --> Gateway[FastAPI Gateway]
+    
+    subgraph "AI Orchestration Layer"
+        Gateway --> Guardrails[Input Guardrails / Security]
+        Guardrails --> Router[Agent Router & Intent Detection]
+        
+        Router --> |intent=inventory| InvAgent[Inventory Agent]
+        Router --> |intent=forecast| FcstAgent[Forecast Agent]
+        Router --> |intent=customer_support| SuppAgent[Support Agent]
+        Router --> |intent=documentation| DocAgent[Documentation Agent]
+        Router --> |intent=mlops| MLOpsAgent[MLOps Agent]
+        
+        InvAgent & FcstAgent & SuppAgent & DocAgent & MLOpsAgent --> PromptReg[(Prompt Registry)]
+        InvAgent & FcstAgent & SuppAgent & DocAgent & MLOpsAgent --> ModelReg[(Model Registry)]
+        InvAgent & FcstAgent & SuppAgent & DocAgent & MLOpsAgent --> Memory[Memory Manager]
+    end
+    
+    subgraph "External Integrations"
+        InvAgent --> DB[(Inventory DB)]
+        FcstAgent --> ML[ML Models]
+        DocAgent --> VectorDB[Vector DB]
+        SuppAgent --> VectorDB
+    end
+```
+
+### AI Orchestration flow
+1. **FastAPI Gateway**: Users submit messages via secure HTTP endpoints `/copilot/chat` or `/copilot/chat/stream`.
+2. **Input Guardrails**: Intercepts requests to validate against prompt injections, jailbreaks, Base64 bypass attempts, and sensitive data leakage.
+3. **Intent Detection**: Analyzes the query using a dedicated fast-classifier model, returning the user intent (`inventory`, `forecast`, `customer_support`, `documentation`, `reports`, `executive_insights`, `settings`, `unknown`) and a confidence score.
+4. **Agent Router**: If the intent detector returns a confidence score below `0.70`, the system requests user clarification instead of selecting an agent at random. Otherwise, the query routes to the corresponding specialized agent.
+5. **Specialized Agent Execution**: Concrete isolated agents run execution loops, invoking restricted tool sets:
+   * **Inventory Agent**: Uses the **Inventory Intelligence Engine**. Evaluates deterministic **Business Rules**, calls the **Knowledge Builder** for operational snapshots, and retrieves filtered context via Top-K semantic search.
+   * **Forecast Agent**: Explains seasonal demand, lead time predictions, and model trends using tools like `generate_forecast` and `search_forecast_knowledge`.
+   * **Customer Support Agent**: Resolves dashboard queries, UI explanations, and settings configurations using documentation FAQ indexes. Restricted from executing data modifying actions or reading inventory databases.
+   * **Documentation Agent**: Answers pricing, feature definitions, and user onboarding policies from guides.
+   * **MLOps Agent**: Tracks system memory, forecasting pipeline drift, and accuracy rates.
+   * **Security Agent / Guardrails**: Inspects inputs and filters output response text for private data or hallucinations.
+6. **Isolated registries**:
+   * **Model Registry**: Instantiates distinct `ChatOpenAI` client instances per agent role. Since API providers charge per token, **all agents share the single OpenRouter API key** for billing consolidation, but they maintain **complete logical isolation** with independent hyperparameters (temperature, max tokens, timeouts, retries, and callback tracing).
+   * **Prompt Registry**: Supplies immutable system prompt configurations per agent role, avoiding context pollution or system prompt leakage.
+   * **Memory Isolation**: Restricts memory read/write requests to SQL records where `AgentMemory.agent_type == agent_type`.
+   * **Knowledge Document Isolation**: Restricts vector searches to permitted document files using strict metadata filtering.
+
+### ⚡ Optimization Strategies
+
+The platform implements the following optimizations to minimize token usage, latency, and costs:
 
 | Strategy | Impact | Key Files |
 |----------|--------|-----------|
+| **AI Orchestration Layer** | Strict agent and data isolation, robust routing | `backend/ai/orchestrator/` |
 | **Duplicate context removal** | ~50% fewer input tokens | `forecast_reasoning.py`, `executive_prompts.py` |
-| **RAG consolidation** | Eliminated duplicate DB queries | `knowledge/rag.py`, `knowledge/copilot.py` |
+| **Intelligence Engine consolidation** | Eliminated duplicate DB queries | `knowledge/rag.py`, `knowledge/copilot.py` |
 | **Token budget enforcement** | Prevents runaway context | `llm/limits.py` (per-feature budgets) |
-| **Agent iteration limits** | Caps tool-call loops at 4 rounds | `agents/state.py`, `agents/graph.py` |
+| **Agent iteration limits** | Caps tool-call loops at 3 rounds | `ai/orchestrator/agent_factory.py` |
 | **Response caching** | 1hr TTL, SHA-256 keyed | `llm/cache.py` (applied to RAG) |
-| **LLM observability** | Full call tracking | `llm/monitor.py` (stats, recent, cache endpoints) |
-| **Streaming (SSE)** | Real-time UX, first-token latency ~2s | `services/streaming.py`, `routers/*.py` |
+| **LLM observability** | Full call tracking | `llm/monitor.py`, `ai/orchestrator/telemetry.py` |
+| **Streaming (SSE)** | Real-time UX, first-token latency ~2s | `services/streaming.py`, `knowledge/stream.py` |
 
 **Monitoring endpoints:**
 - `GET /api/v1/insights/monitor/stats` — Aggregated LLM call statistics
@@ -431,6 +481,7 @@ The platform implements 7 optimization strategies to reduce token usage, latency
 - `GET /api/v1/insights/monitor/cache` — Response cache hit/miss stats
 
 **Streaming Endpoints:**
+- `POST /api/v1/copilot/chat/stream` — Real-time Orchestrated Chatbot responses
 - `POST /api/v1/insights/generate/stream` — Real-time AI insights generation
 - `POST /api/v1/forecast/reasoning/stream` — Streaming forecast analysis
 - `POST /api/v1/forecast/insights/stream` — Streaming forecast insights
