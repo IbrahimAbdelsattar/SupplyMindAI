@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { useReports } from '@/components/reports/data/usereports';
+import { useReports } from '@/components/reports/data/useReports';
 import { ReportOverview } from '@/components/reports/sections/ReportOverview';
 import { ReportGenerator } from '@/components/reports/sections/ReportGenerator';
 import { RecentReports } from '@/components/reports/sections/RecentReports';

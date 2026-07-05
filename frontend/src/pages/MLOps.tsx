@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-import { useMLOps } from '@/components/mlops/data/useMlops';
+import { useMLOps } from '@/components/mlops/data/useMLOps';
 
 import {
   Activity,

@@ -115,7 +115,7 @@ dmypy.json
 # Windows
 Thumbs.db
 Modeling/
-data/
+/data/
 node_modules
 backend/supplymind.db
 backend/alembic.ini

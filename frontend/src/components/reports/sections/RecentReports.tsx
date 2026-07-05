@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { FileText, Eye, Download, Clock, Trash2 } from 'lucide-react';
 import { SectionHeader } from '../shared/SectionHeader';
-import { TYPE_COLORS, formatFileSize, formatDate, type ReportItem } from '../data/usereports';
+import { TYPE_COLORS, formatFileSize, formatDate, type ReportItem } from '../data/useReports';
 import { useToast } from '@/hooks/use-toast';
 import { fetchApi } from '@/lib/api';
 import type { UseMutationResult } from '@tanstack/react-query';

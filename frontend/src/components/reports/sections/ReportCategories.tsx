@@ -1,7 +1,7 @@
 import React from 'react';
 import { Layers } from 'lucide-react';
 import { SectionHeader } from '../shared/SectionHeader';
-import { TYPE_COLORS, formatFileSize, formatDate } from '../data/usereports';
+import { TYPE_COLORS, formatFileSize, formatDate } from '../data/useReports';
 import type { ReportCategory } from '../data/types';
 
 interface Props {
