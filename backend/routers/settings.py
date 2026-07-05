@@ -43,6 +43,8 @@ def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user))
     except AttributeError:
         new_settings = payload.dict(exclude_none=True)
 
+    new_name = new_settings.pop("name", None)
+
     db = SessionLocal()
     try:
         local_user = db.query(User).filter(User.id == uid).first()
@@ -52,7 +54,7 @@ def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user))
             email = _attr(user, "email") or f"{uid}@supplymind.ai"
             local_user = User(
                 id=uid,
-                name=meta.get("name", email.split("@")[0]),
+                name=new_name.strip() if new_name and new_name.strip() else meta.get("name", email.split("@")[0]),
                 email=email,
                 role=app_meta.get("role", "admin"),
                 is_active=True,
@@ -61,6 +63,9 @@ def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user))
             )
             db.add(local_user)
             db.flush()
+        elif new_name is not None and new_name.strip():
+            local_user.name = new_name.strip()
+            local_user.updated_at = _utc_now()
 
         row = db.query(UserSettings).filter(UserSettings.user_id == uid).first()
         if row:

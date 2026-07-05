@@ -3,43 +3,37 @@ import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Save, User, Palette, Globe, Bell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-
-
-import { Palette, Globe, Shield, User, Save, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { SignOutButton } from '@clerk/clerk-react';
+import { ProfileTab } from '@/components/settings/ProfileTab';
+import { AppearanceTab } from '@/components/settings/AppearanceTab';
+import { RegionalTab } from '@/components/settings/RegionalTab';
+import { NotificationsTab } from '@/components/settings/NotificationsTab';
+import { useUser } from '@clerk/clerk-react';
 
 const Settings = () => {
-  const { t } = useTranslation();
-  const { theme, toggleTheme } = useTheme();
-  const { currency, setCurrency } = useCurrency();
+  const { t, i18n } = useTranslation();
+  const { theme } = useTheme();
+  const { currency } = useCurrency();
   const { toast } = useToast();
+  const { user: clerkUser } = useUser();
   const [isSaving, setIsSaving] = useState(false);
 
   // User state
   const [user, setUser] = useState<{ name?: string; email?: string; role?: string } | null>(null);
-  
+
   const [notifications, setNotifications] = useState({
     stockAlerts: true,
     forecastUpdates: true,
     weeklyReports: true,
     systemUpdates: false,
   });
-  
+
   const [region, setRegion] = useState('us');
 
   // Load saved settings and user data from API on mount
@@ -67,6 +61,9 @@ const Settings = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Determine the effective name to save
+      const effectiveName = user?.name || clerkUser?.fullName || clerkUser?.firstName || '';
+
       const { fetchApi } = await import('@/lib/api');
       await fetchApi('/settings', {
         method: 'PUT',
@@ -75,8 +72,19 @@ const Settings = () => {
           notifications,
           region,
           display: { currency },
+          language: i18n.language,
+          name: effectiveName,
         }),
       });
+
+      // Sync name back to Clerk
+      if (effectiveName && clerkUser && effectiveName !== clerkUser.fullName) {
+        const parts = effectiveName.trim().split(' ');
+        const firstName = parts[0];
+        const lastName = parts.slice(1).join(' ');
+        await clerkUser.update({ firstName, lastName: lastName || undefined });
+      }
+
       toast({
         title: t('settings:toast.saved'),
         description: t('settings:toast.savedDesc'),
@@ -95,173 +103,65 @@ const Settings = () => {
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
-      
+
       <div className="flex-1 flex flex-col min-w-0">
-        <DashboardHeader 
-          title={t('settings:title')} 
-          subtitle={t('settings:subtitle')} 
+        <DashboardHeader
+          title={t('settings:title')}
+          subtitle={t('settings:subtitle')}
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
-          {/* Profile */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  <CardTitle className="text-base sm:text-lg">{t('settings:section.profile')}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm">{t('settings:profileDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 sm:gap-6">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl sm:text-2xl font-bold text-primary">
-                        {(user?.name ?? user?.email ?? '?').charAt(0)}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-base sm:text-lg font-semibold truncate">{user?.name}</p>
-                      <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
-                      <p className="text-xs sm:text-sm text-primary capitalize mt-0.5 sm:mt-1">
-                        {t('settings:roleAccount', { role: user?.role })}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <SignOutButton>
-                    <Button variant="destructive" className="w-full sm:w-auto gap-2">
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </Button>
-                  </SignOutButton>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            <Tabs defaultValue="profile" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-6">
+                <TabsTrigger value="profile" className="gap-2">
+                  <User className="w-4 h-4 hidden sm:block" />
+                  <span className="hidden sm:inline">{t('settings:section.profile')}</span>
+                  <span className="sm:hidden">{t('settings:section.profile')}</span>
+                </TabsTrigger>
+                <TabsTrigger value="appearance" className="gap-2">
+                  <Palette className="w-4 h-4 hidden sm:block" />
+                  <span className="hidden sm:inline">{t('settings:section.appearance')}</span>
+                  <span className="sm:hidden">{t('settings:section.appearance')}</span>
+                </TabsTrigger>
+                <TabsTrigger value="regional" className="gap-2">
+                  <Globe className="w-4 h-4 hidden sm:block" />
+                  <span className="hidden sm:inline">{t('settings:section.regionalSettings')}</span>
+                  <span className="sm:hidden">{t('settings:section.regionalSettings')}</span>
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="gap-2">
+                  <Bell className="w-4 h-4 hidden sm:block" />
+                  <span className="hidden sm:inline">{t('settings:section.notifications')}</span>
+                  <span className="sm:hidden">{t('settings:section.notifications')}</span>
+                </TabsTrigger>
+              </TabsList>
 
-          {/* Appearance */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-          >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <div className="flex items-center gap-2">
-                  <Palette className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  <CardTitle className="text-base sm:text-lg">{t('settings:section.appearance')}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm">{t('settings:appearanceDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <Label className="text-sm sm:text-base">{t('settings:darkMode')}</Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {t('settings:darkModeDescription')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={theme === 'dark'}
-                    onCheckedChange={toggleTheme}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+              <TabsContent value="profile">
+                <ProfileTab
+                  user={user}
+                  onNameChange={(name) => setUser(prev => prev ? { ...prev, name } : null)}
+                />
+              </TabsContent>
 
+              <TabsContent value="appearance">
+                <AppearanceTab />
+              </TabsContent>
 
+              <TabsContent value="regional">
+                <RegionalTab region={region} onRegionChange={setRegion} />
+              </TabsContent>
 
-          {/* Regional Settings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  <CardTitle className="text-base sm:text-lg">{t('settings:section.regionalSettings')}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm">{t('settings:regionalSettingsDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-xs sm:text-sm">{t('settings:region')}</Label>
-                    <Select value={region} onValueChange={setRegion}>
-                      <SelectTrigger className="bg-background h-9 sm:h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover">
-                        <SelectItem value="us">{t('settings:regions.us')}</SelectItem>
-                        <SelectItem value="eu">{t('settings:regions.eu')}</SelectItem>
-                        <SelectItem value="asia">{t('settings:regions.asia')}</SelectItem>
-                        <SelectItem value="mena">{t('settings:regions.mena')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs sm:text-sm">{t('settings:currency')}</Label>
-                    <Select value={currency} onValueChange={setCurrency}>
-                      <SelectTrigger className="bg-background h-9 sm:h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover">
-                        <SelectItem value="usd">{t('settings:currencies.usd')}</SelectItem>
-                        <SelectItem value="eur">{t('settings:currencies.eur')}</SelectItem>
-                        <SelectItem value="gbp">{t('settings:currencies.gbp')}</SelectItem>
-                        <SelectItem value="egp">{t('settings:currencies.egp')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Role-based View */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-          >
-            <Card>
-              <CardHeader className="pb-3 sm:pb-6">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  <CardTitle className="text-base sm:text-lg">{t('settings:section.roleFeatures')}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm">{t('settings:roleFeaturesDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {(true ? [
-                    { titleKey: 'settings:roleFeatures.executiveReports', descKey: 'settings:roleFeatures.executiveReportsDesc' },
-                    { titleKey: 'settings:roleFeatures.budgetControls', descKey: 'settings:roleFeatures.budgetControlsDesc' },
-                    { titleKey: 'settings:roleFeatures.teamManagement', descKey: 'settings:roleFeatures.teamManagementDesc' },
-                    { titleKey: 'settings:roleFeatures.approvalWorkflows', descKey: 'settings:roleFeatures.approvalWorkflowsDesc' },
-                  ] : [
-                    { titleKey: 'settings:roleFeatures.technicalDetails', descKey: 'settings:roleFeatures.technicalDetailsDesc' },
-                    { titleKey: 'settings:roleFeatures.dataExploration', descKey: 'settings:roleFeatures.dataExplorationDesc' },
-                    { titleKey: 'settings:roleFeatures.modelConfiguration', descKey: 'settings:roleFeatures.modelConfigurationDesc' },
-                    { titleKey: 'settings:roleFeatures.apiAccess', descKey: 'settings:roleFeatures.apiAccessDesc' },
-                  ]).map((feature) => (
-                    <div key={feature.titleKey} className="p-3 sm:p-4 rounded-xl border border-border bg-muted/50">
-                      <p className="font-medium text-sm sm:text-base">{t(feature.titleKey)}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{t(feature.descKey)}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+              <TabsContent value="notifications">
+                <NotificationsTab
+                  notifications={notifications}
+                  onNotificationsChange={setNotifications}
+                />
+              </TabsContent>
+            </Tabs>
           </motion.div>
 
           {/* Save Button */}

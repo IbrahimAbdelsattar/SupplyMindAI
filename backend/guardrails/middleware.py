@@ -10,8 +10,8 @@ from .rag_guardrails import RAGGuardrails
 from .forecast_guardrails import ForecastGuardrails
 from .output_guardrails import OutputGuardrails
 from .agent_guardrails import AgentGuardrails
-# Rate limiter removed — was causing 429 errors during development retry storms.
-# from .rate_limiter import RateLimiter
+# Rate limiter enabled for production only
+from .rate_limiter import RateLimiter
 from .monitor import GuardrailMonitor
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class GuardrailsMiddleware(BaseHTTPMiddleware):
         self.forecast_guardrails = ForecastGuardrails(self.config)
         self.output_guardrails = OutputGuardrails(self.config)
         self.agent_guardrails = AgentGuardrails(self.config)
+        self.rate_limiter = RateLimiter(self.config)
         self.monitor = monitor or GuardrailMonitor(self.config)
 
         self.GUARDRAILED_ENDPOINTS = {
@@ -59,8 +60,16 @@ class GuardrailsMiddleware(BaseHTTPMiddleware):
         tenant_id = request.headers.get("X-Tenant-ID")
         session_id = request.headers.get("X-Session-ID")
 
-        # Rate limiter removed — was causing 429 errors during development retry storms.
-        # See backend/guardrails/rate_limiter.py if you want to re-enable.
+        # Enable rate limiter in production only to avoid dev retry storms
+        if os.getenv("ENVIRONMENT", "development") == "production":
+            client_ip = request.client.host if request.client else "unknown"
+            rate_result = self.rate_limiter.check(user_id=user_id, tenant_id=tenant_id, ip=client_ip, endpoint=request.url.path)
+            if not rate_result.passed:
+                return Response(
+                    content=f'{{"error":"blocked","message":"Too many requests","detail":"{rate_result.violations[0].details}"}}',
+                    status_code=429,
+                    media_type="application/json",
+                )
 
         if request.method in ("POST", "PUT", "PATCH"):
             path = request.url.path

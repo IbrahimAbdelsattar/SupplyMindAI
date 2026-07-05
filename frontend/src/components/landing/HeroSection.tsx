@@ -74,7 +74,7 @@ function TiltCard({
       onMouseMove={onMove}
       onMouseLeave={() => { rawX.set(0); rawY.set(0); }}
       style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
-      className={className}
+      className={`${className} touch-none`}
     >
       {children}
     </motion.div>
@@ -159,7 +159,7 @@ export const HeroSection = () => {
           {/* Headline */}
           <motion.h1
             variants={item}
-            className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.05]"
+            className="text-3xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.05]"
           >
             <span className="block text-foreground">{t('hero.headline1')}</span>
             <span
@@ -190,7 +190,7 @@ export const HeroSection = () => {
             >
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary text-white text-lg font-bold shadow-[0_8px_24px_rgba(37,99,235,0.4)] hover:shadow-[0_12px_32px_rgba(37,99,235,0.55)] transition-shadow group"
+                className="inline-flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-primary text-white text-base sm:text-lg font-bold shadow-[0_8px_24px_rgba(37,99,235,0.4)] hover:shadow-[0_12px_32px_rgba(37,99,235,0.55)] transition-shadow group"
               >
                 {t('hero.ctaPrimary')}
                 <motion.span
@@ -209,7 +209,7 @@ export const HeroSection = () => {
             >
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-lg font-bold text-muted-foreground transition-all"
+                className="inline-flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg font-bold text-muted-foreground transition-all"
                 style={{
                   background: 'var(--neu-bg, #dde1e7)',
                   boxShadow: '6px 6px 14px rgba(163,177,198,0.55), -6px -6px 14px rgba(255,255,255,0.85)',

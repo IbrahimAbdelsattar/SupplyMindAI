@@ -26,6 +26,15 @@ export const LandingNavbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
   const navLinks = [
     { href: '#features', label: t('navbar.features') },
     { href: '#use-cases', label: t('navbar.useCases') },
@@ -159,7 +168,7 @@ export const LandingNavbar = () => {
             transition={{ duration: 0.25, ease: EASE_DRAWER }}
             className="md:hidden overflow-hidden backdrop-blur-xl bg-white/90 dark:bg-[#1a1c23]/90 border-b border-border"
           >
-            <div className="container mx-auto px-4 py-4 flex flex-col gap-1">
+            <div className="container mx-auto px-4 py-4 flex flex-col gap-1 max-h-[calc(100dvh-4rem)] overflow-y-auto">
               {navLinks.map(({ href, label }, i) => (
                 <motion.a
                   key={href}

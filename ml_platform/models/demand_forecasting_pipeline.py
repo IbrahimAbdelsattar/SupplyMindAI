@@ -19,6 +19,7 @@ Output features (per product, per time period):
 =============================================================================
 """
 
+import json
 import os
 import numpy as np
 import pandas as pd
@@ -47,6 +48,7 @@ MAT_COST_PATH   = os.path.join(DATA_DIR, "product_mat_cost.csv")
 MODEL_OUT       = os.path.join(DATA_DIR, "demand_model_pipeline.pkl")
 FUTURE_OUT      = os.path.join(DATA_DIR, "future_forecast.csv")
 SHAP_OUT        = os.path.join(DATA_DIR, "shap_summary.csv")
+METRICS_OUT     = os.path.join(DATA_DIR, "model_metrics.json")
 
 
 # =============================================================================
@@ -353,6 +355,22 @@ def train_model(df: pd.DataFrame):
 
     joblib.dump(model, MODEL_OUT)
     print(f"\n  Model saved -> {MODEL_OUT}\n")
+
+    # Persist metrics to JSON so MLOps page can display real values
+    metrics_data = {
+        "trained_at": pd.Timestamp.now().isoformat(),
+        "mae": round(float(mae), 2),
+        "rmse": round(float(rmse), 2),
+        "r2": round(float(r2), 4),
+        "wape": round(float(wape), 4),
+        "accuracy_pct": round(float((1 - wape) * 100), 2),
+        "train_rows": int(len(train)),
+        "test_rows": int(len(test)),
+        "split_date": str(split_date.date()),
+    }
+    with open(METRICS_OUT, "w") as f:
+        json.dump(metrics_data, f, indent=2)
+    print(f"  Metrics saved -> {METRICS_OUT}")
 
     # Store model metrics for confidence calculation
     model.mae_  = mae

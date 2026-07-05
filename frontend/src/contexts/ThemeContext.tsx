@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 
 type Theme = 'light' | 'dark';
 
@@ -18,6 +19,7 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { isSignedIn } = useAuth();
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('theme') as Theme;
@@ -27,11 +29,37 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return 'dark';
   });
 
+  // Load theme preference from backend when signed in
+  useEffect(() => {
+    if (!isSignedIn) return;
+    const loadSettings = async () => {
+      try {
+        const { fetchApi } = await import('@/lib/api');
+        const res = await fetchApi('/settings');
+        const s = (res as { settings?: { theme?: Theme } })?.settings || {};
+        if (s.theme && (s.theme === 'light' || s.theme === 'dark')) {
+          setTheme(s.theme);
+        }
+      } catch {
+        // use default
+      }
+    };
+    loadSettings();
+  }, [isSignedIn]);
+
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
     localStorage.setItem('theme', theme);
+
+    // Sync to backend (fire-and-forget)
+    import('@/lib/api').then(({ fetchApi }) => {
+      fetchApi('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ theme }),
+      }).catch(() => {});
+    });
   }, [theme]);
 
   const toggleTheme = () => {

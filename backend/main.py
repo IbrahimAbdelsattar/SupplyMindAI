@@ -44,11 +44,23 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
 
 # In development, allow all hosts so the browser can reach /docs on any port.
 # In production, restrict to the configured list.
+# NOTE: Starlette's TrustedHostMiddleware only bypasses validation when the
+# list is exactly ["*"]. Mixing "*" with other hosts causes exact-match
+# against the literal string "*", rejecting real host headers (400 Bad Request).
 _raw_allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver,*")
 if ENVIRONMENT != "production":
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = [h.strip() for h in _raw_allowed_hosts.split(",") if h.strip()]
+    _parsed = [h.strip() for h in _raw_allowed_hosts.split(",") if h.strip()]
+    # If wildcard is present anywhere, simplify to ["*"] so Starlette
+    # correctly bypasses host validation for all incoming requests.
+    if "*" in _parsed:
+        ALLOWED_HOSTS = ["*"]
+    else:
+        # Always include production domains alongside user-configured hosts
+        _defaults = {"supplymind.tech", "api.supplymind.tech", "*.supplymind.tech"}
+        ALLOWED_HOSTS = list(set(_parsed) | _defaults)
+
 
 if ENVIRONMENT == "production" and not ALLOWED_ORIGINS:
     raise RuntimeError("ALLOWED_ORIGINS must be configured in production")
@@ -326,16 +338,21 @@ async def global_exception_handler(request: Request, exc: Exception):
     import traceback as _tb
     tb_str = _tb.format_exc()
     logger.critical(
-        "🔥 SUCCESS_FAIL_AUDIT | GLOBAL EXCEPTION | Request: %s %s | Error: %s | Type: %s | Traceback:\n%s",
+        "SUCCESS_FAIL_AUDIT | GLOBAL EXCEPTION | Request: %s %s | Error: %s | Type: %s | Traceback:\n%s",
         request.method,
         request.url.path,
         str(exc),
         type(exc).__name__,
         tb_str,
     )
+    content = {"detail": "An unexpected server error occurred."}
+    if ENVIRONMENT != "production":
+        content["error_type"] = type(exc).__name__
+        content["error_msg"] = str(exc)
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An unexpected server error occurred.", "error_type": type(exc).__name__, "error_msg": str(exc)}
+        content=content
     )
 
 @app.middleware("http")
@@ -343,11 +360,12 @@ async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
+    # X-XSS-Protection is obsolete and can introduce vulnerabilities. CSP is the modern standard.
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     if ENVIRONMENT == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        # Content-Security-Policy is intentionally omitted here as it is applied by Nginx
+        # on the frontend. Applying it here blocks the frontend from loading external resources.
     return response
 
 
@@ -387,7 +405,7 @@ async def log_requests(request: Request, call_next):
     except Exception as exc:
         duration = time.time() - start_time
         logger.error(
-            "🔥 SUCCESS_FAIL_AUDIT | UNHANDLED FAILURE | Request: %s %s | Error: %s | Duration: %.4fs",
+            "SUCCESS_FAIL_AUDIT | UNHANDLED FAILURE | Request: %s %s | Error: %s | Duration: %.4fs",
             request.method,
             request.url.path,
             str(exc),

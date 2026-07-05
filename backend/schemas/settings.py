@@ -11,3 +11,4 @@ class UserSettingsPayload(BaseModel):
     region: Optional[str] = None
     language: Optional[str] = None
     display: Optional[dict] = None
+    name: Optional[str] = None

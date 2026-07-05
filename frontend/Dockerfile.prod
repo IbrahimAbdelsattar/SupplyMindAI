@@ -54,5 +54,16 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE 80
 
+# Setup permissions for non-root nginx user
+RUN mkdir -p /var/cache/nginx && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid
+
+USER nginx
+
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

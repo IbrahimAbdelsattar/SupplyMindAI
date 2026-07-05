@@ -1,10 +1,10 @@
 {
   "header": {
     "title": "SupplyMind Copilot",
-    "subtitle": "AI Assistant",
+    "subtitle": "Customer Service",
     "stockMind": "Ask Stock Mind"
   },
-  "welcome": "Hello! I'm your SupplyMind AI assistant. How can I help you today?",
+  "welcome": "Hello! I'm SupplyMind Copilot — your customer service assistant for the SupplyMind AI platform. I can help you with features, dashboards, forecasts, inventory, and analytics. How can I assist you today?",
   "stockMindWelcome": "Ask Stock Mind is ready. Ask about stock, demand, coverage, active products, or the latest snapshot.",
   "quickQuestions": "Quick questions:",
   "placeholder": "Ask about forecasts, inventory...",

@@ -13,6 +13,11 @@
   "appearanceDescription": "Customize the look and feel",
   "darkMode": "Dark Mode",
   "darkModeDescription": "Toggle between light and dark themes",
+  "language": "Language",
+  "languages": {
+    "en": "English",
+    "ar": "العربية"
+  },
   "notificationsDescription": "Configure alert preferences",
   "notifications": {
     "stockAlerts": "Stock Alerts",

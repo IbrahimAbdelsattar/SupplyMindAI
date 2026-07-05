@@ -39,7 +39,7 @@ function FeatureCard3D({ step, index }: { step: typeof steps[number]; index: num
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { rawX.set(0); rawY.set(0); setHovered(false); }}
       style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
-      className="relative cursor-default h-full"
+      className="relative cursor-default h-full touch-none"
     >
       <div
         className="h-full p-6 sm:p-8 rounded-3xl relative overflow-hidden transition-all duration-300"

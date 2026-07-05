@@ -19,5 +19,9 @@ COPY data/ ./data/
 COPY ml_platform/ ./ml_platform/
 COPY scripts/ ./scripts/
 
+# Create non-root user and change ownership
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
 # Start the application
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

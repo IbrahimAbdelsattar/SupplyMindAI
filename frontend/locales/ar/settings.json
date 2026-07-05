@@ -13,6 +13,11 @@
   "appearanceDescription": "تخصيص الشكل والمظهر",
   "darkMode": "الوضع الليلي",
   "darkModeDescription": "التبديل بين السمة الفاتحة والداكنة",
+  "language": "اللغة",
+  "languages": {
+    "en": "English",
+    "ar": "العربية"
+  },
   "notificationsDescription": "تكوين تفضيلات التنبيهات",
   "notifications": {
     "stockAlerts": "تنبيهات المخزون",

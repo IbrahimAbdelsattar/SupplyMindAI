@@ -141,7 +141,9 @@ export default function InventoryTable({ data, selectedId, onSelectItem }: Inven
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden" style={{ height: listHeight + 48 }}>
+      <div className="overflow-x-auto rounded-lg border bg-card">
+        <div style={{ minWidth: "680px" }}>
+        <div style={{ height: listHeight + 48 }}>
         <div className="flex items-center border-b border-border bg-muted/50 font-medium text-sm h-12">
           <div style={{ minWidth: "90px" }} className="flex-[1]">
             <SortHeader field="product_id">ID</SortHeader>
@@ -178,6 +180,8 @@ export default function InventoryTable({ data, selectedId, onSelectItem }: Inven
             rowComponent={Row}
           />
         )}
+      </div>
+        </div>
       </div>
     </div>
   );
