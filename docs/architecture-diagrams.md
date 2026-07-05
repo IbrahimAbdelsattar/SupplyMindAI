@@ -12,32 +12,52 @@ This document combines:
 
 ```mermaid
 flowchart LR
-    user[Manager / Analyst User]
+
+    user["Manager / Analyst User"]
 
     subgraph FE["Frontend SPA (Current)"]
-        app[React + Vite + React Router]
-        providers[Providers\nQueryClientProvider\nClerkProvider\nThemeProvider\nCurrencyProvider\nDateRangeProvider]
-        pages[Pages\nLanding, Login, Dashboard,\nForecasting, Inventory,\nAI Insights, Reports,\nMLOps, Settings, 404]
-        shared[Shared UI\nDashboardSidebar\nDashboardHeader\nCharts (Recharts)\nAIChatbot\nLanguageSwitcher]
-        i18n[i18n\nEN / AR + RTL\n12 namespaces]
-        apiClient[API Layer\n@tanstack/react-query\nsrc/lib/api.ts\nsrc/lib/knowledgeApi.ts]
 
-        app --> providers --> pages --> shared
+        app["React + Vite + React Router"]
+
+        providers["Providers<br/>QueryClientProvider<br/>ClerkProvider<br/>ThemeProvider<br/>CurrencyProvider<br/>DateRangeProvider"]
+
+        pages["Pages<br/>Landing<br/>Login<br/>Dashboard<br/>Forecasting<br/>Inventory<br/>AI Insights<br/>Reports<br/>MLOps<br/>Settings<br/>404"]
+
+        shared["Shared UI<br/>Dashboard Sidebar<br/>Dashboard Header<br/>Charts - Recharts<br/>AI Chatbot<br/>Language Switcher"]
+
+        i18n["Localization<br/>English / Arabic RTL<br/>12 Namespaces"]
+
+        apiClient["API Layer<br/>TanStack Query<br/>api.ts<br/>knowledgeApi.ts"]
+
+        app --> providers
+        providers --> pages
+        pages --> shared
         pages --> apiClient
-        i18n -.- pages
+        i18n -.-> pages
+
     end
 
     subgraph API["Application Backend (Current)"]
-        gateway[FastAPI App /api/v1]
-        auth[Security Router + JWT\nClerk Token Validation]
-        dataSvc[Data Router]
-        forecastSvc[Forecast Service\nML Adapter + Intelligence]
-        inventorySvc[Inventory + RAG + Alert Services]
-        insightSvc[Insights + Chat + Copilot Services]
-        mlopsSvc[MLOps + Reports Services]
-        settingsSvc[Settings + Storage Services]
-        cache[(Redis)]
-        guardrails[AI Guardrails\nInput, Output, RAG,\nForecast, Agent,\nTenant, Rate Limiter]
+
+        gateway["FastAPI Gateway<br/>/api/v1"]
+
+        auth["Authentication<br/>Clerk Token Validation"]
+
+        dataSvc["Data Router"]
+
+        forecastSvc["Forecast Service<br/>ML Adapter<br/>Forecast Intelligence"]
+
+        inventorySvc["Inventory Service<br/>Inventory Intelligence Engine<br/>Alerts"]
+
+        insightSvc["Insights<br/>Copilot Service"]
+
+        mlopsSvc["MLOps<br/>Reports"]
+
+        settingsSvc["Settings<br/>Storage"]
+
+        cache[("Redis")]
+
+        guardrails["AI Guardrails<br/>Input Validation<br/>Output Validation<br/>Forecast Protection<br/>Agent Protection<br/>Tenant Isolation<br/>Rate Limiting"]
 
         gateway --> auth
         gateway --> dataSvc
@@ -48,69 +68,101 @@ flowchart LR
         gateway --> settingsSvc
         gateway --> guardrails
         gateway <--> cache
+
     end
 
-    subgraph DATA["Data and ML Platform (Current)"]
-        raw[CSV Datasets\nproducts, sales, inventory,\nproduction, suppliers,\ncontracts, raw_materials, bom]
-        postgres[(PostgreSQL / Supabase)]
-        training[Training Pipeline\nXGBoost / scikit-learn]
-        registry[MLflow Tracking + Model Registry]
-        drift[Drift Detection + Retraining]
-        optimizer[Inventory Optimizer\nEOQ / ROP / Safety Stock]
-        vector[(ChromaDB Vector Store)]
-        embeddings[sentence-transformers\nall-MiniLM-L6-v2]
-        agentGraph[LangGraph Agents\nSupervisor, Forecasting,\nInventory, MLOps, RAG]
-        llmClient[LLM Client\nOpenAI / OpenRouter / NVIDIA]
+    subgraph DATA["Data & ML Platform (Current)"]
+
+        raw["Business CSV Datasets<br/>Products<br/>Sales<br/>Inventory<br/>Production<br/>Suppliers<br/>Contracts<br/>Raw Materials<br/>BOM"]
+
+        postgres[("PostgreSQL / Supabase")]
+
+        training["Training Pipeline<br/>XGBoost<br/>Scikit Learn"]
+
+        registry["MLflow<br/>Model Registry"]
+
+        drift["Drift Detection<br/>Retraining"]
+
+        optimizer["Inventory Optimizer<br/>EOQ<br/>ROP<br/>Safety Stock"]
+
+        vector[("ChromaDB")]
+
+        embeddings["Sentence Transformers<br/>all-MiniLM-L6-v2"]
+
+        agentGraph["LangGraph Agents<br/>Supervisor<br/>Forecast<br/>Inventory<br/>MLOps"]
+
+        llmClient["LLM Client<br/>OpenRouter<br/>OpenAI<br/>NVIDIA"]
 
         raw --> postgres
-        raw --> training --> registry
+        raw --> training
+        training --> registry
         training --> drift
+
+        optimizer --> postgres
+
         vector --> embeddings
+
         agentGraph --> vector
         agentGraph --> llmClient
-        optimizer --> postgres
+
     end
 
     subgraph INFRA["Infrastructure (Current)"]
-        docker[Docker + Docker Compose]
-        nginx[Nginx Reverse Proxy\n+ API Gateway]
-        langsmith[LangSmith Tracing]
-        otel[OpenTelemetry Collector]
-        prom[Prometheus Metrics]
-        ci[GitHub Actions CI/CD]
+
+        docker["Docker<br/>Docker Compose"]
+
+        nginx["Nginx<br/>Reverse Proxy"]
+
+        langsmith["LangSmith"]
+
+        otel["OpenTelemetry"]
+
+        prom["Prometheus"]
+
+        ci["GitHub Actions"]
+
     end
 
     user --> app
+
     apiClient <--> gateway
 
-    dataSvc <--> postgres
     auth --> postgres
+
+    dataSvc <--> postgres
+
     forecastSvc --> postgres
     forecastSvc --> registry
     forecastSvc --> agentGraph
+
     inventorySvc --> postgres
     inventorySvc --> optimizer
     inventorySvc --> vector
     inventorySvc --> forecastSvc
+
     insightSvc --> postgres
     insightSvc --> forecastSvc
     insightSvc --> llmClient
     insightSvc --> agentGraph
+
     mlopsSvc --> registry
     mlopsSvc --> drift
     mlopsSvc --> postgres
+
     settingsSvc --> postgres
 
     docker --> app
     docker --> gateway
     docker --> postgres
+
     nginx --> app
     nginx --> gateway
+
     langsmith --> gateway
     otel --> gateway
     prom --> gateway
-    ci --> docker
-```
+
+    ci --> docker```
 
 ## 2. ER Diagram
 
