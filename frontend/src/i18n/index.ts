@@ -14,6 +14,7 @@ import enLanding from "../../locales/en/landing.json";
 import enChatbot from "../../locales/en/chatbot.json";
 import enUi from "../../locales/en/ui.json";
 import enAi from "../../locales/en/ai.json";
+import enAlerts from "../../locales/en/alerts.json";
 
 
 import arCommon from "../../locales/ar/common.json";
@@ -28,6 +29,7 @@ import arLanding from "../../locales/ar/landing.json";
 import arChatbot from "../../locales/ar/chatbot.json";
 import arUi from "../../locales/ar/ui.json";
 import arAi from "../../locales/ar/ai.json";
+import arAlerts from "../../locales/ar/alerts.json";
 
 
 i18n
@@ -57,6 +59,7 @@ i18n
         chatbot: enChatbot,
         ui: enUi,
         ai: enAi,
+        alerts: enAlerts,
       },
       ar: {
         common: arCommon,
@@ -71,6 +74,7 @@ i18n
         chatbot: arChatbot,
         ui: arUi,
         ai: arAi,
+        alerts: arAlerts,
       },
     },
   });

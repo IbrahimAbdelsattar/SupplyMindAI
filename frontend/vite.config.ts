@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       // Dev proxy: verify backend is actually listening on this target; ECONNRESET indicates the TCP connection was reset.
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         changeOrigin: true,
       },
     },

@@ -69,11 +69,19 @@ type SystemMetrics = {
   gpu: number;
 };
 
+type StatusData = {
+  modelStatus: 'healthy' | 'degraded' | 'critical';
+  lastRetrained: string | null;
+  pipelineStatus: 'active' | 'inactive';
+  inferenceLatency: string;
+};
+
 type MLOpsMetrics = {
   modelAccuracy: AccuracyPoint[];
   dataDrift: DriftMetric[];
   retrainingHistory: RetrainingEvent[];
   system: SystemMetrics;
+  status: StatusData;
 };
 
 type LangSmithAgent = {
@@ -209,10 +217,45 @@ const MLOps = () => {
           {/* Status Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {[
-              { label: t('mlops:cards.modelStatus'), value: t('mlops:healthy'), icon: Activity, color: 'success' },
-              { label: t('mlops:cards.lastRetrain'), value: t('mlops:twoDaysAgo'), icon: RefreshCw, color: 'primary' },
-              { label: t('mlops:cards.dataPipeline'), value: t('mlops:active'), icon: Database, color: 'accent' },
-              { label: t('mlops:cards.inference'), value: t('mlops:fortyFiveMs'), icon: Zap, color: 'warning' },
+              {
+                label: t('mlops:cards.modelStatus'),
+                value: metricsData.status.modelStatus === 'healthy'
+                  ? t('mlops:healthy')
+                  : metricsData.status.modelStatus === 'degraded'
+                    ? t('mlops:drift.statusWarning')
+                    : t('mlops:critical'),
+                icon: Activity,
+                color: metricsData.status.modelStatus === 'healthy' ? 'success' : metricsData.status.modelStatus === 'degraded' ? 'warning' : 'destructive',
+              },
+              {
+                label: t('mlops:cards.lastRetrain'),
+                value: metricsData.status.lastRetrained
+                  ? (() => {
+                      const d = new Date(metricsData.status.lastRetrained);
+                      const now = new Date();
+                      const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+                      if (diffDays === 0) return t('mlops:today');
+                      if (diffDays === 1) return t('mlops:yesterday');
+                      return t('mlops:daysAgo', { count: diffDays });
+                    })()
+                  : t('mlops:noData'),
+                icon: RefreshCw,
+                color: 'primary',
+              },
+              {
+                label: t('mlops:cards.dataPipeline'),
+                value: metricsData.status.pipelineStatus === 'active'
+                  ? t('mlops:active')
+                  : t('mlops:inactive'),
+                icon: Database,
+                color: metricsData.status.pipelineStatus === 'active' ? 'accent' : 'destructive',
+              },
+              {
+                label: t('mlops:cards.inference'),
+                value: metricsData.status.inferenceLatency,
+                icon: Zap,
+                color: 'warning',
+              },
             ].map((item, index) => (
               <motion.div
                 key={item.label}

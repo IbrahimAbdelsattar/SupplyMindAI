@@ -15,6 +15,7 @@ import {
   FileText,
   Settings,
   Activity,
+  AlertTriangle,
   Sun,
   Moon,
   LogOut,
@@ -40,6 +41,7 @@ const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: s
   { icon: Package, labelKey: 'common:nav.inventory', path: '/inventory' },
   { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
   { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'manager' },
+  { icon: AlertTriangle, labelKey: 'common:nav.alerts', path: '/alerts' },
   { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops', minRole: 'admin' },
   { icon: Settings, labelKey: 'common:nav.settings', path: '/settings', minRole: 'admin' },
 ];

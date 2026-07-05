@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Search, Calendar, Shield, LogOut } from 'lucide-react';
+import { Shield, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
-import { useDateRange } from '@/contexts/DateRangeContext';
+
 import { useAuthContext } from '@/contexts/AuthContext';
 
 interface DashboardHeaderProps {
@@ -34,7 +34,6 @@ const ROLE_COLORS: Record<string, string> = {
 
 export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const { t } = useTranslation();
-  const { label: dateRange, setPeriodDays } = useDateRange();
   const { userRole } = useAuthContext();
   const { signOut } = useClerk();
   const { user } = useUser();
@@ -55,50 +54,6 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
       </div>
 
       <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
-        {/* Search - Neumorphic Inset */}
-        <div className="relative hidden md:block group">
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 6 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2"
-          >
-            <Search className="w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
-          </motion.div>
-          <input
-            type="text"
-            placeholder={t('common:search.placeholder')}
-            className="pl-11 rtl:pl-4 rtl:pr-11 w-[280px] h-11 rounded-2xl border-none neu-panel-inset text-[15px] font-medium text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200"
-          />
-        </div>
-
-        {/* Date Range - Neumorphic Pill */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.97 }}
-              className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground h-11 px-4 rounded-2xl neu-panel active:neu-button-active outline-none"
-            >
-              <motion.div
-                whileHover={{ rotate: -15 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              >
-                <Calendar className="w-4 h-4 text-primary" />
-              </motion.div>
-              <span className="hidden xs:inline">{dateRange}</span>
-              <span className="xs:hidden">{t('common:dateRange.abbreviated')}</span>
-            </motion.button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="neu-panel border-none rounded-2xl p-2 w-[200px]">
-            <DropdownMenuItem onClick={() => setPeriodDays?.(1)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.today')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPeriodDays?.(7)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last7days')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPeriodDays?.(30)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last30days')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPeriodDays?.(90)} className="rounded-xl font-medium focus:bg-background focus:text-primary cursor-pointer p-3">{t('common:dateRange.last90days')}</DropdownMenuItem>
-
-          </DropdownMenuContent>
-
-        </DropdownMenu>
-
         {/* User Profile & Sign Out */}
         <div className="flex items-center ml-2 border-l border-border pl-4 gap-3">
           {/* Role Badge */}

@@ -1,0 +1,31 @@
+{
+  "title": "Active Alerts",
+  "subtitle": "Real-time inventory and stockout alerts",
+  "total": "{{count}} alerts",
+  "noAlerts": "No active alerts",
+  "noAlertsDesc": "All products have sufficient stock levels.",
+  "refresh": "Refresh",
+  "loading": "Loading alerts...",
+  "error": "Failed to load alerts",
+  "type": {
+    "stockout": "Stockout",
+    "low_stock": "Low Stock",
+    "critical_stock": "Critical Stock",
+    "overstock": "Overstock"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "columns": {
+    "product": "Product",
+    "type": "Type",
+    "severity": "Severity",
+    "description": "Description",
+    "time": "Time"
+  },
+  "empty": "No alerts at this time",
+  "emptyDesc": "Your inventory levels are healthy across all products."
+}

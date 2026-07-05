@@ -15,6 +15,32 @@ from backend.db import SessionLocal, ForecastResult
 router = APIRouter(prefix="/api/v1/data", tags=["data"])
 
 
+def _compute_active_alerts(prods: pd.DataFrame, inv: pd.DataFrame, sales: pd.DataFrame) -> int:
+    """Count products with stockout or critically low stock (< 5 days coverage)."""
+    if prods.empty:
+        return 0
+    count = 0
+    for _, r in prods.iterrows():
+        pid = str(r["product_id"])
+        sub = inv[inv["product_id"] == pid]
+        stock = 0
+        if not sub.empty:
+            try:
+                stock = int(sub.sort_values("date").iloc[-1]["stock"])
+            except (ValueError, TypeError):
+                stock = 0
+        if stock <= 0:
+            count += 1
+            continue
+        sales_sub = sales[sales["product_id"] == pid]
+        qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
+        demand = float(sales_sub[qty_col].tail(30).mean()) if not sales_sub.empty else 0.0
+        demand = demand if not pd.isna(demand) else 0.0
+        if demand > 0 and stock / demand < 5:
+            count += 1
+    return count
+
+
 @router.get("/products")
 def data_products(user: dict = Depends(get_current_user)):
     try:
@@ -203,7 +229,7 @@ def data_kpis(period_days: int = 90, user: dict = Depends(get_current_user)):
                 max(0, int(r["stock"])) for _, r in inventory.iterrows()
                 if not pd.isna(r.get("stock"))
             ) if not inventory.empty else 0,
-            "activeAlerts": 0,
+            "activeAlerts": _compute_active_alerts(prods, inv, sales),
             "forecastAccuracy": round(forecast_accuracy, 1),
             "totalStockoutDays": total_stockout_days,
             "inventoryTurnover": round(inventory_turnover, 2),
