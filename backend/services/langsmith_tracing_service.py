@@ -42,8 +42,8 @@ _RUN_TYPES_IN_SCOPE = {"chain", "llm", "tool"}
 
 def get_langsmith_client():
     from langsmith import Client
-    api_key = os.getenv("LANGCHAIN_API_KEY")
-    endpoint = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+    api_key = os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY")
+    endpoint = os.getenv("LANGCHAIN_ENDPOINT") or os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
     if not api_key:
         return None
     return Client(api_url=endpoint, api_key=api_key)
@@ -54,9 +54,9 @@ def fetch_tracing_data(  # noqa: C901
 ) -> dict[str, Any]:
     configure_langsmith()
 
-    enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes"}
-    api_key = os.getenv("LANGCHAIN_API_KEY", "")
-    project = os.getenv("LANGCHAIN_PROJECT", "supplymind-ai")
+    enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes"} or os.getenv("LANGSMITH_TRACING", "").lower() in {"1", "true", "yes"}
+    api_key = os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY", "")
+    project = os.getenv("LANGCHAIN_PROJECT") or os.getenv("LANGSMITH_PROJECT", "supplymind-ai")
 
     result: dict[str, Any] = {
         "enabled": enabled,

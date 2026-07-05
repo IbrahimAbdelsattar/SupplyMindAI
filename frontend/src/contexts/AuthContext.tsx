@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { useUser, useAuth } from '@clerk/clerk-react';
 
-export type AppRole = 'admin' | 'manager' | 'analista' | 'vendedor';
+export type AppRole = 'admin' | 'manager' | 'analyst' | 'viewer';
 
 export interface AuthUser {
   id: string;
@@ -49,9 +49,9 @@ export const AuthContextProvider: React.FC<{ children: ReactNode }> = ({ childre
       // Determine role from Clerk publicMetadata if available
       const metaRole = (clerkUser.publicMetadata as Record<string, unknown>)?.role;
       const role: AppRole =
-        metaRole && ['admin', 'manager', 'analista', 'vendedor'].includes(metaRole as string)
+        metaRole && ['admin', 'manager', 'analyst', 'viewer'].includes(metaRole as string)
           ? (metaRole as AppRole)
-          : 'analista';
+          : 'analyst';
 
       setInternalUser({
         id: clerkUser.id,

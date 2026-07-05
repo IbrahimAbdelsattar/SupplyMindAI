@@ -8,13 +8,13 @@ import { useAuthContext } from '@/contexts/AuthContext';
 const ROLE_HIERARCHY: Record<string, number> = {
   admin: 4,
   manager: 3,
-  analista: 2,
-  vendedor: 1,
+  analyst: 2,
+  viewer: 1,
 };
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'manager' | 'analista' | 'vendedor';
+  requiredRole?: 'admin' | 'manager' | 'analyst' | 'viewer';
 }
 
 export const ProtectedRoute = ({ 
@@ -27,10 +27,14 @@ export const ProtectedRoute = ({
   const { userRole, isDomainValid } = useAuthContext();
 
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-
+    if (isLoaded && isSignedIn && user && requiredRole && userRole) {
+      const userLevel = ROLE_HIERARCHY[userRole] ?? 0;
+      const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 0;
+      if (userLevel < requiredLevel) {
+        navigate('/unauthorized', { replace: true });
+      }
     }
-  }, [isLoaded, isSignedIn, user, navigate]);
+  }, [isLoaded, isSignedIn, user, requiredRole, userRole, navigate]);
 
   if (!isLoaded) {
     return <LoadingSpinner />;

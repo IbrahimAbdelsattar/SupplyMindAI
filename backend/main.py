@@ -269,6 +269,8 @@ _ROUTERS_TO_LOAD = [
     ("backend.routers.inventory_domain", "router"),
     ("backend.routers.data", "router"),
     ("backend.routers.forecasting", "router"),
+    ("backend.routers.notifications", "router"),
+    ("backend.routers.command_center", "router"),
 ]
 
 

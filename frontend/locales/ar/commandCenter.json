@@ -1,0 +1,150 @@
+{
+  "title": "مركز القيادة",
+  "subtitle": "ذكاء القرار بالذكاء الاصطناعي",
+  "morningBrief": {
+    "greeting": "صباح الخير",
+    "greetingAfternoon": "مساء الخير",
+    "greetingEvening": "مساء ناعم",
+    "greetingNight": "تصبح على خير",
+    "today": "اليوم",
+    "summary": "الموجز التنفيذي",
+    "topPriority": "أعلى أولوية",
+    "forecastAccuracy": "دقة التوقعات",
+    "inventoryHealth": "صحة المخزون",
+    "supplyChainStatus": "سلسلة التوريد",
+    "critical": "حرج",
+    "warning": "تحذير",
+    "healthy": "سليم"
+  },
+  "alerts": {
+    "title": "التنبيهات الحرجة",
+    "subtitle": "تتطلب اهتمامًا فوريًا",
+    "empty": "كل شيء على ما يرام! لا توجد تنبيهات نشطة.",
+    "emptySub": "لا توجد تنبيهات نشطة",
+    "acknowledge": "تأكيد",
+    "dismiss": "تجاهل",
+    "affectedProducts": "المتأثرة",
+    "threshold": "العتبة",
+    "triggeredAt": "تاريخ التنبيه",
+    "current": "الحالي:",
+    "source": "المصدر:",
+    "acknowledged": "مؤكد",
+    "timeAgo": {
+      "minutes": "منذ {{count}} د",
+      "hours": "منذ {{count}} س",
+      "days": "منذ {{count}} ي"
+    }
+  },
+  "recommendations": {
+    "title": "الإجراءات الموصى بها",
+    "subtitle": "{{count}} توصيات",
+    "impact": "التأثير المتوقع",
+    "savings": "التوفير المقدر",
+    "takeAction": "اتخاذ إجراء",
+    "relatedAlert": "تنبيه مرتبط",
+    "linkedAlert": "تنبيه مرتبط",
+    "toastExecuting": "جاري تنفيذ الإجراء..."
+  },
+  "businessHealth": {
+    "title": "صحة الأعمال",
+    "subtitle": "{{count}}/{{total}} مؤشرات سليمة",
+    "trend": "الاتجاه",
+    "overall": "الكل"
+  },
+  "financialImpact": {
+    "title": "التأثير المالي",
+    "subtitle": "تحليل الإيرادات والتكاليف",
+    "potentialSavings": "التوفير المحتمل",
+    "fromRecommendations": "من {{count}} توصيات",
+    "atRiskValue": "القيمة المعرضة للخطر",
+    "fromAlerts": "من {{count}} تنبيهات نشطة",
+    "netOpportunity": "الفرصة الصافية",
+    "netGain": "صافي ربح",
+    "netRisk": "صافي مخاطر",
+    "savingsByCategory": "تفصيل التوفير حسب الفئة",
+    "totalSavings": "إجمالي التوفير المحتمل",
+    "atRisk": "الإيرادات المعرضة للخطر",
+    "breakdown": "تفصيل التوفير"
+  },
+  "supplyChain": {
+    "title": "شبكة سلسلة التوريد",
+    "subtitle": "{{nodeCount}} عقدة · {{connCount}} اتصالات",
+    "live": "مباشر",
+    "stock": "المخزون",
+    "legend": {
+      "healthy": "سليم",
+      "warning": "تحذير",
+      "critical": "حرج",
+      "warehouse": "مستودع",
+      "supplier": "مورد",
+      "distribution": "توزيع",
+      "store": "متجر",
+      "manufacturing": "تصنيع"
+    }
+  },
+  "insights": {
+    "title": "رؤى ذكية",
+    "subtitle": "{{count}} رؤى نشطة",
+    "all": "الكل",
+    "opportunity": "فرصة",
+    "risk": "خطر",
+    "optimization": "تحسين",
+    "trend": "اتجاه",
+    "anomaly": "شذوذ",
+    "action": "عرض التفاصيل",
+    "empty": "لا توجد رؤى في هذه الفئة"
+  },
+  "timeline": {
+    "title": "الجدول الزمني للأحداث",
+    "subtitle": "{{count}} أحداث حديثة",
+    "completed": "مكتمل",
+    "timeAgo": {
+      "minutes": "منذ {{count}} د",
+      "hours": "منذ {{count}} س",
+      "days": "منذ {{count}} ي"
+    }
+  },
+  "copilot": {
+    "title": "اسأل المساعد",
+    "subtitle": "مساعد سلسلة التوريد بالذكاء الاصطناعي",
+    "placeholder": "اسأل عن المخزون، التوقعات، المخاطر...",
+    "suggestions": {
+      "inventory": "فحص المخزون",
+      "forecast": "تشغيل التوقعات",
+      "risks": "عرض المخاطر"
+    },
+    "sources": "المصادر"
+  },
+  "quickActions": {
+    "title": "إجراءات سريعة",
+    "subtitle": "{{count}} متاح",
+    "lastRun": "آخر تشغيل",
+    "never": "لم يتم",
+    "running": "جاري التشغيل...",
+    "success": "تم",
+    "error": "فشل",
+    "run": "تشغيل",
+    "idle": "جاهز",
+    "timeAgo": {
+      "minutes": "منذ {{count}} د",
+      "hours": "منذ {{count}} س"
+    }
+  },
+  "alertBadge": {
+    "critical": "حرج",
+    "high": "عالي",
+    "medium": "متوسط",
+    "low": "منخفض"
+  },
+  "statusPill": {
+    "healthy": "سليم",
+    "warning": "تحذير",
+    "critical": "حرج",
+    "neutral": "محايد"
+  },
+  "timeAgo": {
+    "minutes": "منذ {{count}} د",
+    "hours": "منذ {{count}} س",
+    "days": "منذ {{count}} ي"
+  }
+}

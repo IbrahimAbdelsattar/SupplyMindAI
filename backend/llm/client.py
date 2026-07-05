@@ -120,6 +120,13 @@ def get_llm(temperature: float = 0.1, max_tokens: int = 4096) -> ChatOpenAI | No
     # Resolve the project root (two levels up from this file) to correctly load the top-level .env
     project_root = Path(__file__).resolve().parents[2]
     load_dotenv(project_root / ".env", override=True)
+
+    # Configure LangSmith tracing for all LLM calls
+    try:
+        from backend.knowledge.langsmith_tracing import configure_langsmith
+        configure_langsmith()
+    except Exception:
+        pass
     
     # Audit log print diagnostics as required by Phase 2
     LOGGER.info("LLM_MODEL=%s", os.getenv("LLM_MODEL"))

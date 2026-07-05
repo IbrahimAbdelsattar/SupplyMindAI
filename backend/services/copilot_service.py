@@ -7,6 +7,14 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from backend.knowledge.langsmith_tracing import configure_langsmith
 from backend.llm.client import get_llm
 
+try:
+    from langsmith import traceable as _traceable
+except ImportError:
+    def _traceable(*a, **kw):  # type: ignore
+        def deco(fn):
+            return fn
+        return deco
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -26,6 +34,7 @@ class CopilotService:
     def __init__(self) -> None:
         self.llm = get_llm()
 
+    @_traceable(name="copilot_chat", run_type="chain")
     def chat(self, message: str) -> str:
         if not self.llm:
             LOGGER.warning("Copilot LLM is not configured or disabled.")

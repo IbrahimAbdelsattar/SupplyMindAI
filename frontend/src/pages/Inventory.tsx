@@ -27,6 +27,7 @@ import { apiFetch } from '@/lib/api';
 import InventoryTable, { type ProductItem } from '@/components/inventory/InventoryTable';
 import ChatBot from '@/components/inventory/ChatBot';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 type InventoryRecommendation = {
   product_id: string;
@@ -42,6 +43,8 @@ type InventoryRecommendation = {
 
 const Inventory = () => {
   const { t } = useTranslation();
+  const { userRole } = useAuthContext();
+  const isAllowedToApply = userRole === 'admin' || userRole === 'manager';
   const { formatCurrency } = useCurrency();
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const queryClient = useQueryClient();
@@ -249,10 +252,12 @@ const Inventory = () => {
                               +{formatCurrency(item.costSavings)}
                             </p>
                           </div>
-                          <Button size="sm" className="gap-1 h-8 text-xs sm:text-sm" onClick={() => applyMutation(item)} disabled={isApplying}>
-                            {t('inventory:aiRecommendations.apply')}
-                            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
+                          {isAllowedToApply && (
+                            <Button size="sm" className="gap-1 h-8 text-xs sm:text-sm" onClick={() => applyMutation(item)} disabled={isApplying}>
+                              {t('inventory:aiRecommendations.apply')}
+                              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
 

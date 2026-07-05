@@ -229,7 +229,7 @@ def data_kpis(period_days: int = 90, user: dict = Depends(get_current_user)):
                 max(0, int(r["stock"])) for _, r in inventory.iterrows()
                 if not pd.isna(r.get("stock"))
             ) if not inventory.empty else 0,
-            "activeAlerts": _compute_active_alerts(prods, inv, sales),
+            "activeAlerts": _compute_active_alerts(prods, inventory, sales),
             "forecastAccuracy": round(forecast_accuracy, 1),
             "totalStockoutDays": total_stockout_days,
             "inventoryTurnover": round(inventory_turnover, 2),

@@ -8,6 +8,17 @@ from typing import Any
 import pandas as pd
 
 from backend.globals import STORE, _daily_demand_stats, _latest_inventory_level
+from backend.knowledge.langsmith_tracing import configure_langsmith
+
+configure_langsmith()
+
+try:
+    from langsmith import traceable as _traceable
+except ImportError:
+    def _traceable(*a, **kw):  # type: ignore
+        def deco(fn):
+            return fn
+        return deco
 
 LOGGER = logging.getLogger(__name__)
 
@@ -186,14 +197,15 @@ def _assemble_context(product_id: str, stats: dict[str, Any], shap_features: lis
 # ---------------------------------------------------------------------------
 # LLM invocation — ALWAYS runs (raises on failure, no silent fallback)
 # ---------------------------------------------------------------------------
+@_traceable(name="insight_invoke_llm", run_type="llm")
 def _invoke_llm(context: str) -> dict[str, Any]:
     """Call the LLM for supply chain reasoning. Raises if LLM not configured."""
-    from backend.llm.client import get_llm
-    from backend.llm.executive_prompts import SUPPLY_CHAIN_INSIGHTS_PROMPT
+    from backend.ai.orchestrator.model_registry import ModelRegistry
+    from backend.ai.orchestrator.prompt_registry import PromptRegistry
     from backend.llm.limits import get_input_budget, truncate_to_budget
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    llm = get_llm(temperature=0.1)
+    llm = ModelRegistry.get_model("executive_insights")
     if llm is None:
         raise RuntimeError(
             "AI Insights requires an LLM. Configure OPENROUTER_API_KEY or LLM_REASONING_API_KEY."
@@ -203,7 +215,11 @@ def _invoke_llm(context: str) -> dict[str, Any]:
     budget = get_input_budget("ai_insights")
     context = truncate_to_budget(context, budget, label="ai_insights")
 
-    system_msg = SystemMessage(content=SUPPLY_CHAIN_INSIGHTS_PROMPT.format(context=context))
+    base_prompt = PromptRegistry.get_prompt("executive_insights")
+    from backend.llm.executive_prompts import SUPPLY_CHAIN_INSIGHTS_PROMPT
+    full_prompt = base_prompt + "\n\n" + SUPPLY_CHAIN_INSIGHTS_PROMPT.format(context=context)
+
+    system_msg = SystemMessage(content=full_prompt)
     human_msg = HumanMessage(content="Analyze the supply chain data provided in the system message. Return JSON only.")
 
     from backend.llm.monitor import monitor_llm_call
@@ -260,6 +276,7 @@ def _invoke_llm(context: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Public API — LLM is mandatory, SHAP enriches when available
 # ---------------------------------------------------------------------------
+@_traceable(name="generate_insights", run_type="chain")
 def generate_insights(product_id: str) -> dict[str, Any]:
     """
     Generate AI insights for a product using LLM reasoning.

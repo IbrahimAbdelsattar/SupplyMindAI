@@ -8,6 +8,14 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from backend.llm.client import get_llm
 from backend.knowledge.langsmith_tracing import configure_langsmith
 
+try:
+    from langsmith import traceable as _traceable
+except ImportError:
+    def _traceable(*a, **kw):  # type: ignore
+        def deco(fn):
+            return fn
+        return deco
+
 LOGGER = logging.getLogger(__name__)
 
 FORECAST_REASONING_SYSTEM_PROMPT = """You are a Senior Supply Chain Consultant.
@@ -44,8 +52,10 @@ You MUST respond ONLY with a valid JSON object matching the following structure:
 
 class ForecastReasoningService:
     def __init__(self) -> None:
-        self.llm = get_llm()
+        from backend.ai.orchestrator.model_registry import ModelRegistry
+        self.llm = ModelRegistry.get_model("forecast")
 
+    @_traceable(name="forecast_reasoning_analyze", run_type="chain")
     def analyze(self, forecasts: list[dict[str, Any]], question: Optional[str] = None) -> dict[str, Any]:
         if not self.llm:
             LOGGER.warning("Forecast reasoning LLM is not configured or disabled.")
@@ -79,8 +89,34 @@ class ForecastReasoningService:
         if question:
             user_message += f"\n\nUser Question/Focus: {question}"
 
+        from backend.ai.orchestrator.prompt_registry import PromptRegistry
+        base_prompt = PromptRegistry.get_prompt("forecast")
+        full_system_prompt = base_prompt + "\n\n" + """You analyze the provided forecasting metrics and provide actionable business recommendations.
+Focus on:
+- Demand risk
+- Inventory optimization
+- Supplier performance
+- Revenue opportunities
+- Operational bottlenecks
+
+Provide concise executive-level recommendations.
+
+You MUST respond ONLY with a valid JSON object matching the following structure:
+{
+  "summary": "Executive summary paragraph...",
+  "risks": [
+    {"title": "Risk Title", "description": "Description of risk", "impact": "high|medium|low"}
+  ],
+  "recommendations": [
+    {"title": "Recommendation Title", "description": "Actionable detail", "impact": "high|medium|low"}
+  ],
+  "revenue_opportunities": [
+    {"title": "Opportunity Title", "description": "Actionable detail", "value": "estimated revenue/savings impact"}
+  ]
+}"""
+
         messages = [
-            SystemMessage(content=FORECAST_REASONING_SYSTEM_PROMPT),
+            SystemMessage(content=full_system_prompt),
             HumanMessage(content=user_message)
         ]
 

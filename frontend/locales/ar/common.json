@@ -35,7 +35,9 @@
     "noResults": "لم يتم العثور على نتائج."
   },
   "notifications": {
-    "title": "الإشعارات"
+    "title": "الإشعارات",
+    "markAllRead": "تحديد الكل كمقروء",
+    "empty": "لا توجد إشعارات"
   },
   "dateRange": {
     "today": "اليوم",

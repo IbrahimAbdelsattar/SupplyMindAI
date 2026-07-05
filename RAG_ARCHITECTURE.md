@@ -1,100 +1,76 @@
-# SupplyMind RAG Architecture
+# SupplyMind RAG Architecture: Document Isolation & Filtering
 
-## Design principles
+The **Retrieval-Augmented Generation (RAG)** pipeline grounding SupplyMind AI is governed by strict document boundaries. This prevents cross-agent contamination (e.g. preventing Customer Support from accessing internal inventory stock policies).
 
-1. **Grounded answers** — LLM receives retrieved chunks + live operational snapshot only
-2. **No hallucinated metrics** — if retrieval is empty, the model states that explicitly
-3. **Operational DB unchanged** — CSV/SQLite facts injected at query time via `get_operational_snapshot()`
-4. **Layered retrieval** — application vector database first, Chroma legacy fallback, CSV last resort
+---
 
-## Pipeline
+## Ingestion Pipeline
 
 ```
 Operational event (forecast, inventory, insight, report)
         │
         ▼
-  hooks.py (async thread pool)
+   hooks.py (async thread pool)
         │
         ▼
-  ingestion.py → documents + embeddings (384-dim, MiniLM)
+   ingestion.py → documents + embeddings (384-dim, MiniLM)
         │
         ▼
-  Application database embeddings (cosine similarity)
+   SQL Database (SQLite / PostgreSQL) using cosine similarity
 ```
 
-## Query flow
+During ingestion, documents are classified with a `source_type` category matching the origin event:
+* `inventory`: Live stock thresholds, EOQ policies, warehouse stats.
+* `forecast`: Prediction metrics, trend targets, supplier statistics.
+* `insight`: Explanations and SHAP summaries.
+* `report`: Monthly/weekly logistical summaries.
+* `mlops`: Model drift logs.
+* `general`: Onboarding materials, FAQs, user manuals, navigational guides.
+
+---
+
+## Isolated Query Flow (ContextBuilder)
+
+Instead of performing broad queries across all documents, the **ContextBuilder** inside the orchestrator filters searches strictly by permitted document types for the active agent.
 
 ```
-User question
-        │
-        ▼
-  embed_text(query)
-        │
-        ▼
-  match_documents RPC (metadata filters: source_type, product_id, user_id)
-        │
-        ▼
-  rag.py — build CONTEXT + OPERATIONAL_SNAPSHOT
-        │
-        ▼
-  LangChain ChatOpenAI (OpenRouter) — temperature 0.1
-        │
-        ▼
-  Answer + source citations
+User Query
+    │
+    ▼
+Orchestration Intent Route (e.g., Inventory)
+    │
+    ▼
+ContextBuilder.get_filtered_context()
+    │
+    ├─► Enforce filters: document.source_type IN ("inventory", "incident", "recommendation")
+    │
+    ▼
+Semantic Cosine Search (SQL-backed)
+    │
+    ▼
+Grounded Context Chunks + Operational Snapshot
+    │
+    ▼
+LLM Generation (Temperature 0.1)
 ```
 
-## LangChain / LangGraph
+### Document Permissibility Matrix
 
-| Component | Location |
-|-----------|----------|
-| RAG generation | `backend/knowledge/rag.py` |
-| Agent tools | `backend/tools/knowledge_tools.py`, `rag_tools.py` |
-| Multi-agent graph | `backend/agents/graph.py` |
-| Copilot graph | `backend/agents/copilot_graph.py` |
+| Calling Agent | Allowed `source_type` Documents |
+|---|---|
+| **Inventory Agent** | `["inventory", "incident", "recommendation"]` |
+| **Forecast Agent** | `["forecast"]` |
+| **Customer Support Agent** | `["general", "insight"]` (No inventory or internal metrics!) |
+| **Documentation Agent** | `["general"]` |
+| **MLOps Agent** | `["mlops"]` |
+| **Report Agent** | `["report"]` |
+| **Executive Insights Agent** | `["insight", "report"]` |
 
-Agent-specific retrieval tools:
+---
 
-- `search_forecast_knowledge`
-- `search_inventory_knowledge`
-- `search_insights_knowledge`
-- `search_mlops_knowledge`
-- `query_inventory_knowledge` (application database → Chroma → CSV)
+## Retrieval Parameters & Performance
 
-## Metadata filtering
-
-Documents store `metadata` JSONB (e.g. `product_id`, `horizon_days`). Search filters:
-
-- `source_type`: forecast | inventory | insight | report | mlops
-- `product_id`: SKU filter
-- `user_id`: optional per-user scoping
-
-## Performance
-
-| Feature | Implementation |
-|---------|----------------|
-| Batch embeddings | `embed_texts_batch()` with configurable `KNOWLEDGE_BATCH_EMBED_SIZE` |
-| Embedding cache | SHA-256 keyed in-memory cache |
-| Async ingestion | `KNOWLEDGE_INGESTION_ASYNC=true` (ThreadPoolExecutor) |
-| Retrieval limit | `KNOWLEDGE_MATCH_COUNT`, `KNOWLEDGE_MATCH_THRESHOLD` |
-
-## API
-
-```http
-POST /api/v1/knowledge/search
-POST /api/v1/rag/query
-```
-
-Example RAG body:
-
-```json
-{
-  "question": "Why is stock-out risk increasing for BL_KIT?",
-  "product_id": "BL_KIT",
-  "source_type": "inventory",
-  "include_operational_context": true
-}
-```
-
-## LangSmith
-
-Set `LANGCHAIN_TRACING_V2=true` to trace RAG and copilot runs (latency, tokens, retrieval quality). See `LANGSMITH_SETUP.md`.
+* **Similarity Threshold**: Search results are filtered to match a cosine similarity threshold of at least `KNOWLEDGE_MATCH_THRESHOLD` (default `0.35`).
+* **Match Count Limits**: Chunks are capped at `KNOWLEDGE_MATCH_COUNT` (default `5` chunks) to respect token input budgets.
+* **Embedding Cache**: Embedding generation is optimized using an in-memory SHA-256 cache, eliminating redundant model evaluations.
+* **Groundedness**: If the ContextBuilder returns no matching knowledge docs and there is no operational database snapshot, the system returns a safe boundary warning: *"I don't have indexed knowledge for that query yet."*

@@ -1,0 +1,14 @@
+SKU,Product,Category,Revenue,Units Sold,Cumulative %,Tier
+MX_IND,Industrial Mixer,Industrial,2710395000.0,301155,31.07,A
+AF_75,Air Fryer 7.5L,Kitchen,1781880000.0,222735,51.5,A
+ESP,Espresso Machine,Kitchen,1207424000.0,150928,65.34,A
+BL_CHOP,Chopper Blender,Kitchen,488217400.0,221917,70.93,A
+EX_FLAT,Exhaust Flat,Cooling,434064500.0,228455,75.91,A
+BL_KIT,Kitchen Blender,Kitchen,429954000.0,143318,80.84,B
+AF_5,Air Fryer 5L,Kitchen,395296000.0,71872,85.37,B
+BL_IND,Industrial Blender,Industrial,387381500.0,70433,89.81,B
+FAN_STD,Fan,Cooling,374107200.0,155878,94.1,B
+EX_CIRC,Exhaust Circular,Cooling,364732800.0,151972,98.28,C
+SW,Sandwich Maker,Kitchen,149935100.0,81046,100.0,C
+EX_POLY,Exhaust Polygon,Cooling,0.0,0,100.0,C
+MX_KIT,Kitchen Mixer,Kitchen,0.0,0,100.0,C

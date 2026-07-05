@@ -22,6 +22,8 @@ TOKEN_BUDGETS = {
     "executive_insights": 8_000,
     "high_risk_insights": 6_000,
     "revenue_insights": 6_000,
+    "inventory_intelligence": 8_000,
+    "inventory_rag_query": 6_000,
 }
 
 # Output token limits per feature

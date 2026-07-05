@@ -1,46 +1,53 @@
-# Supply Mind Deployment Guide
+# SupplyMind AI Deployment Guide
 
-## Overview
+This document outlines the deployment process for the SupplyMind AI platform. The platform is fully containerized using Docker and Docker Compose.
 
-This document outlines the deployment process for the Supply Mind AI platform. The platform is fully containerized using Docker and Docker Compose, making it easy to deploy to any environment that supports Docker.
+---
 
-## Architecture
+## Core Infrastructure Stack
 
-The system consists of the following components:
+The system consists of the following containerized services:
 
-- **Frontend:** A React/Vite Single Page Application (SPA) served by Nginx.
-- **Backend:** A FastAPI Python backend that serves the REST API.
-- **Postgres:** The relational database for application state.
-- **Redis:** Used for caching and task queues.
-- **ML Services:** Embedded within the backend container for forecasting and RAG.
+* **Frontend**: A React/Vite SPA styled with a neumorphic design system and served via Nginx.
+* **Backend**: A FastAPI Python application encapsulating:
+  * The **AI Orchestrator Layer** (routing user intents, filtering RAG context, and scoping memory).
+  * The XGBoost demand forecasting inference pipeline.
+  * In-memory cosine similarity search (database-backed vectors).
+* **Database**: PostgreSQL 16 for relational logs, user accounts, and knowledge document structures.
+* **Cache & Broker**: Redis 7 for API caching and task queues.
 
-## Prerequisites
+---
 
-- Docker and Docker Compose installed on the host machine.
-- An OpenAI API Key or compatible LLM provider key (e.g., OpenRouter).
+## Deployment Configuration & Environment Variables
 
-## Local Development
+Make sure to populate your `.env` file before booting the containers. Crucial AI Orchestrator parameters include:
 
-To run the application locally for development:
+```ini
+# LLM configuration (All agents share this key but run on isolated model configs)
+OPENROUTER_API_KEY=sk-or-xxxx...
+LLM_MODEL=nvidia/nemotron-3-super-120b-a12b:free
 
-```bash
-# Set your environment variables
-export OPENROUTER_API_KEY=your_key_here
+# Intent routing threshold
+INTENT_CONFIDENCE_THRESHOLD=0.70
 
-# Start the services
-docker compose up -d
+# Database
+DATABASE_URL=postgresql://user:password@db:5432/supplymind
+
+# Observability
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=lsv2_xxxx...
+LANGCHAIN_PROJECT=supplymind-orchestrator
 ```
 
-The frontend will be accessible at `http://localhost:8080` and the backend API at `http://localhost:8000`.
+---
 
-## Production Deployment
+## Booting the Stack
 
-For production deployment, ensure you configure strong passwords and secure your `.env` file.
+### Production Mode
+To deploy the application in production:
 
-1.  Clone the repository on your production server.
-2.  Create a `.env` file with production secrets.
-3.  Run `docker compose -f docker-compose.prod.yml up -d --build`.
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-## CI/CD Pipeline
-
-The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that automatically builds the Docker images and runs basic tests on every push to the `main` branch.
+Nginx maps the frontend to port `8080` (or the mapped public HTTP port) and routes `/api/*` proxies to the FastAPI service.

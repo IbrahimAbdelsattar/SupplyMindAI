@@ -16,6 +16,17 @@ from backend.llm.executive_prompts import (
     REVENUE_INSIGHT_PROMPT,
 )
 from backend.llm.limits import get_input_budget, get_output_limit, truncate_to_budget
+from backend.knowledge.langsmith_tracing import configure_langsmith
+
+configure_langsmith()
+
+try:
+    from langsmith import traceable as _traceable
+except ImportError:
+    def _traceable(*a, **kw):  # type: ignore
+        def deco(fn):
+            return fn
+        return deco
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,6 +50,7 @@ def _safe_parse_json(text: str) -> dict[str, Any]:
         return {"summary": text, "risks": [], "recommendations": [], "revenue_opportunities": []}
 
 
+@_traceable(name="forecast_invoke_llm", run_type="llm")
 def _invoke_llm(system: str, human: str, feature: str = "forecast_reasoning") -> dict[str, Any]:
     llm = _get_reasoning_llm(max_tokens=get_output_limit(feature))
     if llm is None:
@@ -76,6 +88,7 @@ def _invoke_llm(system: str, human: str, feature: str = "forecast_reasoning") ->
         }
 
 
+@_traceable(name="generate_executive_insights", run_type="chain")
 def generate_executive_insights(
     product_forecasts: list[dict[str, Any]],
     context_str: str | None = None,
@@ -88,6 +101,7 @@ def generate_executive_insights(
     return _invoke_llm(system, EXECUTIVE_INSIGHT_PROMPT, feature="executive_insights")
 
 
+@_traceable(name="generate_high_risk_insights", run_type="chain")
 def generate_high_risk_insights(
     high_risk_forecasts: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -100,6 +114,7 @@ def generate_high_risk_insights(
     )
 
 
+@_traceable(name="generate_revenue_insights", run_type="chain")
 def generate_revenue_insights(
     revenue_forecasts: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -112,6 +127,7 @@ def generate_revenue_insights(
     )
 
 
+@_traceable(name="generate_product_insight", run_type="chain")
 def generate_product_insight(product_id: str, forecasts: list[dict[str, Any]]) -> dict[str, Any]:
     """Single product insight. Context in system prompt only."""
     context = build_product_context(product_id, forecasts)

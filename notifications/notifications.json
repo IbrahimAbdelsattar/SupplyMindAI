@@ -1,0 +1,68 @@
+[
+  {
+    "id": "25fb7bb1-1ff6-4b74-a637-454ebe72562b",
+    "type": "low_stock",
+    "severity": "high",
+    "title": "Low Stock: Fan",
+    "description": "Only 3.0 days of stock remaining for Fan. Reorder soon.",
+    "product_id": "FAN_STD",
+    "created_at": "2026-07-05 09:45:25.168123+00:00",
+    "read": true,
+    "read_at": "2026-07-05T09:50:44.953019+00:00"
+  },
+  {
+    "id": "afadaf0c-4cfd-4a5c-affd-73af95c5f6cb",
+    "type": "low_stock",
+    "severity": "high",
+    "title": "Low Stock: Exhaust Flat",
+    "description": "Only 0.9 days of stock remaining for Exhaust Flat. Reorder soon.",
+    "product_id": "EX_FLAT",
+    "created_at": "2026-07-05 09:45:25.168123+00:00",
+    "read": false,
+    "read_at": null
+  },
+  {
+    "id": "8f34f2d4-008a-4d3a-acd1-fb0cc8915994",
+    "type": "low_stock",
+    "severity": "high",
+    "title": "Low Stock: Air Fryer 7.5L",
+    "description": "Only 3.9 days of stock remaining for Air Fryer 7.5L. Reorder soon.",
+    "product_id": "AF_75",
+    "created_at": "2026-07-05 09:45:25.168123+00:00",
+    "read": false,
+    "read_at": null
+  },
+  {
+    "id": "8a2c2ac3-8f4e-4806-bdf8-a401a90126f8",
+    "type": "low_stock",
+    "severity": "high",
+    "title": "Low Stock: Chopper Blender",
+    "description": "Only 2.7 days of stock remaining for Chopper Blender. Reorder soon.",
+    "product_id": "BL_CHOP",
+    "created_at": "2026-07-05 09:45:25.168123+00:00",
+    "read": false,
+    "read_at": null
+  },
+  {
+    "id": "14044b4b-6b1a-4bd3-9cf3-c211c6852048",
+    "type": "low_stock",
+    "severity": "high",
+    "title": "Low Stock: Espresso Machine",
+    "description": "Only 3.2 days of stock remaining for Espresso Machine. Reorder soon.",
+    "product_id": "ESP",
+    "created_at": "2026-07-05 09:45:25.168123+00:00",
+    "read": false,
+    "read_at": null
+  },
+  {
+    "id": "525c3992-41e0-45e2-aa77-62a4b1c7a621",
+    "type": "low_stock",
+    "severity": "high",
+    "title": "Low Stock: Industrial Mixer",
+    "description": "Only 4.3 days of stock remaining for Industrial Mixer. Reorder soon.",
+    "product_id": "MX_IND",
+    "created_at": "2026-07-05 09:45:25.168123+00:00",
+    "read": false,
+    "read_at": null
+  }
+]

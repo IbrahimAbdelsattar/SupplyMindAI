@@ -37,7 +37,9 @@
     "noResults": "No results found."
   },
   "notifications": {
-    "title": "Notifications"
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "No notifications"
   },
   "dateRange": {
     "today": "Today",

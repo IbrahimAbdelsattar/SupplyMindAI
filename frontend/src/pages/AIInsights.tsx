@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { FormattedMessage } from '@/components/ai/FormattedMessage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +42,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { consumeSSE } from '@/lib/stream';
 import { Button } from '@/components/ui/button';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 type Product = { product_id: string; product_name: string };
 
@@ -288,6 +288,8 @@ function InsightCard({
 ════════════════════════════════════════════════ */
 const AIInsights = () => {
   const { t } = useTranslation();
+  const { userRole } = useAuthContext();
+  const isViewer = userRole === 'viewer';
   const [selectedProduct, setSelectedProduct] = useState('');
 
   /* ── Streaming state ── */
@@ -375,14 +377,16 @@ const AIInsights = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              onClick={generateInsights}
-              disabled={isStreaming}
-              className="flex items-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              {isStreaming ? t('insights:actions.generating') : t('insights:actions.generate')}
-            </Button>
+            {!isViewer && (
+              <Button
+                onClick={generateInsights}
+                disabled={isStreaming}
+                className="flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                {isStreaming ? t('insights:actions.generating') : t('insights:actions.generate')}
+              </Button>
+            )}
           </div>
 
           {/* ── Executive Summary ── */}
@@ -541,8 +545,6 @@ const AIInsights = () => {
 
         </main>
       </div>
-
-      <AIChatbot />
     </div>
   );
 };

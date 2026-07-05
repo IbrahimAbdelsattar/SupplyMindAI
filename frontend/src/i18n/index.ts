@@ -15,6 +15,7 @@ import enChatbot from "../../locales/en/chatbot.json";
 import enUi from "../../locales/en/ui.json";
 import enAi from "../../locales/en/ai.json";
 import enAlerts from "../../locales/en/alerts.json";
+import enCommandCenter from "../../locales/en/commandCenter.json";
 
 
 import arCommon from "../../locales/ar/common.json";
@@ -30,6 +31,7 @@ import arChatbot from "../../locales/ar/chatbot.json";
 import arUi from "../../locales/ar/ui.json";
 import arAi from "../../locales/ar/ai.json";
 import arAlerts from "../../locales/ar/alerts.json";
+import arCommandCenter from "../../locales/ar/commandCenter.json";
 
 
 i18n
@@ -60,6 +62,7 @@ i18n
         ui: enUi,
         ai: enAi,
         alerts: enAlerts,
+        commandCenter: enCommandCenter,
       },
       ar: {
         common: arCommon,
@@ -75,6 +78,7 @@ i18n
         ui: arUi,
         ai: arAi,
         alerts: arAlerts,
+        commandCenter: arCommandCenter,
       },
     },
   });

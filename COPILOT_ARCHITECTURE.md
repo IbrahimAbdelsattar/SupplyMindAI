@@ -1,112 +1,70 @@
-# SupplyMind Copilot Architecture
+# SupplyMind Copilot Architecture: Orchestration-Based Chatbot
 
-## Role
+The **SupplyMind Copilot** serves as the central AI assistant for supply chain operators. It is integrated throughout the frontend web application (e.g., the floating chat widget and page summaries) and routed through the unified **AI Orchestration Layer**.
 
-The **SupplyMind Copilot** is the central AI assistant for supply chain operators. It answers questions such as:
+---
 
-- Why is stock-out risk increasing?
-- Which products need attention?
-- Explain forecast changes
-- What caused inventory growth?
-- Show similar historical incidents
-- Recommend next actions
+## High-Level Execution Flow
 
-It combines **database-backed vector memory**, **live operational data** (CSV `DataStore`), and **LangGraph tool orchestration**.
+```mermaid
+sequenceDiagram
+    participant User as Frontend Client
+    participant API as FastAPI /copilot/chat
+    participant Orchestrator as AI Orchestrator Gateway
+    participant Guardrails as Input Guardrails
+    participant Intent as Intent Detector
+    participant Router as Agent Router
+    participant Agent as Specialized Agent (e.g. Support)
+    participant Model as Centralized Model Registry
+    participant RAG as Context Builder (Filtered RAG)
 
-## Engines
-
-| Mode | Env | Behavior |
-|------|-----|----------|
-| LangGraph (default) | `COPILOT_USE_LANGGRAPH=true` | Tool-calling agent with forecast, inventory, knowledge, MLOps tools |
-| RAG fallback | LangGraph failure | `rag_query()` + multi-type semantic search + conversation persistence |
-
-## LangGraph copilot
-
-File: `backend/agents/copilot_graph.py`
-
-```
-User message
-     │
-     ▼
-copilot_agent_node (ChatOpenAI + tools)
-     │
-     ├─ tool calls → ToolNode → back to copilot
-     └─ no tools → END
-```
-
-Tools available to the copilot:
-
-- Knowledge database: `search_*_knowledge`, `recall_agent_memory`
-- Legacy RAG: `query_inventory_knowledge`
-- Live ops: `generate_forecast`, `analyze_inventory`, `get_mlops_metrics`
-
-## Multi-agent integration
-
-Existing supervisor graph (`backend/agents/graph.py`) routes to specialized agents. Each agent binds database-backed retrieval tools:
-
-| Agent | Retrieval tool |
-|-------|----------------|
-| Forecasting | `search_forecast_knowledge` |
-| Inventory | `search_inventory_knowledge` |
-| Insights (RAG node) | `search_insights_knowledge` |
-| MLOps | `search_mlops_knowledge` |
-
-## Memory & conversations
-
-| Store | Table | Use |
-|-------|-------|-----|
-| Chat history | `conversations` | Per `session_id` + `user_id` |
-| Long-term memory | `memory` | `upsert_memory` after copilot turns |
-
-Frontend persists `session_id` in `localStorage` (`supplymind_copilot_session`).
-
-## API
-
-```http
-POST /api/v1/copilot/chat
-Authorization: Bearer <JWT>
+    User->>API: Send chat message + Session ID
+    API->>Orchestrator: execute_query()
+    Orchestrator->>Guardrails: check(message)
+    Guardrails-->>Orchestrator: passed / blocked
+    Orchestrator->>Intent: detect_intent(message)
+    Intent-->>Orchestrator: intent + confidence score
+    
+    alt Confidence < 0.70
+        Orchestrator-->>User: Clarification Request
+    else Confidence >= 0.70
+        Orchestrator->>Router: Route to selected agent
+        Router->>Agent: execute()
+        Agent->>RAG: get_filtered_context(agent_type)
+        RAG-->>Agent: strictly bounded document chunks
+        Agent->>Model: get_model(agent_type)
+        Model-->>Agent: customized ChatOpenAI client
+        Agent->>Agent: Run execution loops + tools
+        Agent-->>Orchestrator: final answer
+        Orchestrator-->>User: Validated response + source citations
+    end
 ```
 
-```json
-{
-  "message": "Which products need attention?",
-  "product_id": "BL_KIT",
-  "mode": "business",
-  "session_id": "optional-uuid"
-}
-```
+---
 
-Response:
+## Agent Routing Scope & Tool Bounds
 
-```json
-{
-  "answer": "...",
-  "sources": [{"title": "...", "source_type": "inventory", "similarity": 0.82}],
-  "session_id": "...",
-  "grounded": true,
-  "engine": "langgraph"
-}
-```
+The orchestrator enforces strict boundaries for tools and retrievers to prevent cross-agent context leakage:
 
-## Frontend
+| Agent / Intent | System Prompt Scope | Bound Tools | RAG Boundaries | Memory Scope |
+|----------------|---------------------|-------------|----------------|--------------|
+| **Inventory** | Stock levels, EOQ, reorder alerts, ROP, overstock risks | `analyze_inventory`, `search_inventory_knowledge` | `source_type="inventory"`, `"incident"`, `"recommendation"` | `agent_type="inventory"` |
+| **Forecast** | Demand prediction analysis, seasonality, trend lines, supplier delays | `generate_forecast`, `search_forecast_knowledge` | `source_type="forecast"` | `agent_type="forecast"` |
+| **Customer Support** | Navigational guide, dashboard KPIs explanation, settings walkthrough | `search_insights_knowledge` (Documentation FAQ) | `source_type="general"`, `"insight"` (No inventory access!) | `agent_type="customer_support"` |
+| **Documentation** | Guide manuals, platform onboarding, FAQs | `search_insights_knowledge` | `source_type="general"` | `agent_type="documentation"` |
+| **MLOps** | System resources, ML model health, retraining runs, drift stats | `get_mlops_metrics`, `search_mlops_knowledge` | `source_type="mlops"` | `agent_type="mlops"` |
+| **Executive Insights** | Synthesize high-level forecasting and inventory summaries for C-level | None | `source_type="insight"`, `"report"` | `agent_type="executive_insights"` |
+| **Report** | Generate structure of monthly, weekly, board-level CSV and PDF reports | None | `source_type="report"` | `agent_type="report"` |
 
-| Component | Path |
-|-----------|------|
-| Floating copilot | `src/components/chatbot/AIChatbot.tsx` → `/copilot/chat` |
-| Page summaries | `src/components/ai/AISummaryCard.tsx` → `/rag/query` |
-| API client | `src/lib/knowledgeApi.ts` |
+---
 
-Integrated on: Dashboard, Forecasting, Inventory, AI Insights, Reports, MLOps.
+## Dialogue Memory & Scoped History
 
-## Observability
+* **Conversations**: Messages are stored in the SQL database (`conversations` table) with `agent_type` stored inside the metadata JSON block. When the frontend loads chat history for a session, the orchestrator retrieves and builds context using turns matching the active agent only.
+* **Memories**: Long-term agent memories are stored in the `agent_memory` database table and filtered strictly using `agent_type` matching rules.
 
-Enable LangSmith (`LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT`) to trace:
+---
 
-- Copilot graph runs
-- Tool invocations and retrieval hits
-- Token usage and latency
-- Failures and fallback to RAG mode
+## Observability & LangSmith Tracing
 
-## Security note
-
-Copilot uses **existing JWT auth** (`_get_current_user`). Knowledge and memory are accessed server-side through SQLAlchemy.
+All agent invocations, tool runs, and routing decisions are monitored and logged to the central console. By enabling `LANGCHAIN_TRACING_V2=true`, developer logs will detail the exact agent chain, sub-tool calls, and parsed outputs, enabling quick tracking of hallucinations or tool failures.

@@ -33,6 +33,7 @@ def semantic_search(
     user_id: str | None = None,
     match_count: int | None = None,
     match_threshold: float | None = None,
+    metadata_filters: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     if not is_knowledge_available() or not query.strip():
         return []
@@ -60,6 +61,11 @@ def semantic_search(
                         KnowledgeDocument.document_metadata["product_id"].as_string() == product_id,
                     )
                 )
+            if metadata_filters:
+                for key, value in metadata_filters.items():
+                    statement = statement.where(
+                        KnowledgeDocument.document_metadata[key].as_string() == str(value)
+                    )
             rows = db.execute(statement).all()
 
         best_by_document: dict[str, dict[str, Any]] = {}

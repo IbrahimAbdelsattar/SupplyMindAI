@@ -1,0 +1,14 @@
+{
+  "id": "abc_analysis_20260705115611",
+  "title": "ABC Classification Report",
+  "description": "Products classified by revenue contribution into A, B, and C tiers",
+  "type": "supply_chain",
+  "format": "csv",
+  "period_start": "2026-06-05T11:56:11.069537+00:00",
+  "period_end": "2026-07-05T11:56:11.069537+00:00",
+  "generated_at": "2026-07-05T11:56:11.069537Z",
+  "date": "2026-07-05T11:56:11.069537+00:00",
+  "status": "ready",
+  "file_size": 783,
+  "download_url": "/system/reports/download/abc_analysis_20260705_115611.csv"
+}

@@ -378,9 +378,9 @@ flowchart TD
 | Role | Dashboard | Inventory | Insights | Forecasting | Reports | MLOps | Settings |
 |------|:---------:|:---------:|:--------:|:-----------:|:-------:|:-----:|:--------:|
 | 👑 Admin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 📊 Manager | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| 🔍 Analyst | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| 👁️ Viewer | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 📊 Manager | ✅ | ✅ (Manage & Apply) | ✅ (View & Gen) | ✅ (View & Gen) | ✅ (View, Gen & Download) | ❌ | ✅ |
+| 🔍 Analyst | ✅ | ✅ (View Only) | ✅ (View & Gen) | ✅ (View & Gen) | ✅ (View, Gen & Download) | ❌ | ✅ |
+| 👁️ Viewer | ✅ | ✅ (View Only) | ✅ (View Only) | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -818,8 +818,9 @@ supplymind-ai/
 │   │   ├── Forecasting.tsx            # Product + horizon selectors, forecast chart, CSV export
 │   │   ├── Inventory.tsx              # Inventory optimization, table, chatbot, apply changes
 │   │   ├── AIInsights.tsx             # Product insights, SHAP cards, factor analysis
-│   │   ├── MLOps.tsx                  # Model status, LangSmith tracing, drift, resources
-│   │   ├── Reports.tsx                # Report generation, list, preview, download
+│   │   ├── MLOps.tsx                  # Command Center: drift, retraining, pipeline, resources
+│   │   ├── Reports.tsx                # Command Center: per-type generation, filtering, deletion
+│   │   ├── Alerts.tsx                 # Command Center: alert summary, feed, severity breakdown
 │   │   ├── Settings.tsx               # Profile, theme, regional prefs, Clerk sign-out
 │   │   ├── Unauthorized.tsx           # Access denied page
 │   │   └── NotFound.tsx               # 404 page
@@ -828,6 +829,16 @@ supplymind-ai/
 │   │   ├── ai/
 │   │   │   ├── AISummaryCard.tsx       # RAG-backed AI summary with localStorage cache
 │   │   │   └── FormattedMessage.tsx    # Markdown-like formatter
+│   │   ├── alerts/
+│   │   │   ├── data/
+│   │   │   │   ├── types.ts            # AlertItem, AlertCategory, SeverityType
+│   │   │   │   └── useAlerts.ts        # Data hook (real API: /system/alerts/*)
+│   │   │   ├── sections/
+│   │   │   │   ├── AlertFeed.tsx       # Filterable alert list with delete
+│   │   │   │   ├── AlertSeverityCard.tsx # Severity breakdown card
+│   │   │   │   └── AlertSummaryCard.tsx  # Summary stats (total, by severity)
+│   │   │   └── shared/
+│   │   │       └── Skeletons.tsx       # Skeleton loading states
 │   │   ├── chatbot/
 │   │   │   └── AIChatbot.tsx           # Global floating copilot chatbot
 │   │   ├── dashboard/
@@ -850,13 +861,32 @@ supplymind-ai/
 │   │   │   ├── LandingNavbar.tsx       # Landing page navigation
 │   │   │   └── Footer.tsx              # Landing page footer
 │   │   ├── mlops/
-│   │   │   ├── AccuracyChart.tsx       # Model accuracy chart
-│   │   │   ├── DriftMonitor.tsx        # Data drift monitoring
-│   │   │   ├── ModelRegistry.tsx       # Model registry display
-│   │   │   ├── RetrainingHistory.tsx   # Retraining history
-│   │   │   ├── StatusCards.tsx         # Status cards
-│   │   │   ├── SystemResources.tsx     # System resource gauges
-│   │   │   └── TracingOverview.tsx     # LangSmith tracing
+│   │   │   ├── data/
+│   │   │   │   ├── types.ts            # DriftMetrics, AgentStatus, ResourceUsage, RetrainingRecord
+│   │   │   │   └── useMlops.ts         # Data hook (real API: /mlops/*)
+│   │   │   ├── sections/
+│   │   │   │   ├── AgentStatusPanel.tsx  # Active agents status
+│   │   │   │   ├── AccuracyChart.tsx   # Model accuracy trend
+│   │   │   │   ├── DriftMonitor.tsx    # Data drift monitor with severity
+│   │   │   │   ├── RetrainingHistory.tsx # Retraining events log
+│   │   │   │   ├── ModelRegistry.tsx   # Model versions registry
+│   │   │   │   ├── SystemResources.tsx # CPU/GPU/memory gauges
+│   │   │   │   └── TracingOverview.tsx # LangSmith tracing overview
+│   │   │   └── shared/
+│   │   │       └── Skeletons.tsx       # Skeleton loading states
+│   │   ├── reports/
+│   │   │   ├── data/
+│   │   │   │   ├── types.ts            # ReportItem, InventorySummary, Recommendation
+│   │   │   │   └── useReports.ts       # Data hook (real API: /system/reports/*)
+│   │   │   ├── sections/
+│   │   │   │   ├── ReportGenerator.tsx   # Per-type generate buttons
+│   │   │   │   ├── RecentReports.tsx     # Filterable report list with delete
+│   │   │   │   ├── CategoryCards.tsx    # Report category cards
+│   │   │   │   ├── MetricsRow.tsx       # Top-line metrics row
+│   │   │   │   ├── IssuesSummary.tsx    # Active issues summary
+│   │   │   │   └── SavingsEstimate.tsx  # Cost savings estimate
+│   │   │   └── shared/
+│   │   │       └── Skeletons.tsx       # 6 skeleton components
 │   │   ├── brand/
 │   │   │   └── SupplyMindLogo.tsx      # Brand logo
 │   │   ├── language/
@@ -872,7 +902,7 @@ supplymind-ai/
 │   ├── 📚 lib/
 │   │   ├── api.ts                      # API client with Clerk JWT
 │   │   ├── knowledgeApi.ts             # Knowledge/RAG API utilities
-│   │   ├── mockData.ts                 # Mock data for development
+│   │   ├── stream.ts                   # SSE streaming consumer
 │   │   └── utils.ts                    # cn() class merging utility
 │   │
 │   ├── 🔐 contexts/
@@ -925,9 +955,10 @@ supplymind-ai/
 │   │   ├── red_team.py                 # Red team testing
 │   │   └── deepeval_integration.py     # DeepEval integration
 │   │
-│   ├── 🌐 routers/ (12 routers)
+│   ├── 🌐 routers/ (13 routers)
 │   │   ├── auth.py                     # /auth/admin — User CRUD, RBAC
-│   │   ├── system.py                   # /api/v1/system — Alerts, reports, user info
+│   │   ├── command_center.py           # /api/v1/command-center — Daily Mission Briefing
+│   │   ├── system.py                   # /api/v1/system — Alerts, reports (per-type generation, delete), user info
 │   │   ├── data.py                     # /api/v1/data — Products, KPIs, heatmap
 │   │   ├── forecasting.py              # /api/v1/forecast — ML predictions
 │   │   ├── inventory_domain.py         # /api/v1/inventory — Optimization, RAG
@@ -1168,8 +1199,20 @@ gantt
 - [x] Neumorphism design system (light/dark mode)
 - [x] Docker Compose (dev + prod stacks)
 - [x] Celery worker for async tasks
-- [x] Report generation (5 CSV report types)
-- [x] LangSmith agent tracing integration
+- [x] Report generation (5 CSV report types with per-type generation + delete)
+- [x] Full LangSmith tracing integration across all orchestrator agents and service LLM call sites
+- [x] Command Center (Daily Mission Briefing) — 10-section overview with real API integration
+- [x] Reports page Command Center rewrite — per-type generation, type filtering, report deletion
+- [x] MLOps page Command Center rewrite — drift, agents, retraining, pipeline, resources
+- [x] Alerts page Command Center rewrite — alert summary, feed, severity breakdown
+- [x] Backend persistence for Command Center Alerts via user-specific JSON state with deterministic IDs
+- [x] Command Center Purchase Order routing enhancements (EN/AR intent parsing)
+- [x] Real-time supply chain mapping nodes derived from backend data
+- [x] Skeleton loading states on all dashboard pages
+- [x] Accessibility pass (keyboard nav, ARIA labels, focus rings, screen reader text)
+- [x] Aligned role names (`admin`, `manager`, `analyst`, `viewer`) consistently across frontend and backend
+- [x] Secured viewer role boundaries (removed chatbot, write triggers, and generation privileges)
+- [x] Opened Settings page to all authenticated users
 
 ### 🔮 Future Improvements
 
@@ -1181,7 +1224,6 @@ gantt
 - [ ] 🔔 Advanced anomaly detection with isolation forests
 - [ ] 📱 Mobile app (React Native)
 - [ ] ⚙️ CI/CD pipeline with GitHub Actions
-- [ ] 📊 ABC/XYZ analysis implementation
 - [ ] 🔄 Automated model retraining triggers
 
 ---

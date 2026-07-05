@@ -14,8 +14,11 @@ def configure_langsmith() -> None:
     if not settings.langsmith_enabled:
         return
     os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
     os.environ.setdefault("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+    os.environ.setdefault("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
     os.environ.setdefault("LANGCHAIN_PROJECT", settings.langsmith_project)
+    os.environ.setdefault("LANGSMITH_PROJECT", settings.langsmith_project)
 
 
 @contextmanager

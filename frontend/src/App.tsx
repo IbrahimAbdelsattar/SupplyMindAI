@@ -27,8 +27,9 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/Login"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 
-import { ClerkProvider } from '@clerk/clerk-react';
+import { ClerkProvider, SignedIn } from '@clerk/clerk-react';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AIChatbot } from '@/components/chatbot/AIChatbot';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 if (!PUBLISHABLE_KEY) {
@@ -56,14 +57,14 @@ const AppRoutes = () => (
       <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
       <Route path="/insights" element={<ProtectedRoute><AIInsights /></ProtectedRoute>} />
 
-      {/* Manager+ required */}
-      <Route path="/forecasting" element={<ProtectedRoute requiredRole="manager"><Forecasting /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute requiredRole="manager"><Reports /></ProtectedRoute>} />
+      {/* Analyst+ required */}
+      <Route path="/forecasting" element={<ProtectedRoute requiredRole="analyst"><Forecasting /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute requiredRole="analyst"><Reports /></ProtectedRoute>} />
       <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
 
       {/* Admin only */}
       <Route path="/mlops" element={<ProtectedRoute requiredRole="admin"><MLOps /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -88,6 +89,9 @@ const App = () => {
                     <Sonner />
                     <BrowserRouter>
                       <AppRoutes />
+                      <SignedIn>
+                        <AIChatbot />
+                      </SignedIn>
                     </BrowserRouter>
                   </TooltipProvider>
                 </DateRangeProvider>

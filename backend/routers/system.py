@@ -29,58 +29,161 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 
 # ── Alerts ──
 
-@router.get("/alerts/active")
-def system_alerts_active(user: dict = Depends(_get_current_user)):
-    try:
-        prods = STORE.products()
-        inv = STORE.inventory()
-        sales = STORE.sales_daily()
-        now = datetime.now(timezone.utc)
+ALERTS_STATE_DIR = PROJECT_ROOT / "alerts_state"
+os.makedirs(ALERTS_STATE_DIR, exist_ok=True)
 
-        alerts: list[AlertItem] = []
-        for _, r in prods.iterrows():
-            pid = str(r["product_id"])
-            pname = str(r.get("product_name", pid))
-            cat = str(r.get("category", ""))
 
-            latest = inv[inv["product_id"] == pid]
-            stock = 0
-            if not latest.empty:
-                try:
-                    stock = int(latest.sort_values("date").iloc[-1]["stock"])
-                except (ValueError, TypeError):
-                    stock = 0
+def _get_alerts_state_path(user_id: str) -> Path:
+    return ALERTS_STATE_DIR / f"{user_id}.json"
 
-            sales_sub = sales[sales["product_id"] == pid]
-            qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
-            demand = float(sales_sub[qty_col].tail(30).mean()) if not sales_sub.empty else 0.0
-            demand = demand if not pd.isna(demand) else 0.0
 
-            if stock <= 0:
+def _load_alerts_state(user_id: str) -> dict:
+    path = _get_alerts_state_path(user_id)
+    if path.exists():
+        try:
+            with open(path, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"acknowledged": {}, "dismissed": {}}
+
+
+def _save_alerts_state(user_id: str, state: dict) -> None:
+    path = _get_alerts_state_path(user_id)
+    with open(path, "w") as f:
+        json.dump(state, f, indent=2)
+
+
+def _build_alerts(user_id: str) -> list[AlertItem]:
+    """Build current alerts from live data, merging persisted ack/dismiss state."""
+    prods = STORE.products()
+    inv = STORE.inventory()
+    sales = STORE.sales_daily()
+    now = datetime.now(timezone.utc)
+    state = _load_alerts_state(user_id)
+
+    alerts: list[AlertItem] = []
+    for _, r in prods.iterrows():
+        pid = str(r["product_id"])
+        pname = str(r.get("product_name", pid))
+        cat = str(r.get("category", ""))
+
+        # Deterministic ID based on product + condition
+        alert_id_base = f"{pid}_{now.strftime('%Y%m%d')}"
+
+        latest = inv[inv["product_id"] == pid]
+        stock = 0
+        if not latest.empty:
+            try:
+                stock = int(latest.sort_values("date").iloc[-1]["stock"])
+            except (ValueError, TypeError):
+                stock = 0
+
+        sales_sub = sales[sales["product_id"] == pid]
+        qty_col = "qty" if "qty" in sales_sub.columns else "total_qty"
+        demand = float(sales_sub[qty_col].tail(30).mean()) if not sales_sub.empty else 0.0
+        demand = demand if not pd.isna(demand) else 0.0
+
+        if stock <= 0:
+            alert_id = f"alert-stockout-{alert_id_base}"
+            ack_info = state["acknowledged"].get(alert_id)
+            dismissed = alert_id in state["dismissed"]
+            if not dismissed:
                 alerts.append(AlertItem(
-                    id=str(uuid.uuid4()),
+                    id=alert_id,
                     type="stockout",
                     severity="critical",
                     title=f"Stockout: {pname}",
                     description=f"{pname} ({cat}) has zero stock. Immediate replenishment required.",
                     product_id=pid,
                     created_at=now,
+                    acknowledged=ack_info is not None,
+                    acknowledged_at=datetime.fromisoformat(ack_info["at"]) if ack_info else None,
+                    acknowledged_by=ack_info.get("by") if ack_info else None,
                 ))
-            elif demand > 0 and stock / demand < 5:
-                coverage = stock / demand
+        elif demand > 0 and stock / demand < 5:
+            coverage = stock / demand
+            alert_id = f"alert-low-{alert_id_base}"
+            ack_info = state["acknowledged"].get(alert_id)
+            dismissed = alert_id in state["dismissed"]
+            if not dismissed:
                 alerts.append(AlertItem(
-                    id=str(uuid.uuid4()),
+                    id=alert_id,
                     type="low_stock",
                     severity="high",
                     title=f"Low Stock: {pname}",
                     description=f"Only {coverage:.1f} days of stock remaining. Reorder soon.",
                     product_id=pid,
                     created_at=now,
+                    acknowledged=ack_info is not None,
+                    acknowledged_at=datetime.fromisoformat(ack_info["at"]) if ack_info else None,
+                    acknowledged_by=ack_info.get("by") if ack_info else None,
                 ))
 
+    return alerts
+
+
+@router.get("/alerts/active")
+def system_alerts_active(user: dict = Depends(_get_current_user)):
+    try:
+        uid = user.id if hasattr(user, "id") else user["id"]
+        alerts = _build_alerts(uid)
+        active = [a for a in alerts if not a.acknowledged]
+        return {"alerts": [a.model_dump() for a in active], "total": len(active)}
+    except Exception as exc:
+        return {"alerts": [], "total": 0, "error": str(exc)}
+
+
+@router.get("/alerts/all")
+def system_alerts_all(user: dict = Depends(_get_current_user)):
+    """Return all alerts including acknowledged ones."""
+    try:
+        uid = user.id if hasattr(user, "id") else user["id"]
+        alerts = _build_alerts(uid)
         return {"alerts": [a.model_dump() for a in alerts], "total": len(alerts)}
     except Exception as exc:
         return {"alerts": [], "total": 0, "error": str(exc)}
+
+
+@router.post("/alerts/{alert_id}/acknowledge")
+def system_alerts_acknowledge(alert_id: str, user: dict = Depends(_get_current_user)):
+    try:
+        uid = user.id if hasattr(user, "id") else user["id"]
+        state = _load_alerts_state(uid)
+        now_str = datetime.now(timezone.utc).isoformat()
+        state["acknowledged"][alert_id] = {"at": now_str, "by": uid}
+        state["dismissed"].pop(alert_id, None)
+        _save_alerts_state(uid, state)
+        return {"status": "success", "message": f"Alert {alert_id} acknowledged"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/alerts/{alert_id}/dismiss")
+def system_alerts_dismiss(alert_id: str, user: dict = Depends(_get_current_user)):
+    try:
+        uid = user.id if hasattr(user, "id") else user["id"]
+        state = _load_alerts_state(uid)
+        state["dismissed"][alert_id] = datetime.now(timezone.utc).isoformat()
+        state["acknowledged"].pop(alert_id, None)
+        _save_alerts_state(uid, state)
+        return {"status": "success", "message": f"Alert {alert_id} dismissed"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/alerts/{alert_id}/restore")
+def system_alerts_restore(alert_id: str, user: dict = Depends(_get_current_user)):
+    """Restore a dismissed alert."""
+    try:
+        uid = user.id if hasattr(user, "id") else user["id"]
+        state = _load_alerts_state(uid)
+        state["dismissed"].pop(alert_id, None)
+        state["acknowledged"].pop(alert_id, None)
+        _save_alerts_state(uid, state)
+        return {"status": "success", "message": f"Alert {alert_id} restored"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ── MLOps (Moved to mlops.py) ──
@@ -229,10 +332,45 @@ def _build_abc_analysis() -> pd.DataFrame:
 
 def _build_purchase_analysis() -> pd.DataFrame:
     prods = STORE.products()
-    purchases = STORE.purchases()
+    contracts = STORE.contracts()
+    suppliers = STORE.suppliers()
+    bom = STORE.bom()
+    raw_materials = STORE.raw_materials()
 
-    if purchases.empty:
+    if contracts.empty:
         return pd.DataFrame()
+
+    # Build supplier lookup: product_id -> primary supplier (via BOM → raw_materials → suppliers)
+    supplier_info: dict[str, dict] = {}
+    if not bom.empty and not raw_materials.empty and not suppliers.empty:
+        rm_map = {}
+        if "material_id" in raw_materials.columns and "supplier_id" in raw_materials.columns:
+            for _, rm in raw_materials.iterrows():
+                rm_map[str(rm["material_id"])] = str(rm["supplier_id"])
+
+        sup_map = {}
+        if "supplier_id" in suppliers.columns:
+            for _, s in suppliers.iterrows():
+                sup_map[str(s["supplier_id"])] = {
+                    "name": str(s.get("supplier_name", "")),
+                    "region": str(s.get("region", "")),
+                    "reliability": float(s.get("reliability", 0)),
+                    "lead_time": int(s.get("lead_time_days", 0)),
+                }
+
+        if "product_id" in bom.columns and "material_id" in bom.columns:
+            for pid_bom, grp in bom.groupby("product_id"):
+                pid_str = str(pid_bom)
+                seen_suppliers: dict[str, dict] = {}
+                for _, b in grp.iterrows():
+                    sid = rm_map.get(str(b["material_id"]), "")
+                    info = sup_map.get(sid, {})
+                    if info and sid not in seen_suppliers:
+                        seen_suppliers[sid] = info
+                if seen_suppliers:
+                    # Pick the supplier with highest reliability
+                    best_sid = max(seen_suppliers, key=lambda k: seen_suppliers[k].get("reliability", 0))
+                    supplier_info[pid_str] = {**seen_suppliers[best_sid], "supplier_id": best_sid}
 
     rows = []
     for _, r in prods.iterrows():
@@ -241,25 +379,54 @@ def _build_purchase_analysis() -> pd.DataFrame:
         min_p = float(r.get("min_price", 0.0)) or 0.0
         max_p = float(r.get("max_price", 0.0)) or 0.0
         avg_p = (min_p + max_p) / 2.0 if (min_p + max_p) > 0 else 10.0
-        purchase_price = float(r.get("purchase_price", 0.0)) or (avg_p * 0.7)
+        unit_cost = round(avg_p, 2)
 
-        psub = purchases[purchases["product_id"] == pid] if "product_id" in purchases.columns else pd.DataFrame()
-        if psub.empty:
+        csub = contracts[contracts["product_id"] == pid] if "product_id" in contracts.columns else pd.DataFrame()
+        if csub.empty:
             continue
 
-        qty_col = "qty" if "qty" in psub.columns else "quantity"
-        total_purchased = int(psub[qty_col].sum()) if qty_col in psub.columns else 0
-        total_spend = round(total_purchased * purchase_price, 2)
-        avg_order = round(total_purchased / max(len(psub), 1), 1)
+        total_contracts = len(csub)
+        monthly_qty = int(csub["monthly_qty"].sum()) if "monthly_qty" in csub.columns else 0
 
-        supplier = ""
-        if "supplier" in psub.columns:
-            supplier = str(psub["supplier"].mode().iloc[0]) if not psub["supplier"].mode().empty else ""
+        # Compute contracted duration (months)
+        total_months = 0
+        if "start" in csub.columns and "end" in csub.columns:
+            for _, c in csub.iterrows():
+                try:
+                    s = pd.to_datetime(c["start"])
+                    e = pd.to_datetime(c["end"])
+                    months = max(1, int((e - s).days / 30))
+                    total_months += months
+                except Exception:
+                    total_months += 12
+        else:
+            total_months = total_contracts * 12
+
+        avg_contract_months = total_months // max(total_contracts, 1)
+        total_qty = monthly_qty * avg_contract_months
+        total_spend = round(total_qty * unit_cost, 2)
+        avg_order_qty = round(total_qty / max(total_contracts, 1), 1)
+
+        # Contract price if available
+        contract_price = round(float(csub["price"].mean()), 2) if "price" in csub.columns else unit_cost
+
+        # Supplier info via BOM chain
+        info = supplier_info.get(pid, {})
 
         rows.append({
-            "SKU": pid, "Product": pname, "Total Purchased": total_purchased,
-            "Total Spend": total_spend, "Avg Order Qty": avg_order,
-            "Unit Cost": purchase_price, "Supplier": supplier,
+            "SKU": pid,
+            "Product": pname,
+            "Active Contracts": total_contracts,
+            "Monthly Qty": monthly_qty,
+            "Total Qty": total_qty,
+            "Unit Cost": unit_cost,
+            "Contract Price": contract_price,
+            "Total Spend": total_spend,
+            "Avg Order Qty": avg_order_qty,
+            "Supplier": info.get("name", ""),
+            "Region": info.get("region", ""),
+            "Reliability": info.get("reliability", 0),
+            "Lead Time (days)": info.get("lead_time", 0),
         })
     return pd.DataFrame(rows) if rows else pd.DataFrame()
 
@@ -417,11 +584,57 @@ def system_reports_generate(user: dict = Depends(_get_current_user)):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@router.post("/reports/generate/{report_type}")
+def system_reports_generate_type(report_type: str, user: dict = Depends(_get_current_user)):
+    if report_type not in REPORT_BUILDERS:
+        raise HTTPException(status_code=400, detail=f"Unknown report type: {report_type}. Valid: {list(REPORT_BUILDERS.keys())}")
+    try:
+        now = datetime.now(timezone.utc)
+        df = REPORT_BUILDERS[report_type]()
+        if df.empty:
+            raise HTTPException(status_code=500, detail=f"No data available for report type: {report_type}")
+        report = _save_report_csv(report_type, df, now)
+        return {"status": "success", "message": f"Generated {report.title}", "report": report.model_dump()}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("/reports/list")
 def system_reports_list(user: dict = Depends(_get_current_user)):
     try:
         reports = _load_existing_reports()
         return {"reports": [r.model_dump() for r in reports]}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.delete("/reports/{report_id}")
+def system_reports_delete(report_id: str, user: dict = Depends(_get_current_user)):
+    try:
+        meta_path = REPORTS_DIR / f"{report_id}.meta.json"
+        csv_path = REPORTS_DIR / f"{report_id}.csv"
+        deleted = False
+        if meta_path.exists():
+            with open(meta_path, "r") as f:
+                data = json.load(f)
+            csv_name = data.get("download_url", "").split("/")[-1]
+            if csv_name:
+                csv_target = REPORTS_DIR / csv_name
+                if csv_target.exists():
+                    csv_target.unlink()
+                    deleted = True
+            meta_path.unlink()
+            deleted = True
+        if csv_path.exists():
+            csv_path.unlink()
+            deleted = True
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Report not found")
+        return {"status": "success", "message": f"Deleted report {report_id}"}
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

@@ -1,183 +1,244 @@
 import { useTranslation } from 'react-i18next';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { AIChatbot } from '@/components/chatbot/AIChatbot';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Package, RefreshCw, ShieldCheck } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchApi } from '@/lib/api';
+import {
+  RefreshCw,
+  AlertTriangle,
+  Package,
+  AlertCircle,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 
-type AlertItem = {
-  id: string;
-  type: string;
-  severity: string;
-  title: string;
-  description: string;
-  product_id: string;
-  created_at: string;
-};
+import { useAlerts } from '@/components/alerts/data/useAlerts';
+import {
+  AlertSummary,
+  AlertList,
+  AlertDetailModal,
+} from '@/components/alerts/sections';
+import {
+  AlertSummarySkeleton,
+  AlertListSkeleton,
+} from '@/components/alerts/shared/Skeletons';
+import type { AlertItem } from '@/components/alerts/data/types';
 
-const SEVERITY_STYLES: Record<string, string> = {
-  critical: 'bg-destructive/10 text-destructive border-destructive/20',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  low: 'bg-primary/10 text-primary border-primary/20',
-};
-
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-  stockout: <AlertTriangle className="w-4 h-4" />,
-  low_stock: <Package className="w-4 h-4" />,
-  critical_stock: <AlertTriangle className="w-4 h-4" />,
-};
-
-const easeOutExpo = [0.23, 1, 0.32, 1] as const;
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.03, delayChildren: 0.02 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12, scale: 0.99 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.15, ease: easeOutExpo },
-  },
-};
-
-const Alerts = () => {
+export default function AlertsPage() {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['alerts'],
-    queryFn: () => fetchApi('/system/alerts/active') as Promise<{ alerts: AlertItem[]; total: number }>,
-    refetchInterval: 30000,
-  });
+  const {
+    alerts,
+    total,
+    severityCounts,
+    byType,
+    isLoading,
+    error,
+    refresh,
+    acknowledge,
+    dismiss,
+    isAcknowledging,
+    isDismissing,
+  } = useAlerts();
 
-  const alerts = data?.alerts ?? [];
-  const total = data?.total ?? 0;
+  const stockoutAlerts = byType['stockout'] ?? [];
+  const lowStockAlerts = byType['low_stock'] ?? [];
+  const criticalStockAlerts = byType['critical_stock'] ?? [];
+  const otherAlerts = alerts.filter(
+    (a) => !['stockout', 'low_stock', 'critical_stock'].includes(a.type),
+  );
+
+  const handleSelect = useCallback((alert: AlertItem) => {
+    setSelectedAlert(alert);
+    setDetailOpen(true);
+  }, []);
+
+  const handleAcknowledge = useCallback(
+    (alertId: string) => {
+      acknowledge(alertId);
+      setDetailOpen(false);
+      setSelectedAlert(null);
+    },
+    [acknowledge],
+  );
+
+  const handleDismiss = useCallback(
+    (alertId: string) => {
+      dismiss(alertId);
+      setDetailOpen(false);
+      setSelectedAlert(null);
+    },
+    [dismiss],
+  );
 
   return (
-    <div className="flex min-h-screen bg-background transition-colors duration-300 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-blue-950">
       <DashboardSidebar />
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto scrollbar-none relative">
-        <DashboardHeader title={t('alerts:title')} subtitle={t('alerts:subtitle')} />
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="flex-1 p-4 md:p-6 space-y-6"
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardHeader
+          title={t('alerts:title', 'Active Alerts')}
+          subtitle={t('alerts:subtitle', 'Real-time inventory and stockout alerts')}
+        />
+
+        <main
+          className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-8 pt-6"
+          role="main"
+          aria-label="Alerts dashboard"
         >
-          {/* Summary Bar */}
-          <motion.div variants={itemVariants} className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="neu-panel-inset rounded-2xl px-4 py-2 flex items-center gap-2">
-                {total > 0 ? (
-                  <AlertTriangle className="w-5 h-5 text-destructive" />
-                ) : (
-                  <ShieldCheck className="w-5 h-5 text-green-500" />
-                )}
-                <span className="text-sm font-semibold">
-                  {total > 0 ? t('alerts:total', { count: total }) : t('alerts:noAlerts')}
-                </span>
-              </div>
-            </div>
+          {/* ── Quick Actions ── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.05, duration: 0.3 }}
+            className="flex justify-end mb-6"
+          >
             <Button
-              variant="outline"
               size="sm"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['alerts'] })}
+              variant="outline"
+              onClick={refresh}
               className="gap-2"
+              aria-label="Refresh alerts"
             >
-              <RefreshCw className="w-4 h-4" />
-              {t('alerts:refresh')}
+              <RefreshCw className="w-4 h-4" aria-hidden="true" />
+              {t('alerts:refresh', 'Refresh')}
             </Button>
           </motion.div>
 
-          {/* Loading State */}
-          {isLoading && (
-            <motion.div variants={itemVariants} className="flex items-center justify-center py-20">
-              <div className="text-muted-foreground text-sm">{t('alerts:loading')}</div>
-            </motion.div>
-          )}
-
-          {/* Error State */}
+          {/* ── Error State ── */}
           {error && (
-            <motion.div variants={itemVariants}>
-              <Card className="neu-card border-destructive/20">
-                <CardContent className="p-6 text-center">
-                  <AlertTriangle className="w-8 h-8 text-destructive mx-auto mb-2" />
-                  <p className="text-sm text-destructive">{t('alerts:error')}</p>
-                </CardContent>
-              </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-5 mb-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle
+                    className="w-5 h-5 text-rose-600 dark:text-rose-400"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-rose-700 dark:text-rose-400">
+                    {t('alerts:error', 'Failed to load alerts')}
+                  </p>
+                  <p className="text-xs text-rose-600/70 dark:text-rose-400/60 mt-0.5">
+                    Pull to refresh or try again later.
+                  </p>
+                </div>
+              </div>
             </motion.div>
           )}
 
-          {/* Empty State */}
-          {!isLoading && !error && alerts.length === 0 && (
-            <motion.div variants={itemVariants}>
-              <Card className="neu-card">
-                <CardContent className="p-12 text-center">
-                  <ShieldCheck className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                  <CardTitle className="text-lg mb-2">{t('alerts:empty')}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{t('alerts:emptyDesc')}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+          {/* ── Content Grid ── */}
+          <div className="space-y-6">
+            {/* Row 1: Severity Summary */}
+            {isLoading ? (
+              <AlertSummarySkeleton />
+            ) : (
+              <AlertSummary
+                total={total}
+                severityCounts={severityCounts}
+                isLoading={isLoading}
+              />
+            )}
 
-          {/* Alert List */}
-          {!isLoading && alerts.length > 0 && (
-            <motion.div variants={itemVariants} className="space-y-3">
-              {alerts.map((alert) => (
-                <Card key={alert.id} className="neu-card hover:neu-lift transition-all duration-200">
-                  <CardContent className="p-4 md:p-5">
-                    <div className="flex items-start gap-4">
-                      <div className="mt-1 flex-shrink-0">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${SEVERITY_STYLES[alert.severity] ?? SEVERITY_STYLES.medium}`}>
-                          {TYPE_ICONS[alert.type] ?? <Package className="w-4 h-4" />}
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-sm font-semibold truncate">{alert.title}</h3>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] px-1.5 py-0 ${SEVERITY_STYLES[alert.severity] ?? ''}`}
-                          >
-                            {t(`alerts:severity.${alert.severity}`)}
-                          </Badge>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {t(`alerts:type.${alert.type}`)}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {alert.description}
-                        </p>
-                        <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
-                          <span>Product: {alert.product_id}</span>
-                          <span>{new Date(alert.created_at).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </motion.div>
-          )}
-        </motion.div>
-        <AIChatbot />
+            {/* Row 2: Stockout + Critical Stock (prominent) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {isLoading ? (
+                <AlertListSkeleton />
+              ) : (
+                <AlertList
+                  alerts={stockoutAlerts}
+                  isLoading={isLoading}
+                  title="Stockout Alerts"
+                  subtitle="Products with zero stock"
+                  icon={<AlertTriangle className="w-4 h-4" aria-hidden="true" />}
+                  emptyMessage="No stockouts"
+                  emptySubtext="All products have stock available."
+                  onAcknowledge={handleAcknowledge}
+                  onDismiss={handleDismiss}
+                  onSelect={handleSelect}
+                  isAcknowledging={isAcknowledging}
+                  isDismissing={isDismissing}
+                />
+              )}
+              {isLoading ? (
+                <AlertListSkeleton />
+              ) : (
+                <AlertList
+                  alerts={criticalStockAlerts}
+                  isLoading={isLoading}
+                  title="Critical Stock Alerts"
+                  subtitle="Products at imminent risk"
+                  icon={<AlertCircle className="w-4 h-4" aria-hidden="true" />}
+                  emptyMessage="No critical stock"
+                  emptySubtext="No products are at critical levels."
+                  onAcknowledge={handleAcknowledge}
+                  onDismiss={handleDismiss}
+                  onSelect={handleSelect}
+                  isAcknowledging={isAcknowledging}
+                  isDismissing={isDismissing}
+                />
+              )}
+            </div>
+
+            {/* Row 3: Low Stock + Other */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {isLoading ? (
+                <AlertListSkeleton />
+              ) : (
+                <AlertList
+                  alerts={lowStockAlerts}
+                  isLoading={isLoading}
+                  title="Low Stock Alerts"
+                  subtitle="Products below reorder threshold"
+                  icon={<Package className="w-4 h-4" aria-hidden="true" />}
+                  emptyMessage="No low stock alerts"
+                  emptySubtext="All products are above reorder levels."
+                  onAcknowledge={handleAcknowledge}
+                  onDismiss={handleDismiss}
+                  onSelect={handleSelect}
+                  isAcknowledging={isAcknowledging}
+                  isDismissing={isDismissing}
+                />
+              )}
+              {otherAlerts.length > 0 &&
+                (isLoading ? (
+                  <AlertListSkeleton />
+                ) : (
+                  <AlertList
+                    alerts={otherAlerts}
+                    isLoading={isLoading}
+                    title="Other Alerts"
+                    subtitle="Additional notifications"
+                    icon={
+                      <AlertCircle className="w-4 h-4" aria-hidden="true" />
+                    }
+                    onAcknowledge={handleAcknowledge}
+                    onDismiss={handleDismiss}
+                    onSelect={handleSelect}
+                    isAcknowledging={isAcknowledging}
+                    isDismissing={isDismissing}
+                  />
+                ))}
+            </div>
+          </div>
+        </main>
       </div>
+
+      {/* ── Detail Modal ── */}
+      <AlertDetailModal
+        alert={selectedAlert}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onAcknowledge={handleAcknowledge}
+        onDismiss={handleDismiss}
+      />
     </div>
   );
-};
-
-export default Alerts;
+}

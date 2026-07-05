@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Save, User, Palette, Globe, Bell } from 'lucide-react';
@@ -179,7 +178,6 @@ const Settings = () => {
         </main>
       </div>
 
-      <AIChatbot />
     </div>
   );
 };

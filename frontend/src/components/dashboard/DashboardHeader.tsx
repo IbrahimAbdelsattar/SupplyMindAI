@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Shield, LogOut } from 'lucide-react';
+import { Shield, LogOut, Bell, Check, CheckCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface DashboardHeaderProps {
   title: string;
@@ -21,25 +22,46 @@ interface DashboardHeaderProps {
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
   manager: 'Manager',
-  analista: 'Analyst',
-  vendedor: 'Sales',
+  analyst: 'Analyst',
+  viewer: 'Viewer',
 };
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
   manager: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  analista: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-  vendedor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  analyst: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  viewer: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
 };
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: 'bg-red-500',
+  high: 'bg-amber-500',
+  medium: 'bg-blue-500',
+  info: 'bg-muted-foreground/40',
+};
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
 
 export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const { t } = useTranslation();
   const { userRole } = useAuthContext();
   const { signOut } = useClerk();
   const { user } = useUser();
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
-  const roleLabel = ROLE_LABELS[userRole || 'analista'] || 'Analyst';
-  const roleColorClass = ROLE_COLORS[userRole || 'analista'] || ROLE_COLORS.analista;
+  const roleLabel = ROLE_LABELS[userRole || 'analyst'] || 'Analyst';
+  const roleColorClass = ROLE_COLORS[userRole || 'analyst'] || ROLE_COLORS.analyst;
+
+  const recentNotifications = notifications.slice(0, 10);
 
   return (
     <motion.header
@@ -54,6 +76,69 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
       </div>
 
       <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
+        {/* Notification Bell */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="relative p-2 rounded-xl hover:bg-muted transition-colors outline-none">
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-sm">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[360px] rounded-2xl p-0 overflow-hidden border-none shadow-xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <span className="text-sm font-bold text-foreground">
+                {t('notifications.title', 'Notifications')}
+              </span>
+              {unreadCount > 0 && (
+                <button
+                  onClick={() => markAllRead()}
+                  className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                >
+                  <CheckCheck className="w-3 h-3" />
+                  {t('notifications.markAllRead', 'Mark all read')}
+                </button>
+              )}
+            </div>
+            <div className="max-h-[400px] overflow-y-auto">
+              {recentNotifications.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  {t('notifications.empty', 'No notifications')}
+                </div>
+              ) : (
+                recentNotifications.map((n) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    className={`flex items-start gap-3 px-4 py-3 rounded-none cursor-pointer border-b border-border/50 last:border-0 ${
+                      !n.read ? 'bg-primary/5' : ''
+                    }`}
+                    onClick={() => !n.read && markRead(n.id)}
+                  >
+                    <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${SEVERITY_COLORS[n.severity] || 'bg-muted-foreground/40'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-semibold truncate ${!n.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {n.title}
+                        </span>
+                        {!n.read && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.description}</p>
+                      <span className="text-[10px] text-muted-foreground/70 mt-1 block">
+                        {timeAgo(n.created_at)}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {/* User Profile & Sign Out */}
         <div className="flex items-center ml-2 border-l border-border pl-4 gap-3">
           {/* Role Badge */}

@@ -1,14 +1,19 @@
-"""Local intelligence layer: vectors, RAG, copilot, and memory."""
+"""Local intelligence layer: vectors, RAG, copilot, and memory.
+
+StockMind AI — Inventory Intelligence Engine.
+Only inventory-related knowledge documents are managed here.
+"""
 
 from backend.knowledge.client import is_knowledge_available
 from backend.knowledge.copilot import copilot_chat
-from backend.knowledge.ingestion import ingest_document
+from backend.knowledge.ingestion import ingest_document, ingest_inventory_knowledge_document
 from backend.knowledge.rag import rag_query
 from backend.knowledge.search import semantic_search
 
 __all__ = [
     "copilot_chat",
     "ingest_document",
+    "ingest_inventory_knowledge_document",
     "is_knowledge_available",
     "rag_query",
     "semantic_search",

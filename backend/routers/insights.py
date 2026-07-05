@@ -5,7 +5,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from backend.dependencies import _get_current_user
+from backend.dependencies import _get_current_user, require_permission
+from backend.auth.rbac import Permission
 from backend.schemas.insights import InsightsGeneratePayload, ChatPayload
 
 LOGGER = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/api/v1/insights", tags=["insights"])
 @router.post("/generate")
 def insights_generate(
     payload: InsightsGeneratePayload,
-    user: dict = Depends(_get_current_user),
+    user: dict = Depends(require_permission(Permission.GENERATE_INSIGHTS)),
 ):
     """Generate AI insights for a product using ML feature extraction (SHAP) + LLM reasoning."""
     try:
@@ -31,7 +32,7 @@ def insights_generate(
 @router.post("/generate/stream")
 async def insights_generate_stream(
     payload: InsightsGeneratePayload,
-    user: dict = Depends(_get_current_user),
+    user: dict = Depends(require_permission(Permission.GENERATE_INSIGHTS)),
 ):
     """Stream AI insights generation as SSE events (reduces perceived latency)."""
     from backend.services.streaming import stream_insights

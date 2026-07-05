@@ -6,7 +6,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from backend.dependencies import _get_current_user
+from backend.dependencies import _get_current_user, require_permission
+from backend.auth.rbac import Permission
 from backend.globals import STORE, load_ml_model
 from backend.schemas.forecast import ForecastPredictRequest, ForecastPredictResponse, ForecastPoint, MonthlyPrediction
 
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/api/v1/forecast", tags=["forecasting"])
 
 
 @router.post("/predict", response_model=ForecastPredictResponse)
-def predict_forecast(payload: ForecastPredictRequest, user: dict = Depends(_get_current_user)):
+def predict_forecast(payload: ForecastPredictRequest, user: dict = Depends(require_permission(Permission.GENERATE_FORECASTS))):
     try:
         import pandas as pd
         from datetime import date, timedelta
@@ -174,7 +175,7 @@ async def forecast_insights_stream(
 @router.post("/reasoning/stream")
 async def forecast_reasoning_stream(
     payload: dict,
-    user: dict = Depends(_get_current_user),
+    user: dict = Depends(require_permission(Permission.GENERATE_FORECASTS)),
 ):
     """Stream forecast reasoning analysis as SSE events."""
     from backend.services.streaming import stream_forecast_reasoning

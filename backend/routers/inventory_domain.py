@@ -9,7 +9,8 @@ import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from backend.dependencies import _get_current_user
+from backend.dependencies import _get_current_user, require_permission
+from backend.auth.rbac import Permission
 from backend.globals import PROJECT_ROOT, STORE
 from backend.analytics import (
     daily_demand_stats,
@@ -79,7 +80,7 @@ def list_inventory(user: dict = Depends(_get_current_user)) -> dict[str, Any]:
 # POST /update — update stock with full payload
 # ---------------------------------------------------------------------------
 @router.post("/update")
-def inventory_update(payload: dict, user: dict = Depends(_get_current_user)):
+def inventory_update(payload: dict, user: dict = Depends(require_permission(Permission.APPLY_INVENTORY))):
     try:
         product_id = payload.get("product_id")
         quantity = payload.get("quantity", 0)
@@ -175,7 +176,7 @@ def inventory_optimize(payload: dict, user: dict = Depends(_get_current_user)):
 
 
 @router.post("/adjust")
-def inventory_adjust(payload: dict, user: dict = Depends(_get_current_user)):
+def inventory_adjust(payload: dict, user: dict = Depends(require_permission(Permission.MANAGE_INVENTORY))):
     try:
         product_id = payload.get("product_id")
         quantity = payload.get("quantity", 0)

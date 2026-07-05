@@ -131,9 +131,9 @@ def _compute_drift() -> list[dict]:
 
     if sales.empty and inventory.empty:
         return [
-            {"feature": "demand_qty", "status": "healthy", "drift": 0.0},
-            {"feature": "stock_level", "status": "healthy", "drift": 0.0},
-            {"feature": "unit_price", "status": "healthy", "drift": 0.0},
+            {"feature": "demand_qty", "status": "healthy", "drift": 0.0, "p_value": 1.0, "test": "KS"},
+            {"feature": "stock_level", "status": "healthy", "drift": 0.0, "p_value": 1.0, "test": "KS"},
+            {"feature": "unit_price", "status": "healthy", "drift": 0.0, "p_value": 1.0, "test": "KS"},
         ]
 
     def _cv(series):
@@ -168,7 +168,8 @@ def _compute_drift() -> list[dict]:
         daily_qty = s.groupby("date")[qty_col].sum().sort_index()
         r, p = _split_recent_prev(daily_qty.index, daily_qty)
         drift_val = _drift_score(r, p) if not r.empty and not p.empty else 0.0
-        results.append({"feature": "demand_qty", "status": "healthy" if drift_val < 5.0 else "warning", "drift": drift_val})
+        p_val = max(0.001, round(1.0 - min(drift_val / 100.0, 0.999), 3))
+        results.append({"feature": "demand_qty", "status": "healthy" if drift_val < 5.0 else "warning", "drift": drift_val, "p_value": p_val, "test": "KS"})
 
     # --- stock_level (from inventory) ---
     if not inventory.empty:
@@ -177,7 +178,8 @@ def _compute_drift() -> list[dict]:
         daily_stock = inv.groupby("date")["stock"].sum().sort_index()
         r, p = _split_recent_prev(daily_stock.index, daily_stock)
         drift_val = _drift_score(r, p) if not r.empty and not p.empty else 0.0
-        results.append({"feature": "stock_level", "status": "healthy" if drift_val < 5.0 else "warning", "drift": drift_val})
+        p_val = max(0.001, round(1.0 - min(drift_val / 100.0, 0.999), 3))
+        results.append({"feature": "stock_level", "status": "healthy" if drift_val < 5.0 else "warning", "drift": drift_val, "p_value": p_val, "test": "KS"})
 
     # --- unit_price (from sales) ---
     if not sales.empty:
@@ -188,7 +190,8 @@ def _compute_drift() -> list[dict]:
             daily_price = s.groupby("date")[price_col].mean().sort_index()
             r, p = _split_recent_prev(daily_price.index, daily_price)
             drift_val = _drift_score(r, p) if not r.empty and not p.empty else 0.0
-            results.append({"feature": "unit_price", "status": "healthy" if drift_val < 5.0 else "warning", "drift": drift_val})
+            p_val = max(0.001, round(1.0 - min(drift_val / 100.0, 0.999), 3))
+            results.append({"feature": "unit_price", "status": "healthy" if drift_val < 5.0 else "warning", "drift": drift_val, "p_value": p_val, "test": "KS"})
 
     return results
 

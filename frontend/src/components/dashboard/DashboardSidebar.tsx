@@ -26,24 +26,24 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import React, { useState } from 'react';
 
-type NavRole = 'admin' | 'manager' | 'analista' | 'vendedor';
+type NavRole = 'admin' | 'manager' | 'analyst' | 'viewer';
 
 const ROLE_HIERARCHY: Record<NavRole, number> = {
   admin: 4,
   manager: 3,
-  analista: 2,
-  vendedor: 1,
+  analyst: 2,
+  viewer: 1,
 };
 
 const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: string; path: string; minRole?: NavRole }[] = [
   { icon: LayoutDashboard, labelKey: 'common:nav.dashboard', path: '/dashboard' },
-  { icon: TrendingUp, labelKey: 'common:nav.forecasting', path: '/forecasting', minRole: 'manager' },
+  { icon: TrendingUp, labelKey: 'common:nav.forecasting', path: '/forecasting', minRole: 'analyst' },
   { icon: Package, labelKey: 'common:nav.inventory', path: '/inventory' },
   { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
-  { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'manager' },
+  { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'analyst' },
   { icon: AlertTriangle, labelKey: 'common:nav.alerts', path: '/alerts' },
   { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops', minRole: 'admin' },
-  { icon: Settings, labelKey: 'common:nav.settings', path: '/settings', minRole: 'admin' },
+  { icon: Settings, labelKey: 'common:nav.settings', path: '/settings' },
 ];
 
 const SidebarContent = ({

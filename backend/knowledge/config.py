@@ -34,6 +34,8 @@ def get_knowledge_settings() -> KnowledgeSettings:
         ingestion_async=os.getenv("KNOWLEDGE_INGESTION_ASYNC", "true").strip().lower()
         in {"1", "true", "yes", "on"},
         langsmith_enabled=os.getenv("LANGCHAIN_TRACING_V2", "false").strip().lower()
+        in {"1", "true", "yes", "on"}
+        or os.getenv("LANGSMITH_TRACING", "false").strip().lower()
         in {"1", "true", "yes", "on"},
-        langsmith_project=os.getenv("LANGCHAIN_PROJECT", "supplymind-ai"),
+        langsmith_project=os.getenv("LANGCHAIN_PROJECT") or os.getenv("LANGSMITH_PROJECT", "supplymind-ai"),
     )

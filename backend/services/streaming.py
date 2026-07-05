@@ -8,6 +8,17 @@ import time
 from typing import AsyncGenerator, Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from backend.knowledge.langsmith_tracing import configure_langsmith
+
+configure_langsmith()
+
+try:
+    from langsmith import traceable as _traceable
+except ImportError:
+    def _traceable(*a, **kw):  # type: ignore
+        def deco(fn):
+            return fn
+        return deco
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +34,7 @@ def sse_event(event_type: str, data: dict) -> str:
 # ---------------------------------------------------------------------------
 # Streaming AI Insights
 # ---------------------------------------------------------------------------
+@_traceable(name="stream_insights", run_type="chain")
 async def stream_insights(product_id: str) -> AsyncGenerator[str, None]:
     """Stream AI insights generation as SSE events.
 
@@ -39,8 +51,8 @@ async def stream_insights(product_id: str) -> AsyncGenerator[str, None]:
         _get_shap_features,
         _assemble_context,
     )
-    from backend.llm.client import get_llm
-    from backend.llm.executive_prompts import SUPPLY_CHAIN_INSIGHTS_PROMPT
+    from backend.ai.orchestrator.model_registry import ModelRegistry
+    from backend.ai.orchestrator.prompt_registry import PromptRegistry
     from backend.llm.limits import get_input_budget, truncate_to_budget
     from backend.llm.monitor import monitor_llm_call
 
@@ -64,14 +76,17 @@ async def stream_insights(product_id: str) -> AsyncGenerator[str, None]:
         context = truncate_to_budget(context, budget, label="ai_insights")
 
         # Step 5: Get LLM
-        llm = get_llm(temperature=0.1)
+        llm = ModelRegistry.get_model("executive_insights")
         if llm is None:
             yield sse_event("error", {"message": "AI Insights requires an LLM. Configure OPENROUTER_API_KEY."})
             yield sse_event("done", {})
             return
 
         # Step 6: Build messages
-        system_msg = SystemMessage(content=SUPPLY_CHAIN_INSIGHTS_PROMPT.format(context=context))
+        from backend.llm.executive_prompts import SUPPLY_CHAIN_INSIGHTS_PROMPT, INVENTORY_INTELLIGENCE_PROMPT
+        base_prompt = PromptRegistry.get_prompt("executive_insights")
+        full_system_prompt = base_prompt + "\n\n" + SUPPLY_CHAIN_INSIGHTS_PROMPT.format(context=context)
+        system_msg = SystemMessage(content=full_system_prompt)
         human_msg = HumanMessage(content="Analyze the supply chain data provided in the system message. Return JSON only.")
         messages = [system_msg, human_msg]
 
@@ -114,6 +129,7 @@ async def stream_insights(product_id: str) -> AsyncGenerator[str, None]:
 # ---------------------------------------------------------------------------
 # Streaming Forecast Reasoning
 # ---------------------------------------------------------------------------
+@_traceable(name="stream_forecast_reasoning", run_type="chain")
 async def stream_forecast_reasoning(
     forecasts: list[dict[str, Any]],
     question: str | None = None,
@@ -127,14 +143,14 @@ async def stream_forecast_reasoning(
       - error: failure message
       - done: stream complete
     """
-    from backend.llm.client import get_llm
+    from backend.ai.orchestrator.model_registry import ModelRegistry
+    from backend.ai.orchestrator.prompt_registry import PromptRegistry
     from backend.llm.monitor import monitor_llm_call
-    from backend.services.forecast_reasoning_service import FORECAST_REASONING_SYSTEM_PROMPT
 
     t0 = time.time()
 
     try:
-        llm = get_llm(temperature=0.1)
+        llm = ModelRegistry.get_model("forecast")
         if llm is None:
             yield sse_event("error", {"message": "Forecast reasoning requires an LLM."})
             yield sse_event("done", {})
@@ -161,8 +177,12 @@ async def stream_forecast_reasoning(
         if question:
             user_message += f"\n\nUser Question/Focus: {question}"
 
+        base_prompt = PromptRegistry.get_prompt("forecast")
+        from backend.services.forecast_reasoning_service import FORECAST_REASONING_SYSTEM_PROMPT
+        full_system_prompt = base_prompt + "\n\n" + FORECAST_REASONING_SYSTEM_PROMPT
+
         messages = [
-            SystemMessage(content=FORECAST_REASONING_SYSTEM_PROMPT),
+            SystemMessage(content=full_system_prompt),
             HumanMessage(content=user_message),
         ]
 

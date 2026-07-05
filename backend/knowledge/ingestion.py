@@ -89,6 +89,36 @@ def ingest_forecast_summary(
     )
 
 
+def ingest_inventory_knowledge_document(
+    *,
+    product_id: str,
+    content: str,
+    title: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Ingest an inventory knowledge document (from the Knowledge Builder).
+
+    Args:
+        product_id: The product identifier.
+        content: The semantic text content of the document.
+        title: Optional title (defaults to "Inventory Intelligence: {product_id}").
+        metadata: Optional metadata dict.
+
+    Returns:
+        Ingestion result dict or None on failure.
+    """
+    return ingest_document(
+        title=title or f"Inventory Intelligence: {product_id}",
+        content=content,
+        source_type="inventory_intelligence",
+        source_id=product_id,
+        metadata={
+            "product_id": product_id,
+            "document_type": "inventory_intelligence",
+            **(metadata or {}),
+        },
+    )
+
 def ingest_inventory_recommendation(
     *, product_id: str, summary: str, user_id: str | None = None,
     extra: dict[str, Any] | None = None,

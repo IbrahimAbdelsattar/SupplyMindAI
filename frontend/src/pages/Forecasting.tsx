@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
-import { AIChatbot } from '@/components/chatbot/AIChatbot';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -541,7 +540,6 @@ const Forecasting = () => {
         </main>
       </div>
 
-      <AIChatbot />
     </div>
   );
 };

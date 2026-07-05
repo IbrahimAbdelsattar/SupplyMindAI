@@ -73,6 +73,18 @@ SupplyMindAI/
 │   │   ├── storage.py          # Document storage
 │   │   └── stream.py           # Streaming responses
 │   │
+│   ├── ai/                     # AI Orchestrator Layer
+│   │   └── orchestrator/       # Scoped agents, registries, and routing
+│   │       ├── router.py       # Orchestrator gateway workflow
+│   │       ├── model_registry.py
+│   │       ├── prompt_registry.py
+│   │       ├── context_builder.py
+│   │       ├── memory_manager.py
+│   │       ├── conversation_manager.py
+│   │       ├── intent_detector.py
+│   │       ├── agent_factory.py
+│   │       └── telemetry.py
+│   │
 │   ├── llm/                    # LLM integration
 │   │   ├── client.py           # OpenAI-compatible LLM client
 │   │   ├── context_builder.py  # Prompt context assembly
@@ -327,10 +339,12 @@ The guardrails system is a comprehensive safety layer implemented as **FastAPI m
 - Retrieval: Hybrid search (vector similarity + keyword BM25)
 - Documents: Ingested from JSONL via `ingestion.py`
 
-### LLM Integration
-- Provider-agnostic: OpenAI, OpenRouter, NVIDIA NIM
-- Usage: Chat, copilot, forecast reasoning, RAG summarization
-- Tracing: LangSmith (optional, env flag)
+### LLM Integration (AI Orchestration Layer)
+- **AI Orchestrator**: User queries route through a central AI gateway executing input guardrails, model-based intent classification, role router, agent execution loops, response guardrails, and structured telemetry.
+- **Model Registry**: Centralized factory for instantiating custom model parameters (temperature, max tokens, retries, timeout) per agent role using the configured OpenRouter API key.
+- **Prompt Registry**: Stores dedicated instruction sets (`InventoryPrompt`, `ForecastPrompt`, `SupportPrompt`, etc.) to prevent context contamination.
+- **Memory & RAG Isolation**: Scopes conversations and recalls database-backed memories by `agent_type`, and filters knowledge doc similarity checks strictly by allowed `source_type` boundaries.
+- **Tracing**: Fully integrated with LangSmith and custom backend telemetry for monitoring latencies, token counts, and routing accuracy.
 
 ---
 

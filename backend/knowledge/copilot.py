@@ -57,77 +57,23 @@ def copilot_chat(
     product_id: str | None = None,
     mode: str = "business",
 ) -> dict[str, Any]:
-    configure_langsmith()
-    session_id = session_id or str(uuid.uuid4())
+    from backend.ai.orchestrator.router import AIOrchestrator
+    from backend.ai.orchestrator.session_manager import SessionManager
 
-    prefix = "[Technical mode] " if mode == "technical" else ""
-    enriched = prefix + message
+    session_id = SessionManager.get_or_create_session(session_id)
+    
+    orchestrator = AIOrchestrator()
+    result = orchestrator.execute_query(
+        query=message,
+        user_id=user_id,
+        session_id=session_id,
+        product_id=product_id
+    )
 
-    if _use_langgraph_copilot():
-        try:
-            from backend.agents.copilot_graph import run_copilot_graph
+    return {
+        "answer": result.get("answer", ""),
+        "sources": result.get("sources", []),
+        "session_id": session_id,
+        "grounded": result.get("grounded", False),
+    }
 
-            graph_result = run_copilot_graph(enriched, product_id or "")
-            return {
-                "answer": graph_result.get("answer", ""),
-                "sources": graph_result.get("sources", []),
-                "session_id": session_id,
-                "grounded": True,
-                "engine": "langgraph",
-            }
-        except Exception as exc:
-            LOGGER.warning("LangGraph copilot failed, falling back to RAG: %s", exc)
-
-    with trace_run(
-        "copilot_chat",
-        metadata={"user_id": user_id, "product_id": product_id, "mode": mode},
-    ):
-        _save_conversation_turn(
-            user_id=user_id,
-            session_id=session_id,
-            role="user",
-            content=message,
-            metadata={"product_id": product_id, "mode": mode},
-        )
-
-        # Broad retrieval across knowledge types — delegate to rag_query which already
-        # calls semantic_search() + operational snapshot. Avoid duplicate DB queries.
-        rag_result = rag_query(
-            enriched,
-            product_id=product_id,
-            user_id=user_id,
-            operational_context=True,
-        )
-
-        memories = recall_memory(message, agent_type="copilot", user_id=user_id, limit=3)
-
-        if memories:
-            mem_text = "\n".join(f"- {m.get('content', '')[:400]}" for m in memories)
-            rag_result["answer"] = (
-                rag_result.get("answer", "")
-                + "\n\nRelevant agent memory:\n"
-                + mem_text
-            )
-
-        _save_conversation_turn(
-            user_id=user_id,
-            session_id=session_id,
-            role="assistant",
-            content=rag_result.get("answer", ""),
-            metadata={"sources": rag_result.get("sources", []), "grounded": rag_result.get("grounded")},
-        )
-
-        upsert_memory(
-            agent_type="copilot",
-            memory_key=f"session:{session_id}:last",
-            content=f"Q: {message[:500]}\nA: {rag_result.get('answer', '')[:800]}",
-            user_id=user_id,
-            metadata={"product_id": product_id},
-        )
-
-        return {
-            "answer": rag_result.get("answer", ""),
-            "sources": rag_result.get("sources", []),
-            "session_id": session_id,
-            "grounded": rag_result.get("grounded", False),
-        }

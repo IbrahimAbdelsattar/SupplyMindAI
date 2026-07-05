@@ -1,4 +1,7 @@
 product_id,period,predicted_demand,confidence_level,demand_trend,current_stock,stock_risk_level,recommended_order_qty,supplier_score,best_supplier,lead_time_days,delay_risk,avg_delay,profit_margin,revenue_forecast
-FAN_STD,2025-01,2086,95.0,decreasing,365,medium,2096,80.1,Industrial_Client_6,29.3,high,22.26,96.31,5068980.0
-FAN_STD,2025-02,2076,90.0,decreasing,365,medium,1956,80.1,Industrial_Client_6,29.3,high,22.26,96.31,5044680.0
-FAN_STD,2025-03,2097,85.0,stable,365,medium,1818,80.1,Industrial_Client_6,29.3,high,22.26,96.31,5095710.0
+BL_IND,2025-01,1213,95.0,decreasing,680,low,782,81.82,Industrial_Client_1,27.3,medium,20.32,98.27,6219051.0
+BL_IND,2025-02,1218,90.0,stable,680,low,773,81.82,Industrial_Client_1,27.3,medium,20.32,98.27,6244686.0
+BL_IND,2025-03,1207,85.0,stable,680,low,531,81.82,Industrial_Client_1,27.3,medium,20.32,98.27,6188289.0
+BL_IND,2025-04,1213,80.0,stable,680,low,540,81.82,Industrial_Client_1,27.3,medium,20.32,98.27,6219051.0
+BL_IND,2025-05,1213,75.0,stable,680,low,540,81.82,Industrial_Client_1,27.3,medium,20.32,98.27,6219051.0
+BL_IND,2025-06,1216,70.0,stable,680,low,541,81.82,Industrial_Client_1,27.3,medium,20.32,98.27,6234432.0

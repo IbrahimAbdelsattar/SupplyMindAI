@@ -1,0 +1,14 @@
+{
+  "id": "purchase_analysis_20260705120102",
+  "title": "Purchase Analysis Report",
+  "description": "Purchase volumes, spend, and supplier breakdown",
+  "type": "technical",
+  "format": "csv",
+  "period_start": "2026-06-05T12:01:02.390896+00:00",
+  "period_end": "2026-07-05T12:01:02.390896+00:00",
+  "generated_at": "2026-07-05T12:01:02.390896Z",
+  "date": "2026-07-05T12:01:02.390896+00:00",
+  "status": "ready",
+  "file_size": 980,
+  "download_url": "/system/reports/download/purchase_analysis_20260705_120102.csv"
+}

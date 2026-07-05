@@ -1,0 +1,14 @@
+{
+  "id": "operations_overview_20260705115623",
+  "title": "Operations Overview Report",
+  "description": "Consolidated KPIs across inventory, sales, and procurement",
+  "type": "executive",
+  "format": "csv",
+  "period_start": "2026-06-05T11:56:23.142030+00:00",
+  "period_end": "2026-07-05T11:56:23.142030+00:00",
+  "generated_at": "2026-07-05T11:56:23.142030Z",
+  "date": "2026-07-05T11:56:23.142030+00:00",
+  "status": "ready",
+  "file_size": 216,
+  "download_url": "/system/reports/download/operations_overview_20260705_115623.csv"
+}

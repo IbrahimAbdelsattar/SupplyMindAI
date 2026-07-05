@@ -1,0 +1,150 @@
+{
+  "title": "Command Center",
+  "subtitle": "AI-powered decision intelligence",
+  "morningBrief": {
+    "greeting": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "greetingNight": "Good night",
+    "today": "Today",
+    "summary": "Executive Summary",
+    "topPriority": "Top Priority",
+    "forecastAccuracy": "Forecast Accuracy",
+    "inventoryHealth": "Inventory Health",
+    "supplyChainStatus": "Supply Chain",
+    "critical": "Critical",
+    "warning": "Warning",
+    "healthy": "Healthy"
+  },
+  "alerts": {
+    "title": "Critical Alerts",
+    "subtitle": "Requires immediate attention",
+    "empty": "All clear! No active alerts.",
+    "emptySub": "No active alerts",
+    "acknowledge": "Acknowledge",
+    "dismiss": "Dismiss",
+    "affectedProducts": "Affected",
+    "threshold": "Threshold",
+    "triggeredAt": "Triggered",
+    "current": "Current:",
+    "source": "Source:",
+    "acknowledged": "Acknowledged",
+    "timeAgo": {
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    }
+  },
+  "recommendations": {
+    "title": "Recommended Actions",
+    "subtitle": "{{count}} recommendations",
+    "impact": "Expected Impact",
+    "savings": "Est. Savings",
+    "takeAction": "Take Action",
+    "relatedAlert": "Related Alert",
+    "linkedAlert": "Linked alert",
+    "toastExecuting": "Executing action..."
+  },
+  "businessHealth": {
+    "title": "Business Health",
+    "subtitle": "{{count}}/{{total}} metrics healthy",
+    "trend": "Trend",
+    "overall": "Overall"
+  },
+  "financialImpact": {
+    "title": "Financial Impact",
+    "subtitle": "Revenue and cost analysis",
+    "potentialSavings": "Potential Savings",
+    "fromRecommendations": "From {{count}} recommendations",
+    "atRiskValue": "At-Risk Value",
+    "fromAlerts": "From {{count}} active alerts",
+    "netOpportunity": "Net Opportunity",
+    "netGain": "net gain",
+    "netRisk": "net risk",
+    "savingsByCategory": "Savings by Category",
+    "totalSavings": "Total Potential Savings",
+    "atRisk": "At-Risk Revenue",
+    "breakdown": "Savings Breakdown"
+  },
+  "supplyChain": {
+    "title": "Supply Chain Network",
+    "subtitle": "{{nodeCount}} nodes · {{connCount}} connections",
+    "live": "Live",
+    "stock": "stock",
+    "legend": {
+      "healthy": "Healthy",
+      "warning": "Warning",
+      "critical": "Critical",
+      "warehouse": "Warehouse",
+      "supplier": "Supplier",
+      "distribution": "Distribution",
+      "store": "Store",
+      "manufacturing": "Manufacturing"
+    }
+  },
+  "insights": {
+    "title": "AI Insights",
+    "subtitle": "{{count}} active insights",
+    "all": "All",
+    "opportunity": "Opportunity",
+    "risk": "Risk",
+    "optimization": "Optimization",
+    "trend": "Trend",
+    "anomaly": "Anomaly",
+    "action": "View Details",
+    "empty": "No insights in this category"
+  },
+  "timeline": {
+    "title": "Event Timeline",
+    "subtitle": "{{count}} recent events",
+    "completed": "Completed",
+    "timeAgo": {
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    }
+  },
+  "copilot": {
+    "title": "Ask Copilot",
+    "subtitle": "AI supply chain assistant",
+    "placeholder": "Ask about inventory, forecasts, risks...",
+    "suggestions": {
+      "inventory": "Check inventory",
+      "forecast": "Run forecast",
+      "risks": "Show risks"
+    },
+    "sources": "Sources"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "subtitle": "{{count}} available",
+    "lastRun": "Last run",
+    "never": "Never",
+    "running": "Running...",
+    "success": "Done",
+    "error": "Failed",
+    "run": "Run",
+    "idle": "idle",
+    "timeAgo": {
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago"
+    }
+  },
+  "alertBadge": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "statusPill": {
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "critical": "Critical",
+    "neutral": "Neutral"
+  },
+  "timeAgo": {
+    "minutes": "{{count}}m ago",
+    "hours": "{{count}}h ago",
+    "days": "{{count}}d ago"
+  }
+}

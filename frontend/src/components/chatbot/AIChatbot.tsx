@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { copilotChat } from '@/lib/knowledgeApi';
 import { FormattedMessage } from '../ai/FormattedMessage';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 interface Message {
   id: number;
@@ -24,6 +25,8 @@ const quickQuestions = [
 
 export const AIChatbot = () => {
   const { t } = useTranslation();
+  const { userRole } = useAuthContext();
+  
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -85,6 +88,8 @@ export const AIChatbot = () => {
   const handleQuickQuestion = (question: string) => {
     setInput(question);
   };
+
+  if (userRole === 'viewer') return null;
 
   return (
     <>
