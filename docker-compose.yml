@@ -90,11 +90,7 @@ services:
     networks:
       - default
       - dokploy-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.supplymind-frontend.rule=Host(`supplymind.tech`) || Host(`www.supplymind.tech`)"
-      - "traefik.http.routers.supplymind-frontend.network=dokploy"
-      - "traefik.http.services.supplymind-frontend.loadbalancer.server.port=80"
+
 
 volumes:
   postgres_data:
