@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileText, HardDrive, TrendingUp, AlertTriangle } from 'lucide-react';
 import { SectionHeader } from '../shared/SectionHeader';
-import { TYPE_COLORS } from '../data/useReports';
+import { TYPE_COLORS } from '../data/usereports';
 
 interface Props {
   totalReports: number;
