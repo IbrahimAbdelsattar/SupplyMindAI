@@ -17,7 +17,6 @@ services:
   # -------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: supplymind-postgres-prod
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-supplymind_prod}
@@ -40,7 +39,6 @@ services:
   # -------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    container_name: supplymind-redis-prod
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required} --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
@@ -61,7 +59,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: supplymind-backend-prod
     restart: unless-stopped
     expose:
       - "8000"
@@ -106,7 +103,6 @@ services:
       args:
         - VITE_API_URL=/api/v1
         - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY:?VITE_CLERK_PUBLISHABLE_KEY is required}
-    container_name: supplymind-frontend-prod
     restart: unless-stopped
     expose:
       - "80"
@@ -122,7 +118,6 @@ services:
   # -------------------------------------------------------------------------
   worker:
     image: ${WORKER_IMAGE:-supplymind-worker:latest}
-    container_name: supplymind-worker-prod
     restart: unless-stopped
     build:
       context: .
@@ -153,7 +148,6 @@ services:
   # -------------------------------------------------------------------------
   beat:
     image: ${WORKER_IMAGE:-supplymind-worker:latest}
-    container_name: supplymind-beat-prod
     restart: unless-stopped
     command: ["celery", "-A", "worker.celery_app", "beat", "--loglevel=info", "-s", "/data/celerybeat-schedule"]
     environment:

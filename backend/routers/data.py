@@ -70,6 +70,16 @@ def data_kpis(period_days: int = 90, user: dict = Depends(get_current_user)):
         sales = STORE.sales_daily()
         purchases = STORE.purchases()
 
+        # Use the latest data date as reference for period filtering
+        # so that periods align with the actual data range
+        data_ref_date = None
+        if not inventory.empty and "date" in inventory.columns:
+            data_ref_date = pd.to_datetime(inventory["date"]).max().date()
+        elif not sales.empty and "date" in sales.columns:
+            data_ref_date = pd.to_datetime(sales["date"]).max().date()
+        if data_ref_date is not None:
+            cutoff = data_ref_date - timedelta(days=period_days)
+
         # Filter by period
         if not inventory.empty and "date" in inventory.columns:
             inventory = inventory[inventory["date"].astype(str) >= str(cutoff)]
@@ -116,18 +126,13 @@ def data_kpis(period_days: int = 90, user: dict = Depends(get_current_user)):
             qty_col = "qty" if "qty" in sales.columns else "total_qty"
             total_sold = int(sales[qty_col].sum())
 
-        inventory_turnover = total_sold / avg_inventory if avg_inventory > 0 else 0
+        # Use period-matched sales/inventory for turnover
+        period_days_actual = len(inv_dates) if not inventory.empty else period_days
+        daily_sales_rate = total_sold / max(period_days_actual, 1)
+        inventory_turnover = daily_sales_rate / avg_inventory if avg_inventory > 0 else 0
 
-        stockout_days_count = 0
-        for d in sorted(inv_dates):
-            day_data = inventory[inventory["date"] == d]
-            for _, row in day_data.iterrows():
-                try:
-                    if int(row["stock"]) <= 0:
-                        stockout_days_count += 1
-                except (ValueError, TypeError):
-                    pass
         total_days_count = len(inv_dates) * len(inventory["product_id"].unique()) if not inventory.empty else 1
+        stockout_days_count = total_stockout_days
         service_level = max(0, 1 - (stockout_days_count / max(total_days_count, 1))) * 100
 
         db = SessionLocal()
@@ -137,20 +142,6 @@ def data_kpis(period_days: int = 90, user: dict = Depends(get_current_user)):
             db.close()
 
         forecast_accuracy = min(95, 70 + saved * 0.5)
-
-        # Frontend support
-        from backend.globals import FORECAST_INTELLIGENCE
-        
-        # Calculate total forecasted demand
-        total_demand = total_sold
-        forecast_df = getattr(FORECAST_INTELLIGENCE, "_df", pd.DataFrame()) if getattr(FORECAST_INTELLIGENCE, "is_loaded", False) else pd.DataFrame()
-        if not forecast_df.empty:
-            try:
-                total_demand = int(forecast_df["predicted_demand"].sum())
-            except Exception:
-                pass
-        if total_demand <= 0:
-            total_demand = 18450
 
         # Calculate total inventory cost
         prods = STORE.products()
@@ -166,30 +157,52 @@ def data_kpis(period_days: int = 90, user: dict = Depends(get_current_user)):
         except Exception:
             pass
 
+        # Frontend support
+        from backend.globals import FORECAST_INTELLIGENCE
+        
+        # Calculate total forecasted demand
+        # Use actual sales as the primary source of demand
+        total_demand = total_sold
+        # Only override with forecast if it covers ALL products (not just a single product)
+        forecast_df = getattr(FORECAST_INTELLIGENCE, "_df", pd.DataFrame()) if getattr(FORECAST_INTELLIGENCE, "is_loaded", False) else pd.DataFrame()
+        if not forecast_df.empty:
+            try:
+                forecast_products = forecast_df["product_id"].nunique()
+                if forecast_products >= len(prods) - 1:
+                    total_demand = int(forecast_df["predicted_demand"].sum())
+            except Exception:
+                pass
+
         total_inv_cost = 0.0
         try:
-            for _, r in STORE.inventory().iterrows():
-                pid = r.get("product_id")
-                stock_qty = max(0, int(r.get("stock", 0)))
-                prod_row = prods[prods["product_id"] == pid]
-                price = 1500.0
-                if not prod_row.empty:
-                    price = float(prod_row.iloc[0].get("min_price", 1500.0))
-                total_inv_cost += stock_qty * price * 0.65
+            full_inv = STORE.inventory()
+            if not full_inv.empty and "date" in full_inv.columns:
+                latest_date = full_inv["date"].max()
+                latest_inv = full_inv[full_inv["date"] == latest_date]
+                for _, r in latest_inv.iterrows():
+                    pid = r.get("product_id")
+                    stock_qty = max(0, int(r.get("stock", 0)))
+                    prod_row = prods[prods["product_id"] == pid]
+                    price = 1500.0
+                    if not prod_row.empty:
+                        price = float(prod_row.iloc[0].get("min_price", 1500.0))
+                    total_inv_cost += stock_qty * price * 0.65
         except Exception:
             pass
         if total_inv_cost <= 0:
             total_inv_cost = 142500.0
 
         stockout_risk = round(max(0.0, 100.0 - service_level), 1)
-        overstock_risk = round(max(5.0, min(95.0, 45.0 - inventory_turnover * 5.0)), 1)
+        # Convert daily turnover to annualized turnover for the formula
+        annual_turnover = inventory_turnover * 365
+        overstock_risk = round(max(5.0, min(95.0, 45.0 - annual_turnover * 0.5)), 1)
 
         return {
             "totalProducts": int(prods_count) if (prods_count := len(prods)) else 0,
             "totalStock": sum(
-                max(0, int(r["stock"])) for _, r in STORE.inventory().iterrows()
+                max(0, int(r["stock"])) for _, r in inventory.iterrows()
                 if not pd.isna(r.get("stock"))
-            ) if not STORE.inventory().empty else 0,
+            ) if not inventory.empty else 0,
             "activeAlerts": 0,
             "forecastAccuracy": round(forecast_accuracy, 1),
             "totalStockoutDays": total_stockout_days,

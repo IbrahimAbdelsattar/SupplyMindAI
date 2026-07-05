@@ -1,5 +1,6 @@
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
@@ -24,6 +25,21 @@ const colorMap: Record<string, string> = {
   destructive: '#EF4444',
 };
 
+/** Format the number to estimate display length (including commas, prefix, suffix). */
+function estimateDisplayLength(value: number, prefix: string, suffix: string): number {
+  const formatted = value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return prefix.length + formatted.length + suffix.length;
+}
+
+/** Return adaptive font size class based on total character count. */
+function getAdaptiveFontSize(charCount: number): string {
+  if (charCount <= 7)  return 'text-2xl sm:text-3xl';      // e.g. "6,259"
+  if (charCount <= 10) return 'text-xl sm:text-2xl';        // e.g. "$450,000"
+  if (charCount <= 13) return 'text-lg sm:text-xl';         // e.g. "$27,638,083"
+  if (charCount <= 16) return 'text-base sm:text-lg';       // e.g. "$1,234,567,890"
+  return 'text-sm sm:text-base';                            // anything larger
+}
+
 export const KPICard = ({
   title,
   value,
@@ -37,6 +53,11 @@ export const KPICard = ({
 }: KPICardProps) => {
   const isPositive = change !== undefined && change >= 0;
   const changeColor = isPositive ? '#10B981' : '#EF4444';
+
+  const adaptiveFontSize = useMemo(() => {
+    const len = estimateDisplayLength(value, prefix, suffix);
+    return getAdaptiveFontSize(len);
+  }, [value, prefix, suffix]);
 
   return (
     <Popover>
@@ -96,13 +117,16 @@ export const KPICard = ({
 
       <div className="space-y-1 relative z-10 min-w-0">
         <p className="text-xs sm:text-sm font-semibold text-muted-foreground tracking-tight truncate">{title}</p>
-        <div className="text-xl sm:text-3xl font-extrabold text-foreground tracking-tight flex items-baseline min-w-0 overflow-hidden">
+        <div className={cn(
+          "font-extrabold text-foreground tracking-tight flex items-baseline min-w-0",
+          adaptiveFontSize
+        )}>
           <AnimatedCounter
             value={value}
             prefix={prefix}
             suffix={suffix}
             duration={1.5}
-            className="truncate block min-w-0"
+            className="block min-w-0 leading-tight"
           />
         </div>
         {changeLabel && (

@@ -65,16 +65,8 @@ export const DashboardKPIGrid = ({ periodDays }: { periodDays: 1 | 7 | 30 | 90 }
     queryKey: ['kpis', periodDays],
     queryFn: () => apiFetch<KPIResponse>(`/data/kpis?period_days=${periodDays}`),
     retry: false,
-    staleTime: 10_000,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    placeholderData: {
-      totalDemand: 12500,
-      inventoryCost: 450000,
-      stockoutRisk: 12.5,
-      overstockRisk: 8.2,
-      revenue: 850000,
-      accuracy: 94.5,
-    },
   });
 
   if (isLoading) return <KPISkeletonGrid />;
