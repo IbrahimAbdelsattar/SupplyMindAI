@@ -36,6 +36,11 @@ def get_settings(user=Depends(_get_current_user)):
 
 
 @router.put("")
+import uuid
+
+# ... existing imports remain unchanged ...
+
+@router.put("\"")
 def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user)):
     uid = _uid(user)
     try:
@@ -72,7 +77,7 @@ def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user))
             merged = {**(row.settings_json or {}), **new_settings}
             row.settings_json = merged
         else:
-            row = UserSettings(user_id=uid, settings_json=new_settings)
+            row = UserSettings(id=str(uuid.uuid4()), user_id=uid, settings_json=new_settings)
             db.add(row)
         db.commit()
         return {"status": "ok", "settings": new_settings}
@@ -82,3 +87,4 @@ def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user))
         return {"status": "offline", "settings": new_settings}
     finally:
         db.close()
+

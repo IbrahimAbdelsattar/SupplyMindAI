@@ -6,9 +6,15 @@ from langchain_openai import ChatOpenAI
 
 LOGGER = logging.getLogger(__name__)
 
-NEMOTRON_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+# Primary free model — reliable, widely available on OpenRouter
+DEFAULT_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
 
-FALLBACK_MODELS = [NEMOTRON_MODEL]
+# Ordered fallback chain for free-tier OpenRouter models
+FALLBACK_MODELS = [
+    "mistralai/mistral-7b-instruct:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "qwen/qwen-2-7b-instruct:free",
+]
 
 
 def _resolve_key() -> str | None:
@@ -46,12 +52,12 @@ def _resolve_provider(key: str | None) -> tuple[str, str, str]:
             provider = "openai"
 
     if provider == "nvidia":
-        return "nvidia", "https://integrate.api.nvidia.com/v1", NEMOTRON_MODEL
+        return "nvidia", "https://integrate.api.nvidia.com/v1", DEFAULT_MODEL
     elif provider == "openai":
-        return "openai", "https://api.openai.com/v1", NEMOTRON_MODEL
+        return "openai", "https://api.openai.com/v1", DEFAULT_MODEL
     else:
         # Default to OpenRouter
-        return "openrouter", "https://openrouter.ai/api/v1", NEMOTRON_MODEL
+        return "openrouter", "https://openrouter.ai/api/v1", DEFAULT_MODEL
 
 
 def _openrouter_headers() -> dict[str, str]:
@@ -110,7 +116,7 @@ def _safe_create_chat_openai(
 from functools import lru_cache
 
 @lru_cache(maxsize=8)
-def get_llm(temperature: float = 0.1, max_tokens: int = 4096) -> ChatOpenAI | None:
+def get_llm(temperature: float = 0.1, max_tokens: int = 1024) -> ChatOpenAI | None:
     """
     Unified client factory. Returns a ChatOpenAI instance or None.
     Auto-detects provider, model, base_url and configuration, applying fallbacks.
@@ -156,6 +162,7 @@ def get_llm(temperature: float = 0.1, max_tokens: int = 4096) -> ChatOpenAI | No
 
     # Try instantiating with resolved config, then fallbacks
     candidate_models = [model] + [m for m in FALLBACK_MODELS if m != model]
+    LOGGER.info("LLM candidate models (in order): %s", candidate_models)
     
     for m in candidate_models:
         if not m:

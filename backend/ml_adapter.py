@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+import numpy as np
 
 if TYPE_CHECKING:
     from backend.main import DataStore

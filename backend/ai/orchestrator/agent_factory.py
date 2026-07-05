@@ -188,6 +188,7 @@ class BaseAgent:
                     ctx["record_tokens"](response, input_len=0, output_len=0)
 
                 if hasattr(response, "tool_calls") and response.tool_calls:
+                    # Model called tools — execute them and loop again
                     round_num += 1
                     messages.append(response)
                     for tool_call in response.tool_calls:
@@ -209,25 +210,32 @@ class BaseAgent:
                         messages.append(
                             ToolMessage(content=str(tool_result), tool_call_id=tool_id, name=tool_name)
                         )
+                    # continue while-loop for next round (final answer)
                 else:
-                    # Model didn't call tools, so we stream the response.content chunk-by-chunk for UX consistency
+                    # Model gave a direct answer — simulate streaming word-by-word
                     text = response.content if hasattr(response, "content") else str(response)
-                    # Yield text chunks
-                    chunk_size = 8
+                    chunk_size = 4  # ~4 chars for smooth feel
                     for i in range(0, len(text), chunk_size):
-                        yield {"type": "token", "text": text[i:i+chunk_size]}
+                        yield {"type": "token", "text": text[i:i + chunk_size]}
                     messages.append(response)
                     break
             else:
-                # No tools, direct stream
+                # No tools — true LLM streaming via astream()
                 full_content = []
-                with monitor_llm_call(feature=f"agent_{self.agent_type}_stream", model=self.model.model_name if hasattr(self.model, "model_name") else "unknown", provider="openrouter") as ctx:
+                with monitor_llm_call(
+                    feature=f"agent_{self.agent_type}_stream",
+                    model=self.model.model_name if hasattr(self.model, "model_name") else "unknown",
+                    provider="openrouter"
+                ) as ctx:
                     async for chunk in self.model.astream(messages):
                         if chunk and hasattr(chunk, "content") and chunk.content:
                             text = chunk.content
                             full_content.append(text)
                             yield {"type": "token", "text": text}
-                
+                    # Record token usage
+                    joined = AIMessage(content="".join(full_content))
+                    ctx["record_tokens"](joined, input_len=0, output_len=0)
+
                 ai_msg = AIMessage(content="".join(full_content))
                 messages.append(ai_msg)
                 response = ai_msg

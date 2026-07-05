@@ -51,9 +51,11 @@ RULES:
 
 
 from backend.llm.client import get_llm
+from backend.llm.limits import get_output_limit
 
-def _llm(max_tokens: int = 1024) -> ChatOpenAI:
-    return get_llm(temperature=0.1, max_tokens=max_tokens)
+def _llm(max_tokens: int | None = None) -> ChatOpenAI:
+    tokens = max_tokens if max_tokens is not None else get_output_limit("rag_query")
+    return get_llm(temperature=0.1, max_tokens=tokens)
 
 
 

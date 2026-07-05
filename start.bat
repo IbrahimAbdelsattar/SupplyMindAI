@@ -50,6 +50,16 @@ popd
 echo Starting Backend...
 start "SupplyMind Backend" cmd /k "cd /d %~dp0 && call .venv\Scripts\activate.bat && uvicorn backend.main:app --reload --reload-dir backend --host 0.0.0.0 --port 8081"
 
+REM Wait for backend health before starting frontend
+:wait_backend
+curl -s -o NUL http://localhost:8081/api/v1/health
+if errorlevel 1 (
+  echo Waiting for backend to become healthy...
+  timeout /t 2 > NUL
+  goto wait_backend
+)
+
+echo Backend is healthy. Starting Frontend...
 echo Starting Frontend...
 start "SupplyMind Frontend" cmd /c "cd /d %~dp0frontend && npm run dev"
 
