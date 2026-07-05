@@ -351,59 +351,57 @@ sequenceDiagram
     participant LS as LangSmith
 
     U->>FE: Access application
-    FE->>CLERK: Sign in / Sign up
-    CLERK-->>FE: JWT + user profile
+    FE->>CLERK: Sign in
+    CLERK-->>FE: JWT and User Profile
     FE->>API: Requests with Bearer JWT
 
-    U->>FE: Select product and forecast horizon
+    U->>FE: Select Product and Forecast Horizon
 
-    par Forecast request
+    par Forecast Request
         FE->>API: POST /api/v1/forecast/predict
-        API->>FC: Build prediction request
-        FC->>DB: Load product history and features
-        DB-->>FC: Sales / inventory context
-        FC->>MR: Resolve production model version
-        MR-->>FC: Model metadata / artifact
-        FC-->>API: Forecast + confidence intervals
-        API-->>FE: Forecast payload
-        LS-->>LS: Trace prediction run
-    end
+        API->>FC: Build Prediction Request
+        FC->>DB: Load Product History
+        DB-->>FC: Sales and Inventory Context
+        FC->>MR: Resolve Model Version
+        MR-->>FC: Return Model Artifact
+        FC-->>API: Forecast Result
+        API-->>FE: Forecast Payload
+        LS-->>LS: Trace Prediction
 
-    and Inventory optimization
+    and Inventory Optimization
         FE->>API: GET /api/v1/inventory/optimize
-        API->>INV: Start optimization
-        INV->>DB: Load stock, BOM, supplier data
-        DB-->>INV: Inventory context
-        INV->>FC: Request demand forecast
-        FC-->>INV: Forecast demand series
-        INV->>VS: Query knowledge context
-        VS-->>INV: Ranked documents
-        INV-->>API: EOQ + reorder point + safety stock
-        API-->>FE: Optimization result
-    end
+        API->>INV: Start Optimization
+        INV->>DB: Load Inventory Data
+        DB-->>INV: Inventory Context
+        INV->>FC: Request Forecast
+        FC-->>INV: Forecast Demand
+        INV->>VS: Retrieve Knowledge
+        VS-->>INV: Ranked Documents
+        INV-->>API: EOQ, ROP and Safety Stock
+        API-->>FE: Optimization Result
 
-    and AI insight generation
+    and AI Insight Generation
         FE->>API: POST /api/v1/insights/generate
-        API->>AI: Generate business explanation
-        AI->>DB: Read latest context
-        DB-->>AI: Structured data
-        AI->>LLM: Prompt with forecast + SHAP + inventory
-        LLM-->>AI: Insights + recommendations
-        AI->>API: Insight response
-        API->>FE: Insight cards + summary
-    end
+        API->>AI: Generate Insight
+        AI->>DB: Load Business Context
+        DB-->>AI: Structured Data
+        AI->>LLM: Generate Explanation
+        LLM-->>AI: AI Insight
+        AI-->>API: Insight Response
+        API-->>FE: Insight Cards
 
-    and Copilot chat
+    and Copilot Chat
         FE->>API: POST /api/v1/copilot/chat
-        API->>AI: Route to LangGraph agent
-        AI->>VS: Retrieve knowledge context
-        AI->>LLM: Generate grounded answer
-        LLM-->>AI: Response
-        AI->>API: Answer + sources
-        API->>FE: Chat response
+        API->>AI: Route Request
+        AI->>VS: Retrieve Context
+        VS-->>AI: Relevant Documents
+        AI->>LLM: Generate Response
+        LLM-->>AI: Grounded Answer
+        AI-->>API: Chat Response
+        API-->>FE: Display Chat
     end
 
-    FE->>U: Render charts, recommendations, insights, and chat
+    FE-->>U: Display Forecasts, Inventory, Insights and Chat
 ```
 
 ---
