@@ -39,7 +39,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { consumeSSE } from '@/lib/stream';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { formatCurrency, formatCompactNumber } from '@/lib/currency';
+import { formatCompactNumber } from '@/lib/currency';
 
 // Types for forecast reasoning
 interface ForecastReasoningResult {
@@ -62,6 +62,7 @@ const HORIZON_OPTIONS = [
 
 const Forecasting = () => {
   const { t } = useTranslation();
+  const { formatCurrency } = useCurrency();
 
 
   /* ── Forecast reasoning streaming state ── */
@@ -265,7 +266,7 @@ const Forecasting = () => {
                   <CardDescription className="text-xs truncate">{t('forecasting:kpi.revenueForecast')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl truncate" title={summary.totalRevenue > 0 ? formatCurrency(summary.totalRevenue) : ''}>
                     {summary.totalRevenue > 0
-                      ? formatCurrency(summary.totalRevenue, 'usd', true) // Using true for compact format
+                      ? formatCurrency(summary.totalRevenue, true) // Using true for compact format
                       : '—'}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground truncate">

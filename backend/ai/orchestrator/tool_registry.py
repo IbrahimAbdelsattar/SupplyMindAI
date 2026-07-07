@@ -19,8 +19,8 @@ class ToolRegistry:
     _registry = {
         "inventory": [analyze_inventory, search_inventory_knowledge],
         "forecast": [generate_forecast, search_forecast_knowledge],
-        "customer_support": [search_insights_knowledge],
-        "documentation": [search_insights_knowledge],
+        "customer_support": [],
+        "documentation": [],
         "mlops": [get_mlops_metrics, search_mlops_knowledge],
         "executive_insights": [],
         "report": [],

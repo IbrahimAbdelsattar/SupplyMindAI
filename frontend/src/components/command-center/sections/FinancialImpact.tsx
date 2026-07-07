@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { Recommendation, CriticalAlert } from '../data/types';
 import { ALERT_AT_RISK_VALUES } from '../data/constants';
 import { SectionHeader } from '../shared/SectionHeader';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface FinancialImpactProps {
   recommendations: Recommendation[];
@@ -19,17 +20,8 @@ function parseDollarValue(s?: string): number {
 }
 
 export function FinancialImpact({ recommendations, alerts }: FinancialImpactProps) {
-  const { t, i18n } = useTranslation('commandCenter');
-
-  const formatCurrency = (value: number) => {
-    const locale = i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US';
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: i18n.language === 'ar' ? 'SAR' : i18n.language === 'fr' ? 'EUR' : 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const { t } = useTranslation('commandCenter');
+  const { formatCurrency } = useCurrency();
 
   const { totalSavings, totalAtRisk, savingsByCategory } = useMemo(() => {
     let savings = 0;

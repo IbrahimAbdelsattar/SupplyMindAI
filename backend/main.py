@@ -89,6 +89,44 @@ from backend.globals import STORE, ML_MODEL, FORECAST_INTELLIGENCE
 
 from contextlib import asynccontextmanager
 
+def _start_monthly_retraining_loop():
+    import threading
+    import time
+    from ml_platform.models.demand_forecasting_pipeline import METRICS_OUT, ForecastModel
+
+    def _loop():
+        # Wait a bit after startup for DB migrations and uvicorn startup to complete
+        time.sleep(15)
+        while True:
+            try:
+                last_trained = None
+                if os.path.exists(METRICS_OUT):
+                    with open(METRICS_OUT, "r") as f:
+                        try:
+                            metrics = json.load(f)
+                            trained_at_str = metrics.get("trained_at")
+                            if trained_at_str:
+                                last_trained = datetime.fromisoformat(trained_at_str)
+                        except Exception as json_err:
+                            logger.warning("[ML] Failed to parse model metrics JSON: %s", json_err)
+                
+                # If never trained, or trained more than 30 days ago
+                now = datetime.now(timezone.utc) if (last_trained and last_trained.tzinfo) else datetime.now()
+                if last_trained is None or (now - last_trained).days >= 30:
+                    logger.info("[ML] Scheduled monthly retraining triggered automatically...")
+                    model = ForecastModel()
+                    model.fit()
+                    import backend.globals as bg
+                    bg.ML_MODEL = model
+                    logger.info("[ML] Scheduled monthly retraining completed successfully.")
+            except Exception as e:
+                logger.error("[ML] Scheduled monthly retraining failed: %s", e)
+            
+            # Sleep for 1 day
+            time.sleep(86400)
+
+    threading.Thread(target=_loop, daemon=True).start()
+
 # Define lifespan first so it can be passed to FastAPI
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -130,6 +168,8 @@ async def lifespan(app: FastAPI):
             logger.info("[ML]  ✅ Demand forecast model loaded (trained pickle)")
         else:
             logger.info("[ML]  ℹ️  Demand forecast model ready (CSV-based, no trained pickle found)")
+        # Start monthly background retraining loop
+        _start_monthly_retraining_loop()
     except Exception as exc:
         logger.error("[ML]  ❌ ML model initialization failed: %s", exc)
 
@@ -271,6 +311,7 @@ _ROUTERS_TO_LOAD = [
     ("backend.routers.forecasting", "router"),
     ("backend.routers.notifications", "router"),
     ("backend.routers.command_center", "router"),
+    ("backend.routers.quick_actions", "router"),
 ]
 
 

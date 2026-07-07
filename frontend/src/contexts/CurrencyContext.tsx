@@ -6,8 +6,8 @@ import { useAuth } from '@clerk/clerk-react';
 interface CurrencyContextType {
   currency: Currency;
   setCurrency: (currency: Currency) => void;
-  formatCurrency: (amountUsd: number) => string;
-  convertCurrency: (amountUsd: number) => number;
+  formatCurrency: (amountEgp: number, compact?: boolean) => string;
+  convertCurrency: (amountEgp: number) => number;
   currencySymbol: string;
 }
 
@@ -67,12 +67,12 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     setCurrencyState(newCurrency);
   };
 
-  const formatCurrency = (amountUsd: number) => {
-    return formatCurrencyUtil(amountUsd, currency);
+  const formatCurrency = (amountEgp: number, compact: boolean = false) => {
+    return formatCurrencyUtil(amountEgp, currency, compact);
   };
 
-  const convertCurrency = (amountUsd: number) => {
-    return convertToCurrency(amountUsd, currency);
+  const convertCurrency = (amountEgp: number) => {
+    return convertToCurrency(amountEgp, currency);
   };
 
   const currencySymbol = currencySymbols[currency] || '$';

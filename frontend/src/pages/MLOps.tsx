@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
+import { useToast } from '@/hooks/use-toast';
 import { AISummaryCard } from '@/components/ai/AISummaryCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +87,7 @@ const STATUS_CONFIG = {
 
 const MLOps = () => {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
 
   const {
     metrics,
@@ -508,11 +510,53 @@ const MLOps = () => {
               transition={{ duration: 0.4, delay: 0.6 }}
             >
               <Card>
-                <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg">{t('mlops:retraining.title')}</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">{t('mlops:retraining.description')}</CardDescription>
+                <CardHeader className="pb-3 sm:pb-6 flex flex-row items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-base sm:text-lg">{t('mlops:retraining.title')}</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">{t('mlops:retraining.description')}</CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => retrainMutation.mutate(undefined, {
+                      onSuccess: () => {
+                        toast({
+                          title: i18n.language === 'ar' ? 'تم إعادة التدريب' : 'Retraining Complete',
+                          description: i18n.language === 'ar' ? 'تم إعادة تدريب النموذج بنجاح.' : 'Model has been retrained successfully.',
+                        });
+                      },
+                      onError: () => {
+                        toast({
+                          title: i18n.language === 'ar' ? 'خطأ في إعادة التدريب' : 'Retraining Failed',
+                          description: i18n.language === 'ar' ? 'فشلت عملية إعادة التدريب. حاول مرة أخرى.' : 'Retraining failed. Please try again.',
+                          variant: 'destructive',
+                        });
+                      },
+                    })}
+                    disabled={retrainMutation.isPending}
+                    size="sm"
+                    className="flex items-center gap-2 flex-shrink-0"
+                  >
+                    <RefreshCw className={cn("w-3.5 h-3.5", retrainMutation.isPending && "animate-spin")} />
+                    {retrainMutation.isPending 
+                      ? (i18n.language === 'ar' ? 'جاري إعادة التدريب...' : 'Retraining...') 
+                      : (i18n.language === 'ar' ? 'إعادة تدريب النموذج' : 'Retrain Model')}
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4">
+                  <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 flex items-start gap-2.5 text-left rtl:text-right">
+                    <Shield className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-primary">
+                        {i18n.language === 'ar' ? 'سياسة إعادة التدريب المجدولة' : 'Scheduled Retraining Policy'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                        {i18n.language === 'ar' 
+                          ? 'إعادة التدريب الشهري التلقائي نشط (يعمل كل 30 يومًا). يتم ملائمة النموذج تلقائيًا على مجموعات البيانات الجديدة لمنع تدهور دقة التنبؤ.'
+                          : 'Automatic monthly retraining is active (runs every 30 days). The model is automatically fit on new enriched datasets to prevent prediction accuracy degradation.'
+                        }
+                      </p>
+                    </div>
+                  </div>
+
                   {metrics.retrainingHistory.map((item, index) => (
 
                     <motion.div

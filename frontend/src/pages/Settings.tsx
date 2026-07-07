@@ -33,8 +33,6 @@ const Settings = () => {
     systemUpdates: false,
   });
 
-  const [region, setRegion] = useState('us');
-
   // Load saved settings and user data from API on mount
   useEffect(() => {
     const loadData = async () => {
@@ -46,7 +44,6 @@ const Settings = () => {
         ]);
         const s = (settingsRes as { settings: Record<string, unknown> })?.settings || {};
         if (s.notifications) setNotifications(prev => ({ ...prev, ...(s.notifications as typeof prev) }));
-        if (s.region) setRegion(s.region as string);
         const u = (userRes as { user: { name?: string; email?: string; role?: string } })?.user;
         if (u) setUser(u);
       } catch {
@@ -69,7 +66,6 @@ const Settings = () => {
         body: JSON.stringify({
           theme,
           notifications,
-          region,
           display: { currency },
           language: i18n.language,
           name: effectiveName,
@@ -127,10 +123,10 @@ const Settings = () => {
                   <span className="hidden sm:inline">{t('settings:section.appearance')}</span>
                   <span className="sm:hidden">{t('settings:section.appearance')}</span>
                 </TabsTrigger>
-                <TabsTrigger value="regional" className="gap-2">
+                <TabsTrigger value="currency" className="gap-2">
                   <Globe className="w-4 h-4 hidden sm:block" />
-                  <span className="hidden sm:inline">{t('settings:section.regionalSettings')}</span>
-                  <span className="sm:hidden">{t('settings:section.regionalSettings')}</span>
+                  <span className="hidden sm:inline">{t('settings:section.currencySettings')}</span>
+                  <span className="sm:hidden">{t('settings:section.currencySettings')}</span>
                 </TabsTrigger>
                 <TabsTrigger value="notifications" className="gap-2">
                   <Bell className="w-4 h-4 hidden sm:block" />
@@ -150,8 +146,8 @@ const Settings = () => {
                 <AppearanceTab />
               </TabsContent>
 
-              <TabsContent value="regional">
-                <RegionalTab region={region} onRegionChange={setRegion} />
+              <TabsContent value="currency">
+                <RegionalTab />
               </TabsContent>
 
               <TabsContent value="notifications">

@@ -8,7 +8,6 @@ from pydantic import BaseModel
 class UserSettingsPayload(BaseModel):
     theme: Optional[str] = None
     notifications: Optional[dict] = None
-    region: Optional[str] = None
     language: Optional[str] = None
     display: Optional[dict] = None
     name: Optional[str] = None

@@ -5,7 +5,7 @@
     "profile": "Profile",
     "appearance": "Appearance",
     "notifications": "Notifications",
-    "regionalSettings": "Regional Settings",
+    "currencySettings": "Currency",
     "roleFeatures": "Role-Based Features"
   },
   "profileDescription": "Your account information",
@@ -29,15 +29,8 @@
     "systemUpdates": "System Updates",
     "systemUpdatesDesc": "Notifications about platform updates"
   },
-  "regionalSettingsDescription": "Configure your region and currency",
-  "region": "Region",
+  "currencySettingsDescription": "Choose your display currency for all monetary values",
   "currency": "Currency",
-  "regions": {
-    "us": "United States",
-    "eu": "Europe",
-    "asia": "Asia Pacific",
-    "mena": "Middle East & Africa"
-  },
   "currencies": {
     "usd": "USD ($) – US Dollar",
     "eur": "EUR (€) – Euro",

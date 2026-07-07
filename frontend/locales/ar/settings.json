@@ -5,7 +5,7 @@
     "profile": "الملف الشخصي",
     "appearance": "المظهر",
     "notifications": "الإشعارات",
-    "regionalSettings": "الإعدادات الإقليمية",
+    "currencySettings": "العملة",
     "roleFeatures": "ميزات حسب الدور"
   },
   "profileDescription": "معلومات حسابك",
@@ -29,15 +29,8 @@
     "systemUpdates": "تحديثات النظام",
     "systemUpdatesDesc": "إشعارات حول تحديثات المنصة"
   },
-  "regionalSettingsDescription": "تكوين المنطقة والعملة",
-  "region": "المنطقة",
+  "currencySettingsDescription": "اختر عملة العرض لجميع المبالغ المالية",
   "currency": "العملة",
-  "regions": {
-    "us": "الولايات المتحدة",
-    "eu": "أوروبا",
-    "asia": "آسيا والمحيط الهادئ",
-    "mena": "الشرق الأوسط وأفريقيا"
-  },
   "currencies": {
     "usd": "دولار أمريكي ($)",
     "eur": "يورو (€)",

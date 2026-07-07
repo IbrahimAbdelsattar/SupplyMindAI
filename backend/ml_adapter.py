@@ -34,23 +34,34 @@ class DemandForecastService:
 
     def _load_forecast_model(self, model_path: Path | None = None) -> None:
         path = self._resolve_model_path(model_path)
-        if path is None or not path.exists():
-            LOGGER.info("No model pickle found at %s — will use CSV fallback", path)
-            return
+        loaded = False
 
-        try:
-            from ml_platform.models.demand_forecasting_pipeline import ForecastModel
+        if path is not None and path.exists():
+            try:
+                from ml_platform.models.demand_forecasting_pipeline import ForecastModel
 
-            self._forecast_model = ForecastModel.load()
-            LOGGER.info(
-                "ForecastModel loaded from %s (products=%d)",
-                path,
-                len(self._forecast_model._df["product_id"].unique())
-                if self._forecast_model._df is not None else 0,
-            )
-        except Exception as exc:
-            LOGGER.warning("Failed to load ForecastModel: %s — will use CSV fallback", exc)
-            self._forecast_model = None
+                self._forecast_model = ForecastModel.load()
+                LOGGER.info(
+                    "ForecastModel loaded from %s (products=%d)",
+                    path,
+                    len(self._forecast_model._df["product_id"].unique())
+                    if self._forecast_model._df is not None else 0,
+                )
+                loaded = True
+            except Exception as exc:
+                LOGGER.warning("Failed to load ForecastModel from pickle: %s", exc)
+
+        if not loaded:
+            LOGGER.info("Attempting background retraining on startup to initialize ForecastModel...")
+            try:
+                from ml_platform.models.demand_forecasting_pipeline import ForecastModel
+                model = ForecastModel()
+                model.fit()
+                self._forecast_model = model
+                LOGGER.info("ForecastModel successfully retrained and loaded on startup!")
+            except Exception as retrain_exc:
+                LOGGER.critical("Failed to retrain ForecastModel on startup: %s — falling back to CSV", retrain_exc)
+                self._forecast_model = None
 
     @staticmethod
     def _resolve_model_path(model_path: Path | None = None) -> Path | None:
@@ -104,47 +115,56 @@ class DemandForecastService:
 
         if sub.empty:
             base_monthly = 0.0
-            std = 0.0
-            slope = 0.0
+            std_monthly = 0.0
+            slope_monthly = 0.0
         else:
-            qty = sub["qty"] if "qty" in sub.columns else sub["total_qty"]
-            qty = pd.to_numeric(qty, errors='coerce').fillna(0)
+            qty_col = "qty" if "qty" in sub.columns else "total_qty"
+            sub[qty_col] = pd.to_numeric(sub[qty_col], errors='coerce').fillna(0)
+            sub["date"] = pd.to_datetime(sub["date"])
             
-            # Use last 90 days to determine base and trend
-            last_90 = qty.tail(90)
-            if len(last_90) > 1:
-                base_daily = float(last_90.mean())
-                std = float(last_90.std(ddof=0))
-                # Simple linear slope per day
-                x = np.arange(len(last_90))
-                slope_daily = float(np.polyfit(x, last_90.values, 1)[0])
+            # Group transactions by date first to get daily sales
+            daily_sales = sub.groupby("date")[qty_col].sum().reset_index()
+            
+            if not daily_sales.empty:
+                # Group by month to get actual monthly totals
+                daily_sales["ym"] = daily_sales["date"].dt.to_period("M")
+                monthly_sales = daily_sales.groupby("ym")[qty_col].sum().reset_index()
+                
+                # We use the last 3 active months to determine current baseline
+                last_months = monthly_sales.tail(3)
+                base_monthly = float(last_months[qty_col].mean()) if not last_months.empty else 0.0
+                std_monthly = float(monthly_sales[qty_col].std(ddof=0)) if len(monthly_sales) > 1 else 0.0
+                
+                # Simple linear trend on monthly aggregates
+                if len(monthly_sales) > 1:
+                    x = np.arange(len(monthly_sales))
+                    slope_monthly = float(np.polyfit(x, monthly_sales[qty_col].values, 1)[0])
+                else:
+                    slope_monthly = 0.0
             else:
-                base_daily = float(qty.mean())
-                std = 0.0
-                slope_daily = 0.0
-
-            base_monthly = base_daily * 30
-            slope = slope_daily * 30  # Monthly slope
+                base_monthly = 0.0
+                std_monthly = 0.0
+                slope_monthly = 0.0
 
         rows = []
         today = date.today()
         
-        # Determine base confidence
-        base_confidence = min(95.0, max(70.0, 88.0 - (std / (base_daily + 1)) * 10)) if base_daily > 0 else 70.0
+        # Determine base confidence based on monthly variance
+        base_confidence = min(95.0, max(70.0, 88.0 - (std_monthly / (base_monthly + 1)) * 10)) if base_monthly > 0 else 70.0
 
         current_forecast = base_monthly
         for i in range(max(1, n_months)):
             period = (today.replace(day=1) + timedelta(days=32 * i)).strftime("%Y-%m")
             
-            # Apply trend
-            current_forecast = max(0, current_forecast + slope)
+            # Apply monthly trend
+            current_forecast = max(0, current_forecast + slope_monthly)
             predicted_demand = int(round(current_forecast))
             
             # Determine trend string
-            if abs(slope) < (base_monthly * 0.02):
+            if abs(slope_monthly) < (base_monthly * 0.02):
                 trend_str = "stable"
             else:
-                trend_str = "increasing" if slope > 0 else "decreasing"
+                trend_str = "increasing" if slope_monthly > 0 else "decreasing"
                 
             # Confidence decays slightly over time
             confidence = max(50, int(base_confidence - (i * 2)))

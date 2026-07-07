@@ -1,0 +1,68 @@
+{
+  "name": "SupplyMind Light Neumorphism",
+  "dataColors": [
+    "#1F4E5B",
+    "#FFC5B4",
+    "#72A8B5",
+    "#0D3B43",
+    "#E6B0AA",
+    "#76D7C4",
+    "#E59866",
+    "#F5B041"
+  ],
+  "background": "#F3F4F6",
+  "foreground": "#1F4E5B",
+  "tableAccent": "#1F4E5B",
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [
+          {
+            "show": true,
+            "color": { "solid": { "color": "#FFFFFF" } },
+            "transparency": 0
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "dropShadow": [
+          {
+            "show": true,
+            "color": { "solid": { "color": "#A3B1C8" } },
+            "transparency": 70,
+            "angle": 135,
+            "distance": 4,
+            "blur": 8,
+            "position": "Outer"
+          }
+        ],
+        "visualHeader": [
+          {
+            "show": true
+          }
+        ],
+        "title": [
+          {
+            "show": true,
+            "fontColor": { "solid": { "color": "#1F4E5B" } },
+            "fontSize": 12,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ]
+      }
+    },
+    "page": {
+      "*": {
+        "background": [
+          {
+            "color": { "solid": { "color": "#F3F4F6" } },
+            "transparency": 0
+          }
+        ]
+      }
+    }
+  }
+}

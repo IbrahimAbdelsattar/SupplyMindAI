@@ -16,19 +16,20 @@ export const currencySymbols: Record<Currency, string> = {
 };
 
 /**
- * Convert an amount in USD to the target currency.
+ * Convert an amount in EGP (the base database currency) to the target currency.
  */
-export function convertToCurrency(amountUsd: number, target: Currency): number {
+export function convertToCurrency(amountEgp: number, target: Currency): number {
+  const amountUsd = amountEgp / conversionRates['egp'];
   const rate = conversionRates[target];
   return amountUsd * rate;
 }
 
 /**
- * Format a monetary amount according to the selected currency.
+ * Format a monetary amount (in EGP base) according to the selected currency.
  * If compact is true, it uses '1.2M' format for large numbers.
  */
-export function formatCurrency(amountUsd: number, currency: Currency, compact: boolean = false): string {
-  const converted = convertToCurrency(amountUsd, currency);
+export function formatCurrency(amountEgp: number, currency: Currency, compact: boolean = false): string {
+  const converted = convertToCurrency(amountEgp, currency);
   const symbol = currencySymbols[currency] ?? '';
   
   const options: Intl.NumberFormatOptions = {

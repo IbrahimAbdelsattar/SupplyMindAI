@@ -4,6 +4,7 @@ import { ArrowUpDown, Package, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { List } from "react-window";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 export interface ProductItem {
   product_id: string;
@@ -30,10 +31,11 @@ interface RowData {
   items: ProductItem[];
   selectedId: string | null;
   onSelectItem: (item: ProductItem) => void;
+  formatCurrency: (amount: number) => string;
 }
 
 const Row = React.memo((props: { index: number; style: React.CSSProperties } & RowData) => {
-  const { index, style, items, selectedId, onSelectItem } = props;
+  const { index, style, items, selectedId, onSelectItem, formatCurrency } = props;
   const item = items[index];
 
   if (!item) return null;
@@ -52,8 +54,8 @@ const Row = React.memo((props: { index: number; style: React.CSSProperties } & R
       <div className="flex-1 min-w-[100px] px-4 py-3 truncate">{item.category}</div>
       <div className="flex-1 min-w-[80px] px-4 py-3 truncate">{item.type}</div>
       <div className="flex-1 min-w-[70px] px-4 py-3 truncate">{item.size}</div>
-      <div className="flex-1 min-w-[90px] px-4 py-3 text-right font-mono text-xs">{item.min_price?.toFixed(2) ?? "0.00"}</div>
-      <div className="flex-1 min-w-[90px] px-4 py-3 text-right font-mono text-xs">{item.max_price?.toFixed(2) ?? "0.00"}</div>
+      <div className="flex-1 min-w-[90px] px-4 py-3 text-right font-mono text-xs">{formatCurrency(item.min_price ?? 0)}</div>
+      <div className="flex-1 min-w-[90px] px-4 py-3 text-right font-mono text-xs">{formatCurrency(item.max_price ?? 0)}</div>
     </div>
   );
 });
@@ -62,6 +64,7 @@ Row.displayName = "Row";
 
 export default function InventoryTable({ data, selectedId, onSelectItem }: InventoryTableProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("product_id");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -109,8 +112,8 @@ export default function InventoryTable({ data, selectedId, onSelectItem }: Inven
   };
 
   const itemData: RowData = useMemo(
-    () => ({ items: filtered, selectedId, onSelectItem }),
-    [filtered, selectedId, onSelectItem]
+    () => ({ items: filtered, selectedId, onSelectItem, formatCurrency }),
+    [filtered, selectedId, onSelectItem, formatCurrency]
   );
 
   const SortHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (

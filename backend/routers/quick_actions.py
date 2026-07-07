@@ -17,11 +17,18 @@ def run_forecast(user: dict = Depends(_get_current_user)):
         from ml_platform.models.demand_forecasting_pipeline import ForecastModel
         LOGGER.info("Starting demand forecasting pipeline run via Quick Action...")
         model = ForecastModel()
-        model.fit()  # Trains the model and generates future_forecast.csv
-        
-        # Reload the model in the global context
+        model.fit()
+
+        # Update the DemandForecastService wrapper (not replace it)
         import backend.globals as bg
-        bg.ML_MODEL = model
+        if bg.ML_MODEL is not None and hasattr(bg.ML_MODEL, "_forecast_model"):
+            bg.ML_MODEL._forecast_model = model
+            LOGGER.info("Updated DemandForecastService._forecast_model with retrained model.")
+        else:
+            from backend.bootstrap import init_ml_model
+            bg.ML_MODEL = init_ml_model(bg.STORE)
+            LOGGER.info("Re-initialized DemandForecastService with retrained model.")
+
         LOGGER.info("Demand forecasting pipeline run completed successfully.")
         return {"status": "success", "message": "Forecasting model pipeline run successfully."}
     except Exception as exc:
@@ -92,10 +99,18 @@ def train_model_endpoint(user: dict = Depends(_get_current_user)):
         LOGGER.info("Retraining XGBoost model via MLOps Quick Action...")
         model = ForecastModel()
         model.fit()
-        
-        # Reload the model in the global context
+
+        # Update the DemandForecastService wrapper (not replace it)
         import backend.globals as bg
-        bg.ML_MODEL = model
+        if bg.ML_MODEL is not None and hasattr(bg.ML_MODEL, "_forecast_model"):
+            bg.ML_MODEL._forecast_model = model
+            LOGGER.info("Updated DemandForecastService._forecast_model with retrained model.")
+        else:
+            # Fallback: re-init the full service
+            from backend.bootstrap import init_ml_model
+            bg.ML_MODEL = init_ml_model(bg.STORE)
+            LOGGER.info("Re-initialized DemandForecastService with retrained model.")
+
         LOGGER.info("Model retraining completed successfully.")
         return {"status": "success", "message": "Model retrained successfully."}
     except Exception as exc:

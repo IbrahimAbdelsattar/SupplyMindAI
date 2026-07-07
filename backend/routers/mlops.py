@@ -291,21 +291,5 @@ def mlops_metrics(user: dict = Depends(_get_current_user)):
 @router.get("/langsmith")
 def mlops_langsmith(user: dict = Depends(_get_current_user)):
     """Return LangSmith agent tracing data."""
-    LANG_SMITH_AGENTS = [
-        {"name": "supervisor_agent", "label": "Supervisor Agent", "model": "nvidia/nemotron-3-super-120b-a12b:free", "status": "healthy", "calls_last_24h": 847, "errors_last_24h": 3, "avg_latency_seconds": 1.42, "first_seen": "2026-04-01T00:00:00Z", "last_seen": datetime.utcnow().isoformat() + "Z"},
-        {"name": "forecasting_agent", "label": "Forecasting Agent", "model": "nvidia/nemotron-3-super-120b-a12b:free", "status": "healthy", "calls_last_24h": 412, "errors_last_24h": 1, "avg_latency_seconds": 2.15, "first_seen": "2026-04-01T00:00:00Z", "last_seen": datetime.utcnow().isoformat() + "Z"},
-        {"name": "inventory_agent", "label": "Inventory Agent", "model": "nvidia/nemotron-3-super-120b-a12b:free", "status": "healthy", "calls_last_24h": 623, "errors_last_24h": 0, "avg_latency_seconds": 1.87, "first_seen": "2026-04-01T00:00:00Z", "last_seen": datetime.utcnow().isoformat() + "Z"},
-        {"name": "rag_agent", "label": "RAG Agent", "model": "nvidia/nemotron-3-super-120b-a12b:free", "status": "degraded", "calls_last_24h": 234, "errors_last_24h": 12, "avg_latency_seconds": 3.45, "first_seen": "2026-05-15T00:00:00Z", "last_seen": datetime.utcnow().isoformat() + "Z"},
-        {"name": "mlops_agent", "label": "MLOps Monitor Agent", "model": "nvidia/nemotron-3-super-120b-a12b:free", "status": "healthy", "calls_last_24h": 156, "errors_last_24h": 0, "avg_latency_seconds": 0.98, "first_seen": "2026-04-10T00:00:00Z", "last_seen": datetime.utcnow().isoformat() + "Z"},
-        {"name": "insights_agent", "label": "Insights Agent", "model": "nvidia/nemotron-3-super-120b-a12b:free", "status": "healthy", "calls_last_24h": 389, "errors_last_24h": 2, "avg_latency_seconds": 1.63, "first_seen": "2026-04-01T00:00:00Z", "last_seen": datetime.utcnow().isoformat() + "Z"},
-    ]
-    total_calls = sum(a["calls_last_24h"] for a in LANG_SMITH_AGENTS)
-    total_errors = sum(a["errors_last_24h"] for a in LANG_SMITH_AGENTS)
-    return {
-        "enabled": True,
-        "project": "supplymind-ai-agents",
-        "api_key_configured": True,
-        "agents": LANG_SMITH_AGENTS,
-        "total_calls": total_calls,
-        "errors_last_24h": total_errors,
-    }
+    from backend.services.langsmith_tracing_service import fetch_tracing_data
+    return fetch_tracing_data()

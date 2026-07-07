@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends
 
@@ -36,11 +37,6 @@ def get_settings(user=Depends(_get_current_user)):
 
 
 @router.put("")
-import uuid
-
-# ... existing imports remain unchanged ...
-
-@router.put("\"")
 def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user)):
     uid = _uid(user)
     try:
