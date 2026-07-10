@@ -205,69 +205,122 @@ LLM-generated narratives<br/><br/>
 
 ## 🏗️ System Architecture
 
-<div align="center">
-  <img src="docs/images/architecture_diagram.png" alt="SupplyMind AI Architecture" width="90%"/>
-</div>
-
 <br/>
 
 ```mermaid
 flowchart LR
-    user["👤 Manager / Analyst"]
+    user["Manager / Analyst User"]
 
-    subgraph FE["🖥️ Frontend SPA (React + Vite)"]
-        app["React + TypeScript + Shadcn/UI"]
-        pages["Dashboard · Forecasting · Inventory\nAI Insights · MLOps · Reports"]
-        shared["Sidebar · Header · Charts · AI Chatbot"]
-        app --> pages --> shared
+    subgraph FE["Frontend SPA (Current)"]
+        app["React + Vite + React Router"]
+        providers["Providers<br/>QueryClientProvider<br/>ClerkProvider<br/>ThemeProvider<br/>CurrencyProvider<br/>DateRangeProvider"]
+        pages["Pages<br/>Landing<br/>Login<br/>Dashboard<br/>Forecasting<br/>Inventory<br/>AI Insights<br/>Reports<br/>MLOps<br/>Settings<br/>404"]
+        shared["Shared UI<br/>Dashboard Sidebar<br/>Dashboard Header<br/>Charts - Recharts<br/>AI Chatbot<br/>Language Switcher"]
+        i18n["Localization<br/>English / Arabic RTL<br/>12 Namespaces"]
+        apiClient["API Layer<br/>TanStack Query<br/>api.ts<br/>knowledgeApi.ts"]
+
+        app --> providers
+        providers --> pages
+        pages --> shared
+        pages --> apiClient
+        i18n -.-> pages
     end
 
-    subgraph API["⚡ FastAPI Backend"]
-        gateway["/api/v1 Gateway"]
-        auth["Clerk JWT Auth\nRBAC (4 roles, 19 perms)"]
-        guardrails["Guardrails Middleware\nInput/Output Sanitization"]
-        forecastSvc["Forecast Service\nXGBoost Pipeline"]
-        inventorySvc["Inventory + Alert Services"]
-        insightSvc["Insights + LLM Chat\nOpenRouter Multi-Model"]
-        mlopsSvc["MLOps + Reports Services"]
-        cache[("🔴 Redis Cache")]
-        gateway --> auth --> guardrails --> forecastSvc & inventorySvc & insightSvc & mlopsSvc
+    subgraph API["Application Backend (Current)"]
+        gateway["FastAPI<br/>API v1"]
+        auth["Authentication<br/>JWT Validation<br/>Clerk"]
+        dataSvc["Data Services"]
+        forecastSvc["Forecast Services<br/>ML Adapter<br/>Forecast Intelligence"]
+        inventorySvc["Inventory Services<br/>RAG<br/>Alerts"]
+        insightSvc["Insights<br/>AI Chat<br/>Copilot"]
+        mlopsSvc["MLOps<br/>Reports"]
+        settingsSvc["Settings<br/>Storage"]
+        cache[("Redis")]
+        guardrails["AI Guardrails<br/>Input Validation<br/>Output Validation<br/>RAG Protection<br/>Forecast Protection<br/>Agent Protection<br/>Tenant Isolation<br/>Rate Limiting"]
+
+        gateway --> auth
+        gateway --> dataSvc
+        gateway --> forecastSvc
+        gateway --> inventorySvc
+        gateway --> insightSvc
+        gateway --> mlopsSvc
+        gateway --> settingsSvc
+        gateway --> guardrails
         gateway <--> cache
     end
 
-    subgraph DATA["🤖 ML Platform"]
-        raw["📂 CSV Data Sources\n8 Business Datasets"]
-        ingest["Ingestion + Validation\nPandas + Pydantic"]
-        features["Feature Engineering\nTime-series features"]
-        postgres[("🐘 PostgreSQL\n+ SQLite Fallback")]
-        training["XGBoost Training\nR² = 0.9984"]
-        registry["📦 MLflow Registry"]
-        drift["Drift Detection + Retraining"]
-        optimizer["EOQ / ROP / Safety Stock"]
-        vector[("🔍 ChromaDB\nRAG Knowledge Base")]
-        raw --> ingest --> features --> training --> registry
-        ingest --> postgres
-        features --> drift
-        raw --> vector
+    subgraph DATA["Data and ML Platform (Current)"]
+        raw["CSV Datasets<br/>Products<br/>Sales<br/>Inventory<br/>Production<br/>Suppliers<br/>Contracts<br/>Raw Materials<br/>Bill of Materials"]
+        postgres[("PostgreSQL / Supabase")]
+        training["Training Pipeline<br/>XGBoost<br/>Scikit Learn"]
+        registry["MLflow<br/>Model Registry"]
+        drift["Model Drift Detection<br/>Automatic Retraining"]
+        optimizer["Inventory Optimizer<br/>EOQ<br/>ROP<br/>Safety Stock"]
+        vector[("ChromaDB")]
+        embeddings["Sentence Transformers<br/>MiniLM L6 v2"]
+        agentGraph["LangGraph Agents<br/>Supervisor<br/>Forecasting<br/>Inventory<br/>MLOps<br/>RAG"]
+        llmClient["LLM Providers<br/>OpenAI<br/>OpenRouter<br/>NVIDIA"]
+
+        raw --> postgres
+        raw --> training
+        training --> registry
+        training --> drift
+        vector --> embeddings
+        agentGraph --> vector
+        agentGraph --> llmClient
         optimizer --> postgres
     end
 
-    subgraph CLOUD["☁️ Infrastructure"]
-        llm["OpenRouter API\nMulti-Model Gateway"]
-        celery["Celery Workers\nAsync Task Queue"]
-        docker["Docker Compose\nDev + Prod Stacks"]
+    subgraph INFRA["Infrastructure (Current)"]
+        docker["Docker<br/>Docker Compose"]
+        nginx["Nginx<br/>Reverse Proxy<br/>API Gateway"]
+        langsmith["LangSmith"]
+        otel["OpenTelemetry"]
+        prom["Prometheus"]
+        ci["GitHub Actions<br/>Continuous Integration"]
     end
 
     user --> app
-    pages -->|"API"| gateway
-    forecastSvc --> postgres & registry
-    inventorySvc --> postgres & optimizer & vector
-    insightSvc --> forecastSvc & llm
-    mlopsSvc --> registry & drift & postgres
-    docker --> app & gateway
-    celery --> forecastSvc & inventorySvc
-```
 
+    apiClient <--> gateway
+
+    dataSvc <--> postgres
+
+    auth --> postgres
+
+    forecastSvc --> postgres
+    forecastSvc --> registry
+    forecastSvc --> agentGraph
+
+    inventorySvc --> postgres
+    inventorySvc --> optimizer
+    inventorySvc --> vector
+    inventorySvc --> forecastSvc
+
+    insightSvc --> postgres
+    insightSvc --> forecastSvc
+    insightSvc --> llmClient
+    insightSvc --> agentGraph
+
+    mlopsSvc --> registry
+    mlopsSvc --> drift
+    mlopsSvc --> postgres
+
+    settingsSvc --> postgres
+
+    docker --> app
+    docker --> gateway
+    docker --> postgres
+
+    nginx --> app
+    nginx --> gateway
+
+    langsmith --> gateway
+    otel --> gateway
+    prom --> gateway
+
+    ci --> docker
+```
 ---
 
 ## 🔄 Data Flow Architecture
