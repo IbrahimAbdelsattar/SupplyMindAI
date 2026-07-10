@@ -51,6 +51,7 @@ services:
       LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT:-supplymind-ai}
       MODEL_PATH: /app/ml_platform/models/demand_model_pipeline.pkl
       FORECAST_CSV_PATH: /app/ml_platform/models/future_forecast.csv
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-do-not-use-in-production}
       LOG_LEVEL: DEBUG
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:

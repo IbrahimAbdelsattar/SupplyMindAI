@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
