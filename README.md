@@ -493,66 +493,163 @@ The platform implements the following optimizations to minimize token usage, lat
 ```mermaid
 erDiagram
     USERS {
-        string id PK "Clerk user ID"
-        string email "Unique email"
-        string name "Display name"
-        string role "admin/manager/analyst/viewer"
-        boolean active "Account status"
-        datetime created_at "Registration date"
+        uuid id PK
+        string email
+        string name
+        string role
+        datetime created_at
+        json preferences
+        json clerk_metadata
     }
 
-    FORECAST_RESULTS {
-        int id PK "Auto-increment"
-        string product_id "Product reference"
-        date forecast_date "Forecast target date"
-        float predicted_demand "ML prediction"
-        float confidence_lower "Lower bound"
-        float confidence_upper "Upper bound"
-        string model_version "MLflow version"
-        datetime created_at "Prediction timestamp"
+    PRODUCTS {
+        string product_id PK
+        string product_name
+        string category
+        string type
+        decimal unit_price
+        decimal unit_cost
     }
 
-    KNOWLEDGE_DOCUMENTS {
-        int id PK "Auto-increment"
-        string title "Document title"
-        text content "Full text content"
-        string category "Document category"
-        datetime ingested_at "Ingestion timestamp"
+    SALES_DAILY {
+        uuid id PK
+        string product_id FK
+        date date
+        int units_sold
+        decimal revenue
+        string contract_id FK
     }
 
-    KNOWLEDGE_EMBEDDINGS {
-        int id PK "Auto-increment"
-        int document_id FK "References knowledge_documents"
-        text chunk "Text chunk"
-        vector embedding "ChromaDB vector"
+    INVENTORY {
+        uuid id PK
+        string product_id FK
+        date snapshot_date
+        int stock_on_hand
+        int reorder_point
+        int safety_stock
+        int lead_time_days
+        string status
     }
 
-    CONVERSATIONS {
-        int id PK "Auto-increment"
-        string user_id FK "References users"
-        text message "Chat message"
-        string role "user/assistant"
-        datetime created_at "Message timestamp"
+    PRODUCTION_SCHEDULE {
+        uuid id PK
+        string product_id FK
+        date planned_date
+        int quantity
+        string status
     }
 
-    AGENT_MEMORY {
-        int id PK "Auto-increment"
-        string agent_name "Agent identifier"
-        text memory_content "Stored memory"
-        string context "Memory context"
-        datetime created_at "Memory timestamp"
+    SUPPLIERS {
+        string supplier_id PK
+        string supplier_name
+        string contact_info
+        decimal reliability_score
+    }
+
+    CONTRACTS {
+        string contract_id PK
+        string product_id FK
+        string supplier_id FK
+        date start_date
+        date end_date
+        decimal contract_value
+    }
+
+    RAW_MATERIALS {
+        string material_id PK
+        string supplier_id FK
+        string material_name
+        decimal unit_cost
+        int lead_time_days
+    }
+
+    BOM {
+        uuid id PK
+        string product_id FK
+        string material_id FK
+        decimal quantity_per_unit
+    }
+
+    FORECASTS {
+        uuid id PK
+        string product_id FK
+        uuid model_run_id FK
+        date forecast_date
+        int horizon_days
+        json predictions
+        json confidence_intervals
+        decimal accuracy
+        datetime created_at
+    }
+
+    MODEL_RUNS {
+        uuid id PK
+        string model_name
+        string model_version
+        string status
+        decimal accuracy
+        datetime trained_at
+        string artifact_path
+        json hyperparameters
+    }
+
+    ALERTS {
+        uuid id PK
+        string product_id FK
+        uuid user_id FK
+        string type
+        string severity
+        string message
+        boolean acknowledged
+        datetime created_at
     }
 
     USER_SETTINGS {
-        int id PK "Auto-increment"
-        string user_id FK "References users"
-        json preferences "Theme, currency, etc."
-        datetime updated_at "Last update"
+        uuid user_id PK, FK
+        string theme
+        string currency
+        json notifications
+        json display_preferences
+        datetime updated_at
     }
 
-    USERS ||--o{ CONVERSATIONS : "has"
-    USERS ||--o{ USER_SETTINGS : "has"
-    KNOWLEDGE_DOCUMENTS ||--o{ KNOWLEDGE_EMBEDDINGS : "chunks"
+    DRIFT_REPORTS {
+        uuid id PK
+        datetime report_date
+        int features_analyzed
+        boolean drift_detected
+        json details
+        string recommendation
+    }
+
+    REPORTS {
+        uuid id PK
+        string title
+        string type
+        string format
+        string file_path
+        uuid generated_by FK
+        string status
+        datetime created_at
+    }
+
+    USERS ||--|| USER_SETTINGS : has
+    USERS ||--o{ ALERTS : acknowledges
+    USERS ||--o{ REPORTS : generates
+
+    PRODUCTS ||--o{ SALES_DAILY : sold_in
+    PRODUCTS ||--o{ INVENTORY : stocked_as
+    PRODUCTS ||--o{ PRODUCTION_SCHEDULE : produced_as
+    PRODUCTS ||--o{ CONTRACTS : contracted_as
+    PRODUCTS ||--o{ BOM : composed_of
+    PRODUCTS ||--o{ FORECASTS : predicted_for
+    PRODUCTS ||--o{ ALERTS : triggers
+
+    CONTRACTS ||--o{ SALES_DAILY : fulfilled_by
+    SUPPLIERS ||--o{ RAW_MATERIALS : supplies
+    RAW_MATERIALS ||--o{ BOM : used_in
+
+    MODEL_RUNS ||--o{ FORECASTS : generates
 ```
 
 ---
