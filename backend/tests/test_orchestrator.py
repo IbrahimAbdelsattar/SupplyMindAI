@@ -1,3 +1,5 @@
+import os
+os.environ["RESTRICT_CHATBOT"] = "false"
 import pytest
 from unittest.mock import MagicMock, patch
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage

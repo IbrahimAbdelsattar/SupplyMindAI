@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 from typing import Any, Dict, AsyncGenerator
@@ -39,14 +40,18 @@ class AIOrchestrator:
                 "engine": "orchestrator"
             }
 
-        # 2. Intent Detection
-        intent_info = self.intent_detector.detect_intent(query)
-        intent = intent_info.get("intent", "unknown")
-        confidence = intent_info.get("confidence", 0.0)
-
-        # 3. Route & Selected Agent (with clarification fallback to Customer Support)
-        if confidence < config.INTENT_CONFIDENCE_THRESHOLD or intent == "unknown":
+        # 2. Intent Detection & Routing Override
+        if os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
             intent = "customer_support"
+            confidence = 1.0
+        else:
+            intent_info = self.intent_detector.detect_intent(query)
+            intent = intent_info.get("intent", "unknown")
+            confidence = intent_info.get("confidence", 0.0)
+
+            # 3. Route & Selected Agent (with clarification fallback to Customer Support)
+            if confidence < config.INTENT_CONFIDENCE_THRESHOLD or intent == "unknown":
+                intent = "customer_support"
 
         # 4. Agent Execution
         try:
@@ -104,14 +109,18 @@ class AIOrchestrator:
             yield {"type": "error", "message": "Security check triggered. Your request was flagged as unsafe."}
             return
 
-        # 2. Intent Detection
-        intent_info = self.intent_detector.detect_intent(query)
-        intent = intent_info.get("intent", "unknown")
-        confidence = intent_info.get("confidence", 0.0)
-
-        # 3. Route & Selected Agent (fallback to Customer Support)
-        if confidence < config.INTENT_CONFIDENCE_THRESHOLD or intent == "unknown":
+        # 2. Intent Detection & Routing Override
+        if os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
             intent = "customer_support"
+            confidence = 1.0
+        else:
+            intent_info = self.intent_detector.detect_intent(query)
+            intent = intent_info.get("intent", "unknown")
+            confidence = intent_info.get("confidence", 0.0)
+
+            # 3. Route & Selected Agent (fallback to Customer Support)
+            if confidence < config.INTENT_CONFIDENCE_THRESHOLD or intent == "unknown":
+                intent = "customer_support"
 
         # 4. Stream Execute Agent
         yield {"type": "status", "message": f"Routing query to {intent.replace('_', ' ').title()} Agent..."}

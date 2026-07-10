@@ -83,6 +83,7 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-v4-flash:free}
       - ALLOWED_DOMAIN=${ALLOWED_DOMAIN:-supplymind.tech}
+      - RESTRICT_CHATBOT=${RESTRICT_CHATBOT:-true}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
       - STORAGE_PATH=/app/data/storage
     depends_on:
@@ -144,6 +145,7 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
       - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-v4-flash:free}
       - ALLOWED_DOMAIN=${ALLOWED_DOMAIN:-supplymind.tech}
+      - RESTRICT_CHATBOT=${RESTRICT_CHATBOT:-true}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
       - STORAGE_PATH=/app/data/storage
     depends_on:
