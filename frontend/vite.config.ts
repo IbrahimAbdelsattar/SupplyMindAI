@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => ({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      // Auth endpoints are mounted at /auth (not /api/v1/auth) on the backend
+      '/auth': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

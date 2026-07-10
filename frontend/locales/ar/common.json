@@ -14,7 +14,8 @@
     "settings": "الإعدادات",
     "alerts": "التنبيهات",
     "navigation": "التنقل",
-    "security": "الأمان"
+    "security": "الأمان",
+    "admin": "المشرف"
   },
   "theme": {
     "light": "الوضع النهاري",

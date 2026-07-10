@@ -307,6 +307,21 @@
   }
 }
 
+/* ── Marquee ─────────────────────────────────────────────────────────────── */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+[data-dir="rtl"] .animate-marquee {
+  animation-direction: reverse;
+}
+
+/* ── Word Cycler ─────────────────────────────────────────────────────────── */
+/* Handled by React state in HeroSection.tsx — no CSS animation needed */
+
 /* ── Reduced Motion ────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

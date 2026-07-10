@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Currency, formatCurrency as formatCurrencyUtil, convertToCurrency, currencySymbols } from '@/lib/currency';
 import { apiFetch } from '@/lib/api';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 interface CurrencyContextType {
   currency: Currency;
@@ -29,6 +29,7 @@ export const useCurrency = () => {
 };
 
 export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuthContext();
   const [currency, setCurrencyState] = useState<Currency>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('app_currency') as Currency) || 'usd';
@@ -36,17 +37,15 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     return 'usd';
   });
 
-  const { isSignedIn } = useAuth();
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('app_currency', currency);
     }
   }, [currency]);
 
-  // Load currency preference from backend when signed in
+  // Load currency preference from backend
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!user) return;
     const loadSettings = async () => {
       try {
         const res = await apiFetch<{ settings: StoredSettings }>('/settings');
@@ -61,7 +60,7 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
     };
     loadSettings();
-  }, [isSignedIn]);
+  }, [user]);
 
   const setCurrency = (newCurrency: Currency) => {
     setCurrencyState(newCurrency);

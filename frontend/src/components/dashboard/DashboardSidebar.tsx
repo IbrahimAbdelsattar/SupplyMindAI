@@ -16,6 +16,7 @@ import {
   Settings,
   Activity,
   AlertTriangle,
+  Shield,
   Sun,
   Moon,
   LogOut,
@@ -43,6 +44,7 @@ const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: s
   { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'analyst' },
   { icon: AlertTriangle, labelKey: 'common:nav.alerts', path: '/alerts' },
   { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops', minRole: 'admin' },
+  { icon: Shield, labelKey: 'common:nav.admin', path: '/admin/users', minRole: 'admin' },
   { icon: Settings, labelKey: 'common:nav.settings', path: '/settings' },
 ];
 

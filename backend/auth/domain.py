@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 
-ALLOWED_DOMAIN = "supplymind.tech"
+import os
+
+ALLOWED_DOMAIN = os.getenv("ALLOWED_DOMAIN", "supplymind.tech").strip()
 
 logger = logging.getLogger("backend.auth.domain")
 
@@ -23,9 +25,11 @@ def extract_domain(email: str) -> str | None:
 
 
 def is_valid_domain(email: str) -> bool:
-    """Return True only if the email belongs to the allowed corporate domain."""
+    """Return True if the email belongs to the allowed domain (if configured)."""
+    if not ALLOWED_DOMAIN or ALLOWED_DOMAIN == "*":
+        return True
     domain = extract_domain(email)
-    return domain == ALLOWED_DOMAIN
+    return domain == ALLOWED_DOMAIN.lower()
 
 
 def validate_domain_or_reject(email: str) -> str:
@@ -36,7 +40,7 @@ def validate_domain_or_reject(email: str) -> str:
     domain = extract_domain(email)
     if domain is None:
         raise ValueError(f"Malformed email address: {email}")
-    if domain != ALLOWED_DOMAIN:
+    if ALLOWED_DOMAIN and ALLOWED_DOMAIN != "*" and domain != ALLOWED_DOMAIN.lower():
         raise ValueError(
             f"Email domain '{domain}' is not authorized. "
             f"Only @{ALLOWED_DOMAIN} corporate emails are permitted."

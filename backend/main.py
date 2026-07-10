@@ -133,7 +133,6 @@ async def lifespan(app: FastAPI):
     global ML_MODEL, FORECAST_INTELLIGENCE
     import backend.globals as bg
     from backend.bootstrap import init_ml_model, load_environment
-
     load_environment()
 
     # Required Environment Variables Validation
@@ -301,6 +300,7 @@ except Exception as exc:
     logger.warning("Knowledge router not loaded: %s", exc)
 
 _ROUTERS_TO_LOAD = [
+    ("backend.routers.login", "router"),
     ("backend.routers.auth", "router"),
     ("backend.routers.system", "router"),
     ("backend.routers.mlops", "router"),
@@ -539,6 +539,7 @@ def _run_migrations() -> None:
     except Exception as exc:
         logger.warning("Alembic migration failed (%s), falling back to create_tables()", exc)
 
+
 # -----------------------------------------------------------------------------
 # Entry point
 # -----------------------------------------------------------------------------
@@ -551,3 +552,4 @@ if __name__ == "__main__":
         reload=ENVIRONMENT == "development",
         log_level="info",
     )
+    # Force reload: 3

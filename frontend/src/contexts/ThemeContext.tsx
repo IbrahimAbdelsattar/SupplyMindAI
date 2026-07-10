@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth } from '@clerk/clerk-react';
 
 type Theme = 'light' | 'dark';
 
@@ -19,7 +18,6 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { isSignedIn } = useAuth();
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('theme') as Theme;
@@ -29,9 +27,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return 'dark';
   });
 
-  // Load theme preference from backend when signed in
+  // Load theme preference from backend
   useEffect(() => {
-    if (!isSignedIn) return;
     const loadSettings = async () => {
       try {
         const { fetchApi } = await import('@/lib/api');
@@ -45,7 +42,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     };
     loadSettings();
-  }, [isSignedIn]);
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;

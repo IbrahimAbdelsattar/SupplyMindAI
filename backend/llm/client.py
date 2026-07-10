@@ -6,14 +6,14 @@ from langchain_openai import ChatOpenAI
 
 LOGGER = logging.getLogger(__name__)
 
-# Primary free model — reliable, widely available on OpenRouter
-DEFAULT_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
+# Primary model — fast, cheap, widely available on OpenRouter
+DEFAULT_MODEL = "google/gemini-2.5-flash"
 
-# Ordered fallback chain for free-tier OpenRouter models
+# Ordered fallback chain for OpenRouter models
 FALLBACK_MODELS = [
-    "mistralai/mistral-7b-instruct:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "qwen/qwen-2-7b-instruct:free",
+    "qwen/qwen-2.5-7b-instruct",
+    "meta-llama/llama-3-8b-instruct:free",
+    "google/gemma-2-9b-it:free",
 ]
 
 

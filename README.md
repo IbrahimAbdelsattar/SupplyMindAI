@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white"/>
   <img src="https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Clerk-Auth-6C47FF?style=for-the-badge&logo=clerk&logoColor=white"/>
+  <img src="https://img.shields.io/badge/JWT-Auth-00D4AA?style=for-the-badge&logo=lock&logoColor=white"/>
 </p>
 
 <!-- Badges Row 2 -->
@@ -224,7 +224,7 @@ flowchart LR
 
     subgraph API["⚡ FastAPI Backend"]
         gateway["/api/v1 Gateway"]
-        auth["Clerk JWT Auth\nRBAC (4 roles, 19 perms)"]
+        auth["Self-Hosted JWT Auth\nRBAC (4 roles, 19 perms)"]
         guardrails["Guardrails Middleware\nInput/Output Sanitization"]
         forecastSvc["Forecast Service\nXGBoost Pipeline"]
         inventorySvc["Inventory + Alert Services"]
@@ -294,7 +294,7 @@ flowchart TD
 
     subgraph API_LAYER["🌐 API Layer"]
         REST["⚡ FastAPI REST\n10 Routers · 30+ Endpoints"]
-        AUTH["🔐 Clerk Auth\nJWT Verification\nDomain Validation"]
+        AUTH["🔐 Self-Hosted JWT Auth\nJWT Verification\nRole-Based Access Control"]
         GUARD["🛡️ Guardrails\nInput/Output Safety\nRate Limiting"]
     end
 
@@ -352,21 +352,19 @@ graph LR
 
 ```mermaid
 flowchart TD
-    USER["👤 User\nAttempts Login"] --> CLERK["🔐 Clerk SignIn\nCustom Neumorphism UI"]
-    CLERK --> JWT["🎫 JWT Token\nClerk-issued"]
+    USER["👤 User\nAttempts Login"] --> LOGIN["🔐 Login Page\nEmail + Password"]
+    LOGIN --> POST["POST /auth/login\nCredentials"]
+    POST --> JWT["🎫 JWT Token\nAccess + Refresh"]
     JWT --> MIDDLEWARE["🔒 Auth Middleware\nExtracts Bearer token"]
-    MIDDLEWARE --> JWKS["🔑 JWKS Verification\nClerk public keys"]
-    JWKS --> DOMAIN{"🌐 Domain\nCheck"}
-    DOMAIN -->|"@supplymind.tech ✅"| RBAC{"🎭 Role\nCheck"}
-    DOMAIN -->|"Other domain ❌"| DENY["🚫 403 Forbidden"]
-    RBAC -->|"admin (full access)"| ADMIN["✅ All Routes"]
+    MIDDLEWARE --> VERIFY["🔑 JWT Verification\nHS256 + Secret"]
+    VERIFY --> RBAC{"🎭 Role\nCheck"}
+    RBAC -->|"admin (full access)"| ADMIN["✅ All Routes + Admin"]
     RBAC -->|"manager (elevated)"| MANAGER["✅ Dashboard\n+ Forecasting\n+ Reports"]
     RBAC -->|"analyst (standard)"| ANALYST["✅ Dashboard\n+ Inventory\n+ Insights"]
     RBAC -->|"viewer (read-only)"| VIEWER["✅ Dashboard\nOnly"]
-    RBAC -->|"unknown role ❌"| DENY
 
-    style CLERK fill:#6C47FF,color:#fff
-    style DENY fill:#DC2626,color:#fff
+    style LOGIN fill:#00D4AA,color:#fff
+    style JWT fill:#00D4AA,color:#fff
     style ADMIN fill:#059669,color:#fff
     style MANAGER fill:#0891B2,color:#fff
     style ANALYST fill:#7C3AED,color:#fff
@@ -392,7 +390,7 @@ flowchart TD
 |-------|-----------|---------|
 | **Frontend** | React 18 + TypeScript + Vite | SPA Dashboard & UI |
 | **Styling** | Tailwind CSS + Shadcn/UI + Framer Motion | Neumorphism design system & animations |
-| **Auth** | Clerk (@clerk/clerk-react) | JWT authentication, domain validation |
+| **Auth** | Self-Hosted JWT (HS256) | Login, refresh, logout, admin CRUD |
 | **State** | React Query + Context API | Server state + global preferences |
 | **i18n** | react-i18next | EN/AR with RTL support |
 | **Backend** | FastAPI + Python 3.10+ | REST API & business logic |
@@ -493,7 +491,7 @@ The platform implements the following optimizations to minimize token usage, lat
 ```mermaid
 erDiagram
     USERS {
-        string id PK "Clerk user ID"
+        string id PK "User ID (UUID)"
         string email "Unique email"
         string name "Display name"
         string role "admin/manager/analyst/viewer"
@@ -807,13 +805,13 @@ supplymind-ai/
 │       └── prompts.py
 │
 ├── 🖥️ frontend/src/
-│   ├── App.tsx                        # Root: Clerk + React Query + Providers + Routes
+│   ├── App.tsx                        # Root: AuthContext + React Query + Providers + Routes
 │   ├── main.tsx                       # Entry point
 │   ├── index.css                      # Neumorphism design system + CSS variables
 │   │
-│   ├── 📄 pages/ (11 pages)
+│   ├── 📄 pages/ (13 pages)
 │   │   ├── Index.tsx                  # Landing page (hero, features, metrics, CTA)
-│   │   ├── Login.tsx                  # Clerk SignIn with neumorphism styling
+│   │   ├── Login.tsx                  # Email + password login
 │   │   ├── Dashboard.tsx              # KPIs, demand heatmap, AI summary, alerts
 │   │   ├── Forecasting.tsx            # Product + horizon selectors, forecast chart, CSV export
 │   │   ├── Inventory.tsx              # Inventory optimization, table, chatbot, apply changes
@@ -821,11 +819,15 @@ supplymind-ai/
 │   │   ├── MLOps.tsx                  # Command Center: drift, retraining, pipeline, resources
 │   │   ├── Reports.tsx                # Command Center: per-type generation, filtering, deletion
 │   │   ├── Alerts.tsx                 # Command Center: alert summary, feed, severity breakdown
-│   │   ├── Settings.tsx               # Profile, theme, regional prefs, Clerk sign-out
+│   │   ├── AdminUsers.tsx             # Admin user management (CRUD, roles, reset password)
+│   │   ├── Settings.tsx               # Profile, theme, regional prefs, logout
 │   │   ├── Unauthorized.tsx           # Access denied page
 │   │   └── NotFound.tsx               # 404 page
 │   │
 │   ├── 🧩 components/
+│   │   ├── admin/
+│   │   │   ├── UserFormDialog.tsx        # Create/edit user dialog with role + department
+│   │   │   └── index.ts                  # Re-exports
 │   │   ├── ai/
 │   │   │   ├── AISummaryCard.tsx       # RAG-backed AI summary with localStorage cache
 │   │   │   └── FormattedMessage.tsx    # Markdown-like formatter
@@ -900,19 +902,20 @@ supplymind-ai/
 │   │   └── ui/                         # 50+ shadcn/ui primitives
 │   │
 │   ├── 📚 lib/
-│   │   ├── api.ts                      # API client with Clerk JWT
+│   │   ├── api.ts                      # API client with JWT
 │   │   ├── knowledgeApi.ts             # Knowledge/RAG API utilities
 │   │   ├── stream.ts                   # SSE streaming consumer
 │   │   └── utils.ts                    # cn() class merging utility
 │   │
 │   ├── 🔐 contexts/
-│   │   ├── AuthContext.tsx              # Clerk auth sync, role management
+│   │   ├── AuthContext.tsx              # JWT auth state, role management
 │   │   ├── CurrencyContext.tsx          # USD/EUR/GBP/EGP preference
 │   │   ├── DateRangeContext.tsx         # Date range filtering (1/7/30/90 days)
 │   │   └── ThemeContext.tsx             # Dark/light theme toggle
 │   │
 │   ├── 🪝 hooks/
 │   │   ├── use-mobile.tsx              # Mobile detection
+│   │   ├── use-notifications.ts        # Alert/unread notification polling
 │   │   ├── use-toast.ts                # Toast notifications
 │   │   └── usePrefersReducedMotion.ts  # Accessibility: reduced motion
 │   │
@@ -933,7 +936,7 @@ supplymind-ai/
 │   ├── dependencies.py                 # Shared dependencies
 │   │
 │   ├── 🔐 auth/
-│   │   ├── dependencies.py             # JWT verification (Clerk JWKS → RBAC)
+│   │   ├── dependencies.py             # JWT verification & RBAC enforcement
 │   │   ├── rbac.py                     # 4 roles, 19 permissions, hierarchy
 │   │   ├── middleware.py               # Auth enrichment middleware
 │   │   ├── domain.py                   # Domain validation (@supplymind.tech)
@@ -955,38 +958,44 @@ supplymind-ai/
 │   │   ├── red_team.py                 # Red team testing
 │   │   └── deepeval_integration.py     # DeepEval integration
 │   │
-│   ├── 🌐 routers/ (13 routers)
+│   ├── 🌐 routers/ (14 routers)
 │   │   ├── auth.py                     # /auth/admin — User CRUD, RBAC
+│   │   ├── login.py                    # /auth/login — JWT login, refresh, logout
 │   │   ├── command_center.py           # /api/v1/command-center — Daily Mission Briefing
-│   │   ├── system.py                   # /api/v1/system — Alerts, reports (per-type generation, delete), user info
+│   │   ├── system.py                   # /api/v1/system — Alerts, reports, user info
 │   │   ├── data.py                     # /api/v1/data — Products, KPIs, heatmap
 │   │   ├── forecasting.py              # /api/v1/forecast — ML predictions
 │   │   ├── inventory_domain.py         # /api/v1/inventory — Optimization, RAG
 │   │   ├── insights.py                 # /api/v1/insights — Statistical insights
-│   │   ├── mlops.py                    # /api/v1/mlops — Metrics, LangSmith
 │   │   ├── knowledge.py                # /api/v1 — RAG, copilot, ingestion
+│   │   ├── mlops.py                    # /api/v1/mlops — Metrics, LangSmith
+│   │   ├── notifications.py            # /api/v1/notifications — Alerts subscriptions
+│   │   ├── quick_actions.py            # /api/v1/quick-actions — Dashboard actions
 │   │   ├── settings.py                 # /api/v1/settings — User preferences
 │   │   ├── storage.py                  # /api/v1/storage — File storage
 │   │   └── __init__.py
 │   │
 │   ├── 💡 services/
+│   │   ├── analysis_service.py         # ABC/XYZ analysis
 │   │   ├── copilot_service.py          # LLM copilot chat (OpenRouter)
-│   │   ├── rag_service.py              # RAG pipeline (search + context + LLM)
 │   │   ├── forecast_intelligence_service.py  # Forecast analysis from CSV
-│   │   ├── insight_service.py          # Insight generation (stub)
-│   │   ├── optimization_service.py     # Optimization (stub)
-│   │   ├── inventory_service.py        # Inventory adjustment (stub)
-│   │   ├── analysis_service.py         # ABC/XYZ analysis (stub)
-│   │   ├── forecast_intelligence.py    # Forecast scenarios (stub)
+│   │   ├── forecast_intelligence.py    # Forecast scenarios
 │   │   ├── forecast_persistence.py     # Forecast persistence
 │   │   ├── forecast_reasoning_service.py # Forecast reasoning
-│   │   └── langsmith_tracing_service.py # LangSmith tracing
+│   │   ├── insight_service.py          # Insight generation
+│   │   ├── inventory_service.py        # Inventory adjustment
+│   │   ├── langsmith_tracing_service.py # LangSmith tracing
+│   │   ├── optimization_service.py     # Optimization
+│   │   └── streaming.py                # SSE streaming for insights & forecast
 │   │
 │   ├── 🧠 llm/
+│   │   ├── cache.py                    # LLM response cache (SHA-256, 1hr TTL)
 │   │   ├── client.py                   # Multi-provider LLM factory (OpenRouter/NVIDIA/OpenAI)
 │   │   ├── context_builder.py          # Context building for LLM
 │   │   ├── executive_prompts.py        # Executive prompt templates
-│   │   └── forecast_reasoning.py       # Forecast reasoning prompts
+│   │   ├── forecast_reasoning.py       # Forecast reasoning prompts
+│   │   ├── limits.py                   # Token budgets & truncation
+│   │   └── monitor.py                  # LLM call monitoring & observability
 │   │
 │   ├── 📚 knowledge/ (15 files)
 │   │   ├── client.py                   # Knowledge DB sessions
@@ -1048,6 +1057,7 @@ supplymind-ai/
 │   │   │   └── ml_pipeline.png
 │   │   ├── architecture-diagrams.md
 │   │   └── business-plan.md
+│   ├── API.md                          # Comprehensive API endpoint & schema reference (75+ endpoints)
 │   ├── plans/implementation_plan.md
 │   ├── DEPLOYMENT.md
 │   ├── PRODUCTION_DEPLOYMENT.md
@@ -1105,6 +1115,7 @@ docker compose up -d
 # Frontend: http://localhost:8080
 # Backend API: http://localhost:8000
 # API Docs: http://localhost:8000/docs
+# API Reference: API.md — comprehensive endpoint & schema reference
 ```
 
 ### Manual Setup
@@ -1125,9 +1136,11 @@ uvicorn backend.main:app --reload --port 8000
 ### Environment Variables
 
 ```env
-# ── Clerk Authentication ──────────────────────────────────
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+# ── Self-Hosted JWT Auth ──────────────────────────────────
+JWT_SECRET=change-me-to-a-random-secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
 
 # ── LLM / AI (OpenRouter) ────────────────────────────────
 CHATBOT_API_KEY=sk-or-...       # General chatbot
@@ -1175,8 +1188,9 @@ gantt
     Drift Detection Pipeline     :done, 2026-04-29, 7d
     Automated Retraining         :done, 2026-04-29, 7d
     section Auth & Security
-    Clerk Authentication         :done, 2026-05-06, 7d
+    JWT Authentication           :done, 2026-05-06, 7d
     RBAC & Guardrails            :done, 2026-05-06, 7d
+    Admin User Management        :done, 2026-05-06, 7d
     section i18n
     EN/AR Translation            :done, 2026-05-13, 7d
     RTL Support                  :done, 2026-05-13, 7d
@@ -1190,7 +1204,8 @@ gantt
 
 - [x] FastAPI backend with 10 routers and 30+ endpoints
 - [x] XGBoost demand forecasting (R² = 0.9984)
-- [x] Clerk authentication with JWT and domain validation
+- [x] Self-hosted JWT authentication (login, refresh, logout)
+- [x] Admin user management (CRUD, password reset, role assignment)
 - [x] RBAC with 4 roles and 19 permissions
 - [x] Guardrails middleware (input/output/rate limiting)
 - [x] RAG pipeline (ChromaDB + embeddings + semantic search)

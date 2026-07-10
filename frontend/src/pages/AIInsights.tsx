@@ -307,6 +307,28 @@ const AIInsights = () => {
 
   const productId = selectedProduct || products?.[0]?.product_id || 'BL_KIT';
 
+  // Load cached insights on product change
+  useEffect(() => {
+    if (!productId) return;
+    const cacheKey = `ai-insights-cache-${productId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setStreamResult(parsed.result);
+        setElapsedMs(parsed.elapsedMs);
+      } catch (e) {
+        console.warn('Failed to parse cached insights', e);
+      }
+    } else {
+      setStreamResult(null);
+      setElapsedMs(null);
+    }
+    setStreamStatus(null);
+    setStreamTokens('');
+    setStreamError(null);
+  }, [productId]);
+
   const generateInsights = useCallback(() => {
     setStreamStatus(null);
     setStreamTokens('');
@@ -322,11 +344,34 @@ const AIInsights = () => {
         onStart: () => setStreamStatus('Starting generation…'),
         onStatus: (msg) => setStreamStatus(msg),
         onToken: (tok) => setStreamTokens((prev) => prev + tok),
-        onResult: (res) => setStreamResult(res),
+        onResult: (res) => {
+          setStreamResult(res);
+          // Cache results immediately
+          if (productId) {
+            localStorage.setItem(
+              `ai-insights-cache-${productId}`,
+              JSON.stringify({ result: res, elapsedMs: null })
+            );
+          }
+        },
         onError: (msg) => setStreamError(msg),
         onDone: (meta) => {
           setIsStreaming(false);
-          setElapsedMs(meta?.elapsed_ms ?? null);
+          const elapsed = meta?.elapsed_ms ?? null;
+          setElapsedMs(elapsed);
+
+          // Update cache with final elapsedMs
+          if (productId) {
+            const cacheKey = `ai-insights-cache-${productId}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              try {
+                const parsed = JSON.parse(cached);
+                parsed.elapsedMs = elapsed;
+                localStorage.setItem(cacheKey, JSON.stringify(parsed));
+              } catch (e) { /* ignore */ }
+            }
+          }
         },
       },
     });

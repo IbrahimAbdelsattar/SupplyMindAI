@@ -172,3 +172,17 @@ def log_user_deactivated(
         detail=f"Admin deactivated user {target_user_id}",
         extra={"target_user_id": target_user_id},
     )
+
+
+def log_password_reset(
+    admin_id: str,
+    target_user_id: str,
+    email: str,
+) -> None:
+    _audit_event(
+        "PASSWORD_RESET",
+        user_id=admin_id,
+        email=email,
+        detail=f"Admin forced a password reset for user {target_user_id}",
+        extra={"target_user_id": target_user_id},
+    )

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogOut } from 'lucide-react';
-import { SignOutButton, useUser } from '@clerk/clerk-react';
 
 type ProfileTabProps = {
   user: { name?: string; email?: string; role?: string } | null;
@@ -13,11 +12,9 @@ type ProfileTabProps = {
 
 export const ProfileTab = ({ user, onNameChange }: ProfileTabProps) => {
   const { t } = useTranslation();
-  const { user: clerkUser } = useUser();
 
-  const displayName = user?.name || clerkUser?.fullName || clerkUser?.firstName || 'Account';
-  const displayEmail = user?.email || clerkUser?.primaryEmailAddress?.emailAddress || '';
-  const imageUrl = clerkUser?.imageUrl;
+  const displayName = user?.name || 'Account';
+  const displayEmail = user?.email || '';
 
   return (
     <Card>
@@ -29,13 +26,9 @@ export const ProfileTab = ({ user, onNameChange }: ProfileTabProps) => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4 sm:gap-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {imageUrl ? (
-                <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xl sm:text-2xl font-bold text-primary">
-                  {displayName.charAt(0).toUpperCase()}
-                </span>
-              )}
+              <span className="text-xl sm:text-2xl font-bold text-primary">
+                {displayName.charAt(0).toUpperCase()}
+              </span>
             </div>
             <div className="min-w-0">
               <p className="text-base sm:text-lg font-semibold truncate">{displayName}</p>
@@ -46,12 +39,10 @@ export const ProfileTab = ({ user, onNameChange }: ProfileTabProps) => {
             </div>
           </div>
 
-          <SignOutButton>
-            <Button variant="destructive" className="w-full sm:w-auto gap-2">
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </Button>
-          </SignOutButton>
+          <Button variant="destructive" className="w-full sm:w-auto gap-2" onClick={() => { window.location.href = '/login'; }}>
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
         </div>
 
         <div className="space-y-4 max-w-md pt-4 border-t border-border/50">

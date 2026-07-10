@@ -1,7 +1,5 @@
-import React, { useEffect } from 'react';
-import { useAuth, RedirectToSignIn, useUser } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 
 
@@ -17,45 +15,29 @@ interface ProtectedRouteProps {
   requiredRole?: 'admin' | 'manager' | 'analyst' | 'viewer';
 }
 
-export const ProtectedRoute = ({ 
-  children, 
-  requiredRole 
+export const ProtectedRoute = ({
+  children,
+  requiredRole
 }: ProtectedRouteProps) => {
-  const { isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const navigate = useNavigate();
-  const { userRole, isDomainValid } = useAuthContext();
+  const location = useLocation();
+  const { user, userRole, isLoading } = useAuthContext();
 
-  useEffect(() => {
-    if (isLoaded && isSignedIn && user && requiredRole && userRole) {
-      const userLevel = ROLE_HIERARCHY[userRole] ?? 0;
-      const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 0;
-      if (userLevel < requiredLevel) {
-        navigate('/unauthorized', { replace: true });
-      }
-    }
-  }, [isLoaded, isSignedIn, user, requiredRole, userRole, navigate]);
-
-  if (!isLoaded) {
-    return <LoadingSpinner />;
+  // Show nothing while checking auth state
+  if (isLoading) {
+    return null;
   }
 
-  if (!isSignedIn) {
-    return <RedirectToSignIn />;
+  // Not authenticated — redirect to login with return URL
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Domain validation
-  if (!isDomainValid) {
-    return null; // Navigation already handled in useEffect
-  }
-
-  // Role-based access control
+  // Role check
   if (requiredRole && userRole) {
     const userLevel = ROLE_HIERARCHY[userRole] ?? 0;
     const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 0;
-    
     if (userLevel < requiredLevel) {
-      return null; // Navigation already handled in useEffect
+      return <Navigate to="/unauthorized" replace />;
     }
   }
 

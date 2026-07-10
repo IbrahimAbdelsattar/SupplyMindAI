@@ -17,15 +17,14 @@ Usage:
 from __future__ import annotations
 
 import os
-import base64
 import time
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-import jwt
-import requests
 from fastapi import Request, HTTPException, Depends
+
+from backend.auth.tokens import decode_token
 
 from backend.auth.rbac import (
     Role,
@@ -44,132 +43,7 @@ from backend.knowledge.auth import AuthUser
 
 logger = logging.getLogger("backend.auth.dependencies")
 
-# ── Clerk JWKS Configuration ──────────────────────────────────────────────────
-
-_jwks_cache: dict = {"keys": None, "fetched_at": 0}
-_JWKS_CACHE_TTL = 3600  # 1 hour
-
-
-def _extract_clerk_domain() -> Optional[str]:
-    """Extract Clerk domain from the publishable key env var."""
-    pk = os.getenv("CLERK_PUBLISHABLE_KEY", "")
-    if not pk:
-        return None
-    try:
-        prefix = "pk_test_" if pk.startswith("pk_test_") else "pk_live_" if pk.startswith("pk_live_") else ""
-        encoded_domain = pk[len(prefix):]
-        padding = 4 - len(encoded_domain) % 4
-        if padding != 4:
-            encoded_domain += "=" * padding
-        domain = base64.b64decode(encoded_domain).decode()
-        # Strip any trailing non-DNS chars (e.g. '$') from base64 decode artifacts
-        domain = domain.rstrip("$\x00")
-        return domain
-    except Exception:
-        return None
-
-
-def _get_clerk_jwks() -> list[dict]:
-    """Fetch Clerk JWKS with caching."""
-    now = time.time()
-    if _jwks_cache["keys"] and (now - _jwks_cache["fetched_at"]) < _JWKS_CACHE_TTL:
-        return _jwks_cache["keys"]
-
-    domain = _extract_clerk_domain()
-    if not domain:
-        logger.warning("No CLERK_PUBLISHABLE_KEY configured; JWKS fetch skipped")
-        return []
-
-    try:
-        resp = requests.get(f"https://{domain}/.well-known/jwks.json", timeout=5)
-        resp.raise_for_status()
-        keys = resp.json().get("keys", [])
-        _jwks_cache["keys"] = keys
-        _jwks_cache["fetched_at"] = now
-        logger.info("Fetched %d JWKS keys from Clerk", len(keys))
-        return keys
-    except Exception as exc:
-        logger.error("Failed to fetch Clerk JWKS: %s", exc)
-        return _jwks_cache.get("keys") or []
-
-
-def _find_jwk_by_kid(kid: str) -> Optional[dict]:
-    for key in _get_clerk_jwks():
-        if key.get("kid") == kid:
-            return key
-    return None
-
-
-def _fetch_clerk_user_email(user_id: str) -> tuple[str, str]:
-    """Query Clerk Backend API to get email+name for a user_id.
-
-    Returns (email, name) or ("", "").
-    Requires CLERK_SECRET_KEY env var.
-    """
-    secret_key = os.getenv("CLERK_SECRET_KEY", "")
-    if not secret_key or not user_id or user_id == "unknown":
-        return "", ""
-
-    try:
-        resp = requests.get(
-            f"https://api.clerk.com/v1/users/{user_id}",
-            headers={
-                "Authorization": f"Bearer {secret_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=5,
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            email = ""
-            email_addresses = data.get("email_addresses", [])
-            if email_addresses:
-                # Prefer the primary email
-                primary = [e for e in email_addresses if e.get("id") == data.get("primary_email_address_id")]
-                email = primary[0]["email_address"] if primary else email_addresses[0]["email_address"]
-            name = data.get("username") or data.get("first_name", "") or ""
-            logger.info("Clerk API resolved user %s -> email=%s name=%s", user_id, email, name)
-            return email, name
-        else:
-            logger.warning("Clerk API returned %d for user %s: %s", resp.status_code, user_id, resp.text[:200])
-            return "", ""
-    except Exception as exc:
-        logger.warning("Clerk API call failed for user %s: %s", user_id, exc)
-        return "", ""
-
-
-def _verify_token(token: str) -> dict:
-    """Verify a Clerk JWT via JWKS. Falls back to unverified decode in dev."""
-    try:
-        unverified_header = jwt.get_unverified_header(token)
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail=f"Invalid token header: {exc}")
-
-    kid = unverified_header.get("kid")
-    alg = unverified_header.get("alg", "RS256")
-
-    jwk = _find_jwk_by_kid(kid) if kid else None
-    if jwk:
-        try:
-            public_key = jwt.algorithms.RSAAlgorithm.from_jwk(jwk)
-            claims = jwt.decode(token, public_key, algorithms=[alg], options={"verify_aud": False})
-            return claims
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token has expired")
-        except jwt.InvalidSignatureError:
-            raise HTTPException(status_code=401, detail="Invalid token signature")
-        except Exception as exc:
-            logger.warning("JWKS verification failed, falling back: %s", exc)
-
-    env = os.getenv("ENVIRONMENT", "development")
-    if env == "development":
-        logger.warning("Dev mode: accepting unverified token")
-        try:
-            return jwt.decode(token, options={"verify_signature": False})
-        except Exception as exc:
-            raise HTTPException(status_code=401, detail=f"Invalid token: {exc}")
-
-    raise HTTPException(status_code=401, detail="Unable to verify token - no valid signing key found")
+# ── Helpers ──────────────────────────────────────────────────────────────
 
 
 def _utc_now() -> datetime:
@@ -189,14 +63,7 @@ def _get_client_ip(request: Request) -> str:
 # ── Core Dependency: get_current_user ──────────────────────────────────────────
 
 async def _get_current_user(request: Request) -> AuthUser:
-    """Enterprise auth chain: JWT → domain → DB → RBAC.
-
-    1. Extract and verify Clerk JWT
-    2. Validate email domain is @supplymind.tech
-    3. Look up user in internal DB
-    4. Check user.is_active
-    5. Return AuthUser with role from DB (not hardcoded)
-    """
+    """Enterprise auth chain: local JWT → DB lookup → active check → RBAC."""
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Authorization header")
@@ -204,76 +71,28 @@ async def _get_current_user(request: Request) -> AuthUser:
     token = auth_header.split(" ")[1]
     ip = _get_client_ip(request)
 
-    # Step 1: Verify JWT
+    # Step 1: Verify local JWT
     try:
-        claims = _verify_token(token)
+        claims = decode_token(token, expected_type="access")
     except HTTPException:
         log_login_failure("JWT verification failed", ip_address=ip)
         raise
 
-    user_id = claims.get("sub", "unknown")
-    email = claims.get("email", "") or claims.get("username", "") or claims.get("preferred_username", "")
-
-    # Step 2: DB lookup — try email first, then clerk_user_id
+    user_id = claims.get("sub", "")
+    
+    # Step 2: DB lookup
     from backend.db import get_db
     db = next(get_db())
     try:
         from backend.db import User
 
-        user = None
-        clerk_name = ""
-
-        # Try email lookup first
-        if email:
-            user = db.query(User).filter(User.email == email).first()
-
-        # Fallback: look up by Clerk user ID (sub claim)
-        if user is None and user_id and user_id != "unknown":
-            user = db.query(User).filter(User.clerk_user_id == user_id).first()
-            if user:
-                email = user.email  # Use stored email from DB
-                logger.info("Resolved email from DB via clerk_user_id=%s -> %s", user_id, email)
-
-        # No user found in DB — try Clerk Backend API to get email
-        if user is None and not email:
-            logger.info("No DB user and no email in JWT — querying Clerk API for user %s", user_id)
-            email, clerk_name = _fetch_clerk_user_email(user_id)
-
-        # No user found anywhere — need email to proceed
-        if user is None and not email:
-            log_login_failure("No email in JWT claims, no matching DB user, and Clerk API returned nothing", ip_address=ip)
-            raise HTTPException(status_code=401, detail="Unable to resolve user identity. Please contact an administrator.")
+        user = db.query(User).filter(User.id == user_id).first()
 
         if user is None:
-            # Auto-create first user as admin; subsequent users as analyst
-            existing_count = db.query(User).count()
-            role = Role.ADMIN if existing_count == 0 else Role.ANALYST
-            now = _utc_now()
+            log_login_failure("DB user not found for token sub", ip_address=ip)
+            raise HTTPException(status_code=401, detail="Unable to resolve user identity. Please contact an administrator.")
 
-            user = User(
-                id=user_id,
-                email=email,
-                name=clerk_name or claims.get("name", email.split("@")[0]),
-                role=role.value,
-                is_active=True,
-                department=None,
-                clerk_user_id=user_id,
-                created_at=now,
-                updated_at=now,
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-            logger.info("Auto-created user %s with role %s", email, role.value)
-
-        # Sync clerk_user_id if not set
-        if not user.clerk_user_id and user_id and user_id != "unknown":
-            user.clerk_user_id = user_id
-            db.commit()
-
-        email = user.email  # Ensure email is always the stored value
-
-        # Domain check removed to allow public users
+        email = user.email
 
         # Step 4: Active check
         if not user.is_active:

@@ -10,10 +10,38 @@
     "badge": "AI-Powered Intelligence Platform",
     "headline1": "Predict Demand.",
     "headline2": "Optimize Inventory.",
+    "headline3Prefix": "Powering",
+    "cycleWords": ["Retail", "E-Commerce", "Manufacturing", "Pharma"],
     "subheadline": "Make smarter, automated business decisions with deep AI-driven demand forecasting and inventory optimization that continually learns from your data.",
     "ctaPrimary": "View Live Dashboard",
     "ctaSecondary": "Try AI Forecast",
     "chartLabel": "Demand Forecast — Interactive Live Preview"
+  },
+  "socialProof": {
+    "badge": "Trusted Worldwide",
+    "title": "Teams around the world rely on SupplyMind AI",
+    "subtitle": "From retail to pharma — supply chain leaders trust our platform",
+    "logosLabel": "Trusted by leading companies",
+    "testimonials": [
+      {
+        "name": "Sarah M.",
+        "role": "VP Supply Chain",
+        "company": "NexusRetail Group",
+        "quote": "SupplyMind reduced our forecast errors by 34% in the first quarter. The AI insights are genuinely transformative."
+      },
+      {
+        "name": "Omar K.",
+        "role": "Head of Operations",
+        "company": "MedLogix Pharma",
+        "quote": "Finally, a forecasting tool that handles regulatory compliance and demand variability without manual overrides."
+      },
+      {
+        "name": "Lena H.",
+        "role": "E-Commerce Director",
+        "company": "SwiftGoods GmbH",
+        "quote": "We cut stockouts by 40% while reducing carrying costs. The ROI was visible within weeks."
+      }
+    ]
   },
   "features": {
     "title": "How It Works",
@@ -72,6 +100,47 @@
     "annualSavingsDesc": "Average enterprise savings",
     "carryingCost": "Inventory Carrying Cost Reduction",
     "carryingCostDesc": "Inventory carrying costs typically run 25–30% of stock value"
+  },
+  "cta": {
+    "urgency": "Join 500+ businesses already forecasting smarter",
+    "bookDemo": "Book a Demo",
+    "badge": "Start Today — Free",
+    "headline": "Ready to {{action}} your supply chain?",
+    "subtext": "Join thousands of businesses using SupplyMind AI to make smarter, faster decisions.",
+    "ctaPrimary": "Get Started Free",
+    "trustSoc2": "SOC2 Compliant",
+    "trustNoCC": "No credit card",
+    "trustEnterprise": "Enterprise ready"
+  },
+  "ourStory": {
+    "badge": "Our Story",
+    "title": "Built to End Supply Chain Uncertainty",
+    "subtitle": "We started with a simple belief: supply chains shouldn't run on gut feelings. They should run on data.",
+    "narrative": "Born from real-world frustrations with outdated forecasting tools, SupplyMind AI was founded to bring enterprise-grade intelligence to businesses of every size. Our team of data scientists and supply chain veterans spent years building and refining the AI models that power our platform — models that learn, adapt, and improve with every data point.",
+    "milestones": [
+      {
+        "year": "2020",
+        "headline": "The Spark",
+        "description": "A small team of engineers and supply chain experts asked: why are businesses still guessing demand?"
+      },
+      {
+        "year": "2021",
+        "headline": "First Model",
+        "description": "Our first AI forecasting model achieved 92% accuracy in pilot testing with mid-market retailers."
+      },
+      {
+        "year": "2023",
+        "headline": "Scale & Impact",
+        "description": "SupplyMind AI went live with 200+ enterprise clients across retail, pharma, and manufacturing."
+      },
+      {
+        "year": "2025",
+        "headline": "Global Reach",
+        "description": "Serving 500+ businesses in 15+ countries with AI that learns and improves every day."
+      }
+    ]
+  },
+  "stickyCta": {
+    "label": "Get Started Free"
   }
 }
-

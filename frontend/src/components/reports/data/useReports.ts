@@ -122,6 +122,9 @@ export function useReports() {
     categories,
     activeCategories,
     reportsLoading,
+    invLoading,
+    recLoading,
+    prodLoading,
   };
 }
 

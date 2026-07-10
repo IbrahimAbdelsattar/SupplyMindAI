@@ -22,6 +22,7 @@
  */
 
 import { getApiBaseUrl } from './api';
+import { getAuthToken } from './auth';
 
 export interface SSECallbacks<T = Record<string, unknown>> {
   /** Called when the stream starts (before first event). */
@@ -237,23 +238,16 @@ export async function consumeSSE<T = Record<string, unknown>>(
   } = options;
   const { onStart, onDone } = callbacks ?? {};
 
-  // Get Clerk JWT token
-  let token: string | null = null;
-  // @ts-ignore - window.Clerk is injected by ClerkProvider
-  if (window.Clerk?.session) {
-    try {
-      // @ts-ignore
-      token = await window.Clerk.session.getToken();
-    } catch {
-      // Proceed without token
-    }
-  }
-
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(fetchOptions.headers as Record<string, string> | undefined),
   };
+
+  // Attach JWT token if available
+  const token = await getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const url = `${getApiBaseUrl()}${endpoint}`;
   const body = fetchOptions.body as string | undefined;

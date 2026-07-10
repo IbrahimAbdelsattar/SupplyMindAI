@@ -20,7 +20,7 @@ flowchart LR
 
     subgraph FE["Frontend SPA (Current)"]
         app["React + Vite + React Router"]
-        providers["Providers<br/>QueryClientProvider<br/>ClerkProvider<br/>ThemeProvider<br/>CurrencyProvider<br/>DateRangeProvider"]
+        providers["Providers<br/>QueryClientProvider<br/>JwtAuthProvider<br/>ThemeProvider<br/>CurrencyProvider<br/>DateRangeProvider"]
         pages["Pages<br/>Landing<br/>Login<br/>Dashboard<br/>Forecasting<br/>Inventory<br/>AI Insights<br/>Reports<br/>MLOps<br/>Settings<br/>404"]
         shared["Shared UI<br/>Dashboard Sidebar<br/>Dashboard Header<br/>Charts - Recharts<br/>AI Chatbot<br/>Language Switcher"]
         i18n["Localization<br/>English / Arabic RTL<br/>12 Namespaces"]
@@ -35,7 +35,7 @@ flowchart LR
 
     subgraph API["Application Backend (Current)"]
         gateway["FastAPI<br/>API v1"]
-        auth["Authentication<br/>JWT Validation<br/>Clerk"]
+        auth["Authentication<br/>JWT Validation<br/>Self-Hosted JWT"]
         dataSvc["Data Services"]
         forecastSvc["Forecast Services<br/>ML Adapter<br/>Forecast Intelligence"]
         inventorySvc["Inventory Services<br/>RAG<br/>Alerts"]
@@ -141,7 +141,7 @@ erDiagram
         string role
         datetime created_at
         json preferences
-        json clerk_metadata
+        json auth_metadata
     }
 
     PRODUCTS {
@@ -303,7 +303,6 @@ This sequence models the end-to-end user flow for the core product experience: f
 sequenceDiagram
     actor U as User
     participant FE as React Frontend
-    participant CLERK as Clerk Auth
     participant API as FastAPI Gateway
     participant DB as PostgreSQL
     participant FC as Forecast Service
@@ -315,8 +314,8 @@ sequenceDiagram
     participant LS as LangSmith
 
     U->>FE: Access application
-    FE->>CLERK: Sign in / Sign up
-    CLERK-->>FE: JWT + user profile
+    FE->>API: POST /auth/login
+    API-->>FE: JWT + user profile
     FE->>API: Requests with Bearer JWT
 
     U->>FE: Select product and forecast horizon

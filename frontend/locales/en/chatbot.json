@@ -4,10 +4,10 @@
     "subtitle": "Customer Service",
     "stockMind": "Ask Stock Mind"
   },
-  "welcome": "Hello! I'm SupplyMind Copilot — your customer service assistant for the SupplyMind AI platform. I can help you with features, dashboards, forecasts, inventory, and analytics. How can I assist you today?",
+  "welcome": "Hey there! Welcome to SupplyMind AI — I'm your friendly copilot, ready to help you navigate the platform. I can tell you about our features like Inventory, Forecasting, Insights, Reports, and more. What would you like to know?",
   "stockMindWelcome": "Ask Stock Mind is ready. Ask about stock, demand, coverage, active products, or the latest snapshot.",
   "quickQuestions": "Quick questions:",
-  "placeholder": "Ask about forecasts, inventory...",
+  "placeholder": "Ask about features, navigation, or how things work...",
   "stockMindPlaceholder": "Ask about products, dates, or coverage...",
   "stockMindPlaceholderSelected": "Ask about {{product}}...",
   "error": "I'm sorry, I couldn't process your request. Please try again later.",
@@ -15,10 +15,10 @@
   "stockMindFallbackError": "Unable to reach the assistant.",
   "thinking": "Ask Stock Mind is thinking...",
   "quickQuestionsList": [
-    "How accurate are the demand forecasts?",
-    "What factors affect inventory levels?",
-    "Explain the MLOps monitoring system",
-    "How do I interpret the dashboard KPIs?"
+    "What can SupplyMind AI do for me?",
+    "How do I check my inventory?",
+    "Where can I see demand forecasts?",
+    "What are AI Insights?"
   ],
   "noProductSelected": "Select a row to add product context.",
   "selectedProduct": "Selected: {{name}} ({{sku}})",

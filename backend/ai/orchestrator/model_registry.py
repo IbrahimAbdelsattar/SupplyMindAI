@@ -1,3 +1,4 @@
+import os
 import logging
 from langchain_openai import ChatOpenAI
 from backend.llm.client import _resolve_key, _resolve_provider, _openrouter_headers, _safe_create_chat_openai
@@ -22,35 +23,35 @@ class ModelRegistry:
 
         # Apply agent-specific defaults
         if agent_type == "inventory":
-            model = config.INVENTORY_MODEL
+            model = os.getenv("INVENTORY_MODEL") or os.getenv("LLM_MODEL") or config.INVENTORY_MODEL
             temp = temperature if temperature is not None else config.INVENTORY_TEMP
             tokens = max_tokens if max_tokens is not None else config.INVENTORY_MAX_TOKENS
         elif agent_type == "forecast":
-            model = config.FORECAST_MODEL
+            model = os.getenv("FORECAST_MODEL") or os.getenv("LLM_MODEL") or config.FORECAST_MODEL
             temp = temperature if temperature is not None else config.FORECAST_TEMP
             tokens = max_tokens if max_tokens is not None else config.FORECAST_MAX_TOKENS
         elif agent_type == "customer_support":
-            model = config.SUPPORT_MODEL
+            model = os.getenv("SUPPORT_MODEL") or os.getenv("LLM_MODEL") or config.SUPPORT_MODEL
             temp = temperature if temperature is not None else config.SUPPORT_TEMP
             tokens = max_tokens if max_tokens is not None else config.SUPPORT_MAX_TOKENS
         elif agent_type == "executive_insights":
-            model = config.INSIGHTS_MODEL
+            model = os.getenv("INSIGHTS_MODEL") or os.getenv("LLM_MODEL") or config.INSIGHTS_MODEL
             temp = temperature if temperature is not None else config.INSIGHTS_TEMP
             tokens = max_tokens if max_tokens is not None else config.INSIGHTS_MAX_TOKENS
         elif agent_type == "report":
-            model = config.REPORT_MODEL
+            model = os.getenv("REPORT_MODEL") or os.getenv("LLM_MODEL") or config.REPORT_MODEL
             temp = temperature if temperature is not None else config.REPORT_TEMP
             tokens = max_tokens if max_tokens is not None else config.REPORT_MAX_TOKENS
         elif agent_type == "security":
-            model = config.SECURITY_MODEL
+            model = os.getenv("SECURITY_MODEL") or os.getenv("LLM_MODEL") or config.SECURITY_MODEL
             temp = temperature if temperature is not None else config.SECURITY_TEMP
             tokens = max_tokens if max_tokens is not None else config.SECURITY_MAX_TOKENS
         elif agent_type == "documentation":
-            model = config.DOCUMENTATION_MODEL
+            model = os.getenv("DOCUMENTATION_MODEL") or os.getenv("LLM_MODEL") or config.DOCUMENTATION_MODEL
             temp = temperature if temperature is not None else config.DOCUMENTATION_TEMP
             tokens = max_tokens if max_tokens is not None else config.DOCUMENTATION_MAX_TOKENS
         else:
-            model = config.COPILOT_MODEL
+            model = os.getenv("COPILOT_MODEL") or os.getenv("LLM_MODEL") or config.COPILOT_MODEL
             temp = temperature if temperature is not None else config.COPILOT_TEMP
             tokens = max_tokens if max_tokens is not None else config.COPILOT_MAX_TOKENS
 

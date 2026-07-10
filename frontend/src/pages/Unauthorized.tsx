@@ -1,11 +1,9 @@
 import { motion } from 'framer-motion';
 import { ShieldOff, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@clerk/clerk-react';
 
 const Unauthorized = () => {
   const navigate = useNavigate();
-  const { signOut, isSignedIn } = useAuth();
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden py-12 px-4">
@@ -55,23 +53,13 @@ const Unauthorized = () => {
         </div>
 
         <div className="flex gap-4">
-          {isSignedIn ? (
-            <button
-              onClick={() => signOut(() => navigate('/'))}
-              className="neu-btn bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3 rounded-2xl transition-all duration-200 flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Sign Out & Try Another Account
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate('/login')}
-              className="neu-btn bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3 rounded-2xl transition-all duration-200 flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Return to Login
-            </button>
-          )}
+          <button
+            onClick={() => navigate('/login')}
+            className="neu-btn bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3 rounded-2xl transition-all duration-200 flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Return to Login
+          </button>
         </div>
       </motion.div>
     </div>

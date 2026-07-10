@@ -42,11 +42,26 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCompactNumber } from '@/lib/currency';
 
 // Types for forecast reasoning
+interface ForecastReasoningRisk {
+  title: string;
+  description: string;
+  impact?: string;
+}
+interface ForecastReasoningRecommendation {
+  title: string;
+  description: string;
+  impact?: string;
+}
+interface ForecastReasoningOpportunity {
+  title: string;
+  description: string;
+  value?: string;
+}
 interface ForecastReasoningResult {
   summary: string;
-  risks: string[];
-  recommendations: string[];
-  revenue_opportunities: string[];
+  risks: ForecastReasoningRisk[];
+  recommendations: ForecastReasoningRecommendation[];
+  revenue_opportunities: ForecastReasoningOpportunity[];
 }
 
 type Product = { product_id: string; product_name: string; category?: string };
@@ -95,6 +110,28 @@ const Forecasting = () => {
     },
   });
 
+  // Load cached forecast analysis on product or horizon change
+  useEffect(() => {
+    if (!selectedProduct) return;
+    const cacheKey = `forecast-analysis-cache-${selectedProduct}-${horizon}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setStreamResult(parsed.result);
+        setElapsedMs(parsed.elapsedMs);
+      } catch (e) {
+        console.warn('Failed to parse cached forecast analysis', e);
+      }
+    } else {
+      setStreamResult(null);
+      setElapsedMs(null);
+    }
+    setStreamStatus(null);
+    setStreamTokens('');
+    setStreamError(null);
+  }, [selectedProduct, horizon]);
+
   /* ── Forecast reasoning stream ── */
   const generateForecastAnalysis = useCallback(() => {
     if (!forecastMutation.data?.monthly_summary?.length) {
@@ -120,15 +157,38 @@ const Forecasting = () => {
         onStart: () => setStreamStatus('Starting forecast analysis...'),
         onStatus: (msg) => setStreamStatus(msg),
         onToken: (tok) => setStreamTokens((prev) => prev + tok),
-        onResult: (res) => setStreamResult(res),
+        onResult: (res) => {
+          setStreamResult(res);
+          // Cache results immediately
+          if (selectedProduct) {
+            localStorage.setItem(
+              `forecast-analysis-cache-${selectedProduct}-${horizon}`,
+              JSON.stringify({ result: res, elapsedMs: null })
+            );
+          }
+        },
         onError: (msg) => setStreamError(msg),
         onDone: (meta) => {
           setIsStreaming(false);
-          setElapsedMs(meta?.elapsed_ms ?? null);
+          const elapsed = meta?.elapsed_ms ?? null;
+          setElapsedMs(elapsed);
+
+          // Update cache with final elapsedMs
+          if (selectedProduct) {
+            const cacheKey = `forecast-analysis-cache-${selectedProduct}-${horizon}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              try {
+                const parsed = JSON.parse(cached);
+                parsed.elapsedMs = elapsed;
+                localStorage.setItem(cacheKey, JSON.stringify(parsed));
+              } catch (e) { /* ignore */ }
+            }
+          }
         },
       },
     });
-  }, [forecastMutation.data]);
+  }, [forecastMutation.data, selectedProduct, horizon]);
 
   const chartData = useMemo(() => forecastMutation.data?.series ?? [], [forecastMutation.data]);
   const monthlyData = useMemo(() => forecastMutation.data?.monthly_summary ?? [], [forecastMutation.data]);
@@ -444,7 +504,7 @@ const Forecasting = () => {
                           <span className="w-5 h-5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                             {i + 1}
                           </span>
-                          {risk}
+                          <span><strong>{risk.title}</strong>{risk.description ? `: ${risk.description}` : ''}</span>
                         </li>
                       ))}
                     </ul>
@@ -459,7 +519,7 @@ const Forecasting = () => {
                           <span className="w-5 h-5 rounded-full bg-success/10 text-success text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                             {i + 1}
                           </span>
-                          {rec}
+                          <span><strong>{rec.title}</strong>{rec.description ? `: ${rec.description}` : ''}</span>
                         </li>
                       ))}
                     </ul>
@@ -474,7 +534,7 @@ const Forecasting = () => {
                           <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                             {i + 1}
                           </span>
-                          {opp}
+                          <span><strong>{opp.title}</strong>{opp.description ? `: ${opp.description}` : ''}</span>
                         </li>
                       ))}
                     </ul>

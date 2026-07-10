@@ -9,7 +9,7 @@ SupplyMind AI is an AI-powered demand forecasting and inventory optimization pla
 - **Animation:** Framer Motion (Emil Design principles)
 - **State:** React Query + Context API
 - **Router:** React Router DOM
-- **Auth:** Clerk (@clerk/clerk-react with JWT)
+- **Auth:** Self-hosted JWT (HS256 with refresh tokens)
 - **Charts:** Recharts
 - **i18n:** react-i18next (EN / AR with RTL support)
 
@@ -74,7 +74,7 @@ Use these utility classes for consistent neumorphism:
 - Button components include `active:scale-[0.97]` for press feedback
 - Card components use `.neu-card` for consistent shadow
 - Form inputs use `.neu-basin` for inset appearance in light mode
-- Protected pages use `<ProtectedRoute>` wrapper with Clerk `useAuth`
+- Protected pages use `<ProtectedRoute>` wrapper with `requiredRole` prop
 
 ## File Structure
 - `src/components/ui/` — shadcn/ui base components
@@ -82,15 +82,17 @@ Use these utility classes for consistent neumorphism:
 - `src/components/dashboard/` — Dashboard widgets
 - `src/components/brand/` — Brand assets (logo, etc.)
 - `src/components/ai/` — AI-related components (summary, formatted messages)
+- `src/components/admin/` — Admin components (UserFormDialog)
 - `src/components/chatbot/` — Floating chatbot widget
 - `src/components/inventory/` — Inventory-specific components
 - `src/components/mlops/` — MLOps monitoring components
 - `src/components/language/` — Language switcher
-- `src/contexts/` — React contexts (Theme, Currency, DateRange)
+- `src/contexts/` — React contexts (Theme, Currency, DateRange, Auth)
 - `src/lib/animations.ts` — Animation utilities and constants
-- `src/lib/api.ts` — API client with Clerk JWT integration
+- `src/lib/api.ts` — API client with JWT (auto-adds Bearer token, skips prefix for /auth)
 - `src/lib/knowledgeApi.ts` — RAG/Copilot API client
-- `src/pages/` — Route-level pages (10 pages)
+- `src/lib/auth.ts` — JWT token helper (standalone, no circular import)
+- `src/pages/` — Route-level pages (13 pages)
 
 ## Important Notes
 - **index.css** is the central style file containing the Neumorphism system, CSS variables, and animations
@@ -147,7 +149,7 @@ Use these utility classes for consistent neumorphism:
   - `POST /api/v1/insights/generate/stream` → `StreamingResponse(stream_insights())`
   - `POST /api/v1/forecast/reasoning/stream` → `StreamingResponse(stream_forecast_reasoning())`
 - Frontend:
-  - `frontend/src/lib/stream.ts`: `consumeSSE<T>(endpoint, { method, body, callbacks })` — fetch+ReadableStream consumer with Clerk JWT auth
+  - `frontend/src/lib/stream.ts`: `consumeSSE<T>(endpoint, { method, body, callbacks })` — fetch+ReadableStream consumer with JWT auth
   - `AIInsights.tsx`: `useCallback` + `consumeSSE('/insights/generate/stream', ...)`
   - `Forecasting.tsx`: `useCallback` + `consumeSSE('/forecast/reasoning/stream', ...)`
 - SSE event types: `status` (progress), `token` (incremental text), `result` (final JSON), `error`, `done`

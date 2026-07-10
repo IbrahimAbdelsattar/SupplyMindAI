@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { consumeSSE } from '@/lib/stream';
 import { FormattedMessage } from '../ai/FormattedMessage';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 interface Message {
   id: number;
@@ -36,7 +37,8 @@ const StreamCursor = () => (
 
 export const AIChatbot = () => {
   const { t } = useTranslation();
-  const { userRole } = useAuthContext();
+  const { user, userRole } = useAuthContext();
+  const location = useLocation();
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -186,9 +188,12 @@ export const AIChatbot = () => {
     setInput(question);
   };
 
-  if (userRole === 'viewer') return null;
+  if (!user || userRole === 'viewer') return null;
 
   const isBusy = isThinking || isStreaming;
+
+  // Hide the chatbot widget completely on the landing page
+  if (location.pathname === '/') return null;
 
   return (
     <>

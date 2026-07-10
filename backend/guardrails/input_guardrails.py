@@ -46,6 +46,29 @@ class InputGuardrails:
         (re.compile(r"credit\s+card\s+(generator|steal|fraud)", re.IGNORECASE), ViolationSeverity.CRITICAL),
         (re.compile(r"identity\s+theft", re.IGNORECASE), ViolationSeverity.HIGH),
         (re.compile(r"how\s+to\s+(cheat|defraud|scam)", re.IGNORECASE), ViolationSeverity.HIGH),
+        # --- TECHNICAL QUESTION PATTERNS (redirect, not hard block) ---
+        (re.compile(r"how\s+(do|does|can|is)\s+(the|your)\s+(code|app|backend|frontend|system|platform)\s+(work|built|made|coded|developed)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"what\s+(language|framework|library|technology|stack|database|DB)\s+(do|does|is|are)\s+(you|it|this)\s+(use|using|built|based)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"show\s+me\s+(the|your)\s+(code|api|schema|database|endpoint|source|implementation)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"explain\s+(the|your)\s+(architecture|codebase|code|implementation|database\s+design)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"(write|create|generate)\s+(code|script|function|class|module|API)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"how\s+(do|does)\s+(authentication|auth|login|JWT|session|token)\s+(work|function)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"(React|TypeScript|JavaScript|Python|FastAPI|SQL|PostgreSQL|Docker|Kubernetes)\s+(code|implementation|setup|config)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"what\s+(tech|stack|infrastructure|architecture)\s+(do|does|is|are)\s+(you|this|the\s+platform)\s+(use|running|built)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"how\s+(is|are)\s+(the\s+platform|it)\s+(deployed|hosted|built|architected)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"what\s+(model|algorithm|method)\s+(do|does)\s+(you|the\s+system|it)\s+(use|use\s+for|perform)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"how\s+(does|do)\s+(the|your)\s+(forecast|prediction|model|ML|AI)\s+(work|algorithm|function|operate)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        # --- BUSINESS DATA REQUEST PATTERNS (redirect, not hard block) ---
+        (re.compile(r"what\s+(is|are)\s+(my|the|current|actual|real)\s+(inventory|stock|forecast|revenue|cost|profit|margin|demand|sales)\s+(level|number|value|data|amount|quantity)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"show\s+me\s+(the|my|actual|real|current)\s+(inventory|stock|forecast|revenue|cost|profit|data|numbers|values|level|quantity)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"(pull|get|fetch|retrieve|show|display)\s+(the|my|actual|real)\s+(data|numbers|values|metrics|KPIs|report|forecast)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"(inventory|stock|forecast|revenue|cost|profit|margin)\s+(data|numbers|values|levels|figures|amounts|breakdown)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"how\s+much\s+(inventory|stock|revenue|cost|profit|margin|forecast)\s+(do\s+I|is\s+there|we\s+have)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        # --- PROMPT EXTRACTION / INTERNAL PROBE PATTERNS ---
+        (re.compile(r"what\s+(are|is)\s+(you|your)\s+(real|actual|system|hidden)\s+(prompt|instructions|rules|directives)", re.IGNORECASE), ViolationSeverity.HIGH),
+        (re.compile(r"(reveal|show|print|output|repeat|tell)\s+(me\s+)?(your|the)\s+(system|initial|real|hidden)\s+(prompt|message|instructions)", re.IGNORECASE), ViolationSeverity.HIGH),
+        (re.compile(r"how\s+(are|were)?\s*you\s+(instructed|programmed|trained|configured)", re.IGNORECASE), ViolationSeverity.MEDIUM),
+        (re.compile(r"what\s+rules?\s+(do\s+)?you\s+(follow|have|obey|enforce)", re.IGNORECASE), ViolationSeverity.MEDIUM),
     ]
 
     PROMPT_LEAKAGE_PATTERNS = [

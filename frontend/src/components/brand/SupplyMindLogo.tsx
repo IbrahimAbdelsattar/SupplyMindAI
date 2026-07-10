@@ -9,14 +9,10 @@ interface SupplyMindLogoProps {
 }
 
 /**
- * SupplyMind AI — Geometric "S" Network Logo
+ * SupplyMind AI — Supply Chain Logo
  *
- * A precise geometric "S" shape formed by interconnected network nodes.
- * The logo uses four key nodes (circles) with flowing cubic bezier paths
- * to create a minimal, flat SaaS brandmark.
- *
- * Anti-pattern guard: No gradients, no drop shadows, no 3D effects.
- * SVG uses vector-effect="non-scaling-stroke" for crisp rendering at any size.
+ * Stylized hexagonal logo with blue and green gradients and an upward-pointing arrow.
+ * "From Chaos to Clarity in Supply Chain Management"
  */
 export const SupplyMindLogo: React.FC<SupplyMindLogoProps> = ({
   className,
@@ -26,67 +22,20 @@ export const SupplyMindLogo: React.FC<SupplyMindLogoProps> = ({
 }) => {
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
-      {/* Geometric "S" Network Icon */}
-      <svg
-        viewBox="0 0 32 32"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className={cn('w-8 h-8 flex-shrink-0', iconClassName)}
-        aria-label="SupplyMind AI"
-        vectorEffect="non-scaling-stroke"
-      >
-        {/* Connecting paths — flowing cubic bezier curves */}
-        <path
-          d="M8 10 C8 6 12 4 16 6 C20 8 22 6 24 6"
-          stroke="#2563EB"
-          strokeWidth="2"
-          strokeLinecap="round"
-          fill="none"
-          vectorEffect="non-scaling-stroke"
-        />
-        <path
-          d="M24 12 C24 16 20 18 16 16 C12 14 10 16 8 16"
-          stroke="#10B981"
-          strokeWidth="2"
-          strokeLinecap="round"
-          fill="none"
-          vectorEffect="non-scaling-stroke"
-        />
-        <path
-          d="M8 22 C8 26 12 28 16 26 C20 24 22 26 24 26"
-          stroke="#2563EB"
-          strokeWidth="2"
-          strokeLinecap="round"
-          fill="none"
-          vectorEffect="non-scaling-stroke"
-        />
-
-        {/* Path connector lines — horizontal */}
-        <line
-          x1="8" y1="10" x2="8" y2="16"
-          stroke="#2563EB"
-          strokeWidth="2"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-        <line
-          x1="24" y1="12" x2="24" y2="26"
-          stroke="#2563EB"
-          strokeWidth="2"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-
-        {/* Network nodes — filled circles */}
-        <circle cx="8" cy="10" r="2.5" fill="#2563EB" vectorEffect="non-scaling-stroke" />
-        <circle cx="24" cy="6" r="2.5" fill="#2563EB" vectorEffect="non-scaling-stroke" />
-        <circle cx="24" cy="12" r="2.5" fill="#2563EB" vectorEffect="non-scaling-stroke" />
-        <circle cx="8" cy="16" r="2.5" fill="#10B981" vectorEffect="non-scaling-stroke" />
-        <circle cx="24" cy="26" r="2.5" fill="#2563EB" vectorEffect="non-scaling-stroke" />
-
-        {/* Inner connected node */}
-        <circle cx="16" cy="16" r="2" fill="#2563EB" vectorEffect="non-scaling-stroke" />
-      </svg>
+      {/* Adaptive Logo Image */}
+      <img
+        src="/supplymind-logo.jpg"
+        alt="SupplyMind AI Logo"
+        className={cn(
+          'w-8 h-8 flex-shrink-0 object-contain transition-all duration-300',
+          // Light mode: multiply makes the white background completely transparent
+          'mix-blend-multiply',
+          // Dark mode: invert & hue-rotate preserves colors but turns white to black,
+          // then screen makes the black background completely transparent!
+          'dark:invert dark:hue-rotate-180 dark:mix-blend-screen dark:brightness-125 dark:contrast-125',
+          iconClassName
+        )}
+      />
 
       {/* Wordmark — hidden when iconOnly */}
       {!iconOnly && (
@@ -97,7 +46,6 @@ export const SupplyMindLogo: React.FC<SupplyMindLogoProps> = ({
           )}
         >
           SupplyMind
-          <span className="ml-0.5 text-primary">AI</span>
         </span>
       )}
     </span>

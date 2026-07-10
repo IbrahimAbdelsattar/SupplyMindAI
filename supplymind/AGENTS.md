@@ -1,5 +1,12 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# SupplyMind Agencies (Next.js Sub-project)
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+This is the legacy Next.js prototype app, separate from the main `frontend/` Vite app.
+
+## Tech Stack
+- Next.js (Clerk auth, React, Tailwind)
+- Clerk (`@clerk/nextjs`) for auth
+- `proxy.ts` uses `clerkMiddleware`
+- Layout includes `<ClerkProvider>`, `<SignInButton>`, `<SignUpButton>`, `<UserButton>`
+- Sign-in at `/sign-in/[[...sign-in]]`, sign-up at `/sign-up/[[...sign-up]]`
+
+See `D:\SupplyMindAI\frontend\` for the current production app.

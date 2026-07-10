@@ -24,9 +24,9 @@ class TestPromptRegistry:
     def test_prompt_retrieval(self):
         assert "Inventory Agent" in PromptRegistry.get_prompt("inventory")
         assert "Forecasting Agent" in PromptRegistry.get_prompt("forecast")
-        assert "Customer Support Agent" in PromptRegistry.get_prompt("customer_support")
+        assert "SupplyMind Copilot" in PromptRegistry.get_prompt("customer_support")
         # Default fallback
-        assert "Customer Support Agent" in PromptRegistry.get_prompt("unknown_agent")
+        assert "SupplyMind Copilot" in PromptRegistry.get_prompt("unknown_agent")
 
 
 class TestToolRegistry:

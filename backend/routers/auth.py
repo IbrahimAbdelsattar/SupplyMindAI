@@ -23,8 +23,10 @@ from backend.auth.audit import (
     log_user_created,
     log_user_deactivated,
     log_role_changed,
+    log_password_reset,
 )
-from backend.db import get_db, User
+from backend.auth.passwords import generate_temp_password, hash_password
+from backend.db import get_db, User, RefreshToken
 from backend.knowledge.auth import AuthUser
 
 router = APIRouter(prefix="/auth/admin", tags=["Auth Admin"])
@@ -44,11 +46,16 @@ class UserProfile(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class UserCreateResponse(UserProfile):
+    temp_password: str
+
+
 class UserCreateRequest(BaseModel):
     email: EmailStr
     name: str
     role: str = "analyst"
     department: Optional[str] = None
+    password: Optional[str] = None
 
 
 class UserUpdateRequest(BaseModel):
@@ -96,15 +103,15 @@ async def list_users(
         db.close()
 
 
-@router.post("/users", response_model=UserProfile, status_code=201)
+@router.post("/users", response_model=UserCreateResponse, status_code=201)
 async def create_user(
     req: UserCreateRequest,
     current_user: AuthUser = Depends(require_role(Role.ADMIN)),
 ):
     """Create a new user. Only admins can create users.
 
-    The user will be created as active with the specified role.
-    They can then sign in via Clerk with their @supplymind.tech email.
+    The user will be created as active with the specified role, and forced
+    to change their password upon first login.
     """
     # Domain validation
     domain = extract_domain(req.email)
@@ -133,6 +140,13 @@ async def create_user(
             )
 
         now = datetime.now(timezone.utc)
+        if req.password and req.password.strip():
+            temp_password = req.password.strip()
+            must_change = False
+        else:
+            temp_password = generate_temp_password()
+            must_change = True
+        
         new_user = User(
             id=f"manual_{req.email.split('@')[0]}_{int(now.timestamp())}",
             email=req.email,
@@ -140,6 +154,8 @@ async def create_user(
             role=req.role,
             department=req.department,
             is_active=True,
+            password_hash=hash_password(temp_password),
+            must_change_password=must_change,
             created_at=now,
             updated_at=now,
         )
@@ -154,7 +170,8 @@ async def create_user(
             role=req.role,
         )
 
-        return _user_to_profile(new_user)
+        profile_dict = _user_to_profile(new_user).model_dump()
+        return UserCreateResponse(**profile_dict, temp_password=temp_password)
     finally:
         db.close()
 
@@ -241,6 +258,72 @@ async def deactivate_user(
             target_user_id=user_id,
             email=user.email,
         )
+    finally:
+        db.close()
+
+
+@router.delete("/users/{user_id}/purge", status_code=204)
+async def purge_user(
+    user_id: str,
+    current_user: AuthUser = Depends(require_role(Role.ADMIN)),
+):
+    """Hard-delete a user permanently from the database."""
+    db = next(get_db())
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if user.id == current_user.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete your own account",
+            )
+
+        # Delete related refresh tokens first
+        db.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete()
+        
+        # Delete user
+        db.delete(user)
+        db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/users/{user_id}/reset-password")
+async def reset_password(
+    user_id: str,
+    current_user: AuthUser = Depends(require_role(Role.ADMIN)),
+):
+    """Force a password reset for a user. Revokes all existing sessions."""
+    db = next(get_db())
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        temp_password = generate_temp_password()
+        user.password_hash = hash_password(temp_password)
+        user.must_change_password = True
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        user.updated_at = datetime.now(timezone.utc)
+
+        # Force logout
+        db.query(RefreshToken).filter(
+            RefreshToken.user_id == user.id,
+            RefreshToken.is_revoked == False
+        ).update({"is_revoked": True})
+
+        db.commit()
+
+        log_password_reset(
+            admin_id=current_user.id,
+            target_user_id=user_id,
+            email=user.email,
+        )
+
+        return {"temp_password": temp_password}
     finally:
         db.close()
 

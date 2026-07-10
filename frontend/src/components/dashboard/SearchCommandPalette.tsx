@@ -17,6 +17,7 @@ import {
   FileText,
   Activity,
   Settings,
+  Shield,
 } from 'lucide-react';
 
 type Product = { product_id: string; product_name: string };
@@ -28,6 +29,7 @@ const pages = [
   { label: 'AI Insights', path: '/insights', icon: Brain },
   { label: 'Reports', path: '/reports', icon: FileText },
   { label: 'MLOps', path: '/mlops', icon: Activity },
+  { label: 'Admin', path: '/admin/users', icon: Shield },
   { label: 'Settings', path: '/settings', icon: Settings },
 ];
 

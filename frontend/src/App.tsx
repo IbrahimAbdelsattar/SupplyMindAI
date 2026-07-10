@@ -26,16 +26,10 @@ const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/Login"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
+const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 
-import { ClerkProvider, SignedIn } from '@clerk/clerk-react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AIChatbot } from '@/components/chatbot/AIChatbot';
-
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-if (!PUBLISHABLE_KEY) {
-  console.warn("Missing Publishable Key for Clerk");
-}
-
 
 const queryClient = new QueryClient();
 
@@ -64,6 +58,7 @@ const AppRoutes = () => (
 
       {/* Admin only */}
       <Route path="/mlops" element={<ProtectedRoute requiredRole="admin"><MLOps /></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
@@ -78,28 +73,24 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-        <AuthContextProvider>
-          <QueryClientProvider client={queryClient}>
-            <ThemeProvider>
-              <CurrencyProvider>
-                <DateRangeProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
-                      <AppRoutes />
-                      <SignedIn>
-                        <AIChatbot />
-                      </SignedIn>
-                    </BrowserRouter>
-                  </TooltipProvider>
-                </DateRangeProvider>
-              </CurrencyProvider>
-            </ThemeProvider>
-          </QueryClientProvider>
-        </AuthContextProvider>
-      </ClerkProvider>
+      <AuthContextProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <CurrencyProvider>
+              <DateRangeProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <AppRoutes />
+                    <AIChatbot />
+                  </BrowserRouter>
+                </TooltipProvider>
+              </DateRangeProvider>
+            </CurrencyProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </AuthContextProvider>
     </ErrorBoundary>
   );
 };

@@ -144,23 +144,42 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    """Internal user record — Clerk-linked, domain-restricted, RBAC-enforced.
+    """Internal user record — local auth, domain-restricted, RBAC-enforced.
 
-    This table is the single source of truth for authorization. Authentication
-    is handled by Clerk (JWT), but authorization (role, department, is_active)
-    lives here. Every request verifies JWT → domain → this table → RBAC.
+    This table is the single source of truth for authorization and authentication.
+    Every request verifies the self-issued JWT → domain → this table → RBAC.
     """
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    # deprecated: safe to drop in a later cleanup migration once Clerk is fully retired.
     clerk_user_id: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="analyst")
     department: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class RefreshToken(Base):
+    """Server-side refresh token record, enables logout/revocation."""
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)  # sha256 hex of the raw refresh token
+    is_revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 
@@ -346,5 +365,14 @@ def seed_demo_data() -> None:
 def seed_database() -> None:
     try:
         seed_demo_data()
+        try:
+            from backend.scripts.seed_admin import seed_admin
+            seed_admin()
+        except Exception as seed_err:
+            LOGGER.error("Failed to seed admin user: %s", seed_err)
+        try:
+            import backend.scripts.copy_intro
+        except Exception as copy_err:
+            LOGGER.error("Failed to copy intro video: %s", copy_err)
     except Exception as exc:
         LOGGER.exception("Failed to seed database: %s", exc)

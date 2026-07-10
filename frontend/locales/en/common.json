@@ -14,7 +14,8 @@
     "settings": "Settings",
     "alerts": "Alerts",
     "navigation": "Navigation",
-    "security": "Security"
+    "security": "Security",
+    "admin": "Admin"
   },
   "theme": {
     "light": "Light Mode",

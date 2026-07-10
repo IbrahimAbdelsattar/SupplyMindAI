@@ -13,14 +13,11 @@ import { ProfileTab } from '@/components/settings/ProfileTab';
 import { AppearanceTab } from '@/components/settings/AppearanceTab';
 import { RegionalTab } from '@/components/settings/RegionalTab';
 import { NotificationsTab } from '@/components/settings/NotificationsTab';
-import { useUser } from '@clerk/clerk-react';
-
 const Settings = () => {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const { currency } = useCurrency();
   const { toast } = useToast();
-  const { user: clerkUser } = useUser();
   const [isSaving, setIsSaving] = useState(false);
 
   // User state
@@ -57,8 +54,7 @@ const Settings = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Determine the effective name to save
-      const effectiveName = user?.name || clerkUser?.fullName || clerkUser?.firstName || '';
+      const effectiveName = user?.name || '';
 
       const { fetchApi } = await import('@/lib/api');
       await fetchApi('/settings', {
@@ -71,14 +67,6 @@ const Settings = () => {
           name: effectiveName,
         }),
       });
-
-      // Sync name back to Clerk
-      if (effectiveName && clerkUser && effectiveName !== clerkUser.fullName) {
-        const parts = effectiveName.trim().split(' ');
-        const firstName = parts[0];
-        const lastName = parts.slice(1).join(' ');
-        await clerkUser.update({ firstName, lastName: lastName || undefined });
-      }
 
       toast({
         title: t('settings:toast.saved'),

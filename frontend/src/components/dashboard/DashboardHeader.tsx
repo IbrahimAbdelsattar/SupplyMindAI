@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, LogOut, Bell, Check, CheckCheck } from 'lucide-react';
 import {
@@ -8,8 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -53,10 +52,14 @@ function timeAgo(dateStr: string): string {
 
 export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const { t } = useTranslation();
-  const { userRole } = useAuthContext();
-  const { signOut } = useClerk();
-  const { user } = useUser();
+  const navigate = useNavigate();
+  const { userRole, user, logout } = useAuthContext();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   const roleLabel = ROLE_LABELS[userRole || 'analyst'] || 'Analyst';
   const roleColorClass = ROLE_COLORS[userRole || 'analyst'] || ROLE_COLORS.analyst;
@@ -151,23 +154,27 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 outline-none">
-                <UserButton afterSignOutUrl="/login" />
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="neu-panel border-none rounded-2xl p-2 w-[220px]">
               {user && (
                 <div className="px-3 py-2 mb-1">
                   <p className="text-sm font-bold text-foreground truncate">
-                    {user.fullName || user.primaryEmailAddress?.emailAddress}
+                    {user.name}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {user.primaryEmailAddress?.emailAddress}
+                    {user.email}
                   </p>
                 </div>
               )}
               <DropdownMenuSeparator className="bg-border my-1" />
-              <DropdownMenuItem 
-                onClick={() => signOut({ redirectUrl: '/login' })}
+              <DropdownMenuItem
+                onClick={handleSignOut}
                 className="rounded-xl font-medium focus:bg-red-500/10 focus:text-red-600 cursor-pointer p-3 text-red-500"
               >
                 <LogOut className="w-4 h-4 mr-2" />

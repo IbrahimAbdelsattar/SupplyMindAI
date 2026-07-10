@@ -1,0 +1,73 @@
+{
+  "title": "User Management",
+  "subtitle": "Manage user accounts, roles, and access permissions",
+  "addUser": "Add User",
+  "table": {
+    "header": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "lastLogin": "Last Login",
+      "actions": "Actions"
+    },
+    "noUsers": "No users found.",
+    "empty": "No users found. Create your first user to get started.",
+    "userCount": "{count} users"
+  },
+  "role": {
+    "admin": "Admin",
+    "manager": "Manager",
+    "analyst": "Analyst",
+    "viewer": "Viewer"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "dialog": {
+    "createTitle": "Create New User",
+    "editTitle": "Edit User",
+    "createDesc": "A temporary password will be generated. The user must change it on first login.",
+    "editDesc": "Update the user's profile information.",
+    "nameLabel": "Full Name",
+    "namePlaceholder": "Enter full name",
+    "emailLabel": "Email",
+    "emailPlaceholder": "user@supplymind.local",
+    "roleLabel": "Role",
+    "rolePlaceholder": "Select a role",
+    "departmentLabel": "Department",
+    "departmentPlaceholder": "e.g. Operations, Finance",
+    "cancel": "Cancel",
+    "create": "Create User",
+    "update": "Update User",
+    "creating": "Creating...",
+    "updating": "Updating..."
+  },
+  "password": {
+    "resetTitle": "Reset Password",
+    "resetDesc": "This will generate a new temporary password and revoke all active sessions.",
+    "resetButton": "Reset Password",
+    "newPassword": "New temporary password:",
+    "copyPassword": "Copy to clipboard",
+    "copied": "Copied!",
+    "closeWhenReady": "Close this dialog when you have saved the password."
+  },
+  "confirm": {
+    "deactivateTitle": "Deactivate User",
+    "deactivateDesc": "This will prevent the user from logging in. This action can be reversed later.",
+    "deactivateButton": "Deactivate"
+  },
+  "toast": {
+    "created": "User created",
+    "createdDesc": "The new user has been created. Share the temporary password securely.",
+    "updated": "User updated",
+    "updatedDesc": "User profile has been updated.",
+    "deactivated": "User deactivated",
+    "deactivatedDesc": "The user can no longer log in.",
+    "passwordReset": "Password reset",
+    "passwordResetDesc": "A new temporary password has been generated.",
+    "error": "Error",
+    "errorDesc": "Something went wrong. Please try again."
+  }
+}

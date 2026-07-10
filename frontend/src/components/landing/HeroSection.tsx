@@ -42,6 +42,47 @@ const Orb = ({
   />
 );
 
+// Word cycler for headline3
+function WordCycler({
+  words,
+  prefix,
+  prefersReduced,
+}: {
+  words: string[];
+  prefix: string;
+  prefersReduced: boolean;
+}) {
+  const [index, setIndex] = React.useState(0);
+  const [fading, setFading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (prefersReduced || words.length <= 1) return;
+    const interval = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % words.length);
+        setFading(false);
+      }, 300);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [prefersReduced, words.length]);
+
+  return (
+    <span className="block text-foreground">
+      {prefix}{" "}
+      <span className="relative inline-block min-w-[200px] text-left align-bottom">
+        <span className="invisible">{words.reduce((a, b) => (a.length > b.length ? a : b))}</span>
+        <span
+          className="absolute inset-0 transition-opacity duration-300"
+          style={{ opacity: fading ? 0 : 1 }}
+        >
+          {words[index]}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 // 3D tilt card — Emil spring mouse tracking
 function TiltCard({
   children,
@@ -81,7 +122,7 @@ function TiltCard({
   );
 }
 
-export const HeroSection = () => {
+export const HeroSection = ({ onPlayIntro }: { onPlayIntro?: () => void }) => {
   const { t } = useTranslation('landing');
   const prefersReduced = usePrefersReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
@@ -168,6 +209,13 @@ export const HeroSection = () => {
             >
               {t('hero.headline2')}
             </span>
+            <span className="block text-2xl sm:text-4xl md:text-5xl font-bold mt-2">
+              <WordCycler
+                words={t('hero.cycleWords', { returnObjects: true }) as string[]}
+                prefix={t('hero.headline3Prefix')}
+                prefersReduced={prefersReduced}
+              />
+            </span>
           </motion.h1>
 
           {/* Sub */}
@@ -207,17 +255,17 @@ export const HeroSection = () => {
               whileTap={{ scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             >
-              <Link
-                to="/login"
+              <button
+                onClick={onPlayIntro}
                 className="inline-flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg font-bold text-muted-foreground transition-all"
                 style={{
                   background: 'var(--neu-bg, #dde1e7)',
                   boxShadow: '6px 6px 14px rgba(163,177,198,0.55), -6px -6px 14px rgba(255,255,255,0.85)',
                 }}
               >
-                <Play className="h-5 w-5 text-primary" />
+                <Play className="h-5 w-5 text-primary" fill="currentColor" />
                 {t('hero.ctaSecondary')}
-              </Link>
+              </button>
             </motion.div>
           </motion.div>
 
