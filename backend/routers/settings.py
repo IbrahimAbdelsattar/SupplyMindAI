@@ -72,8 +72,15 @@ def save_settings(payload: UserSettingsPayload, user=Depends(_get_current_user))
         if row:
             merged = {**(row.settings_json or {}), **new_settings}
             row.settings_json = merged
+            row.updated_at = _utc_now()
         else:
-            row = UserSettings(id=str(uuid.uuid4()), user_id=uid, settings_json=new_settings)
+            row = UserSettings(
+                id=str(uuid.uuid4()),
+                user_id=uid,
+                settings_json=new_settings,
+                created_at=_utc_now(),
+                updated_at=_utc_now(),
+            )
             db.add(row)
         db.commit()
         return {"status": "ok", "settings": new_settings}

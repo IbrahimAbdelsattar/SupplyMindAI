@@ -37,6 +37,9 @@ LOGGER = logging.getLogger(__name__)
 def list_products(user: dict = Depends(_get_current_user)) -> dict[str, Any]:
     try:
         prods = STORE.products()
+        # Derive unit_cost from min_price when not present
+        if "unit_cost" not in prods.columns:
+            prods["unit_cost"] = prods.get("min_price", 0)
         items = prods.fillna("").to_dict(orient="records")
         return {"items": items, "total": len(items)}
     except Exception as exc:
@@ -210,7 +213,7 @@ def create_purchase_order(payload: dict, user: dict = Depends(require_permission
         product_row = prods[prods["product_id"] == product_id]
         if product_row.empty:
             raise HTTPException(status_code=404, detail=f"Product '{product_id}' not found")
-        unit_cost = float(product_row.iloc[0].get("unit_cost", 0))
+        unit_cost = float(product_row.iloc[0].get("unit_cost", 0) or product_row.iloc[0].get("min_price", 0) or 0)
         total_cost = round(unit_cost * qty, 2)
         po_id = f"PO-{uuid.uuid4().hex[:8].upper()}"
         pos = STORE.purchase_orders()
@@ -219,7 +222,7 @@ def create_purchase_order(payload: dict, user: dict = Depends(require_permission
             "unit_cost": unit_cost, "total_cost": total_cost,
             "notes": notes or "", "status": "created",
             "created_at": datetime.now(timezone.utc),
-            "created_by": user.get("email", ""),
+            "created_by": getattr(user, "email", "") or "",
         }])
         pos = pd.concat([pos, new_row], ignore_index=True)
         csv_path = DATA_DIR / "purchase_orders.csv"

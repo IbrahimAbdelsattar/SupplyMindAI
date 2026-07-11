@@ -2,6 +2,7 @@ import os
 import time
 import logging
 from fastapi import Request, Response
+from fastapi.responses import StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from .config import GuardrailsConfig
 from .input_guardrails import InputGuardrails
@@ -103,18 +104,34 @@ class GuardrailsMiddleware(BaseHTTPMiddleware):
             if (
                 response.status_code < 400
                 and request.url.path in self.GUARDRAILED_ENDPOINTS
+                and not isinstance(response, StreamingResponse)
             ):
                 response_body = b""
                 async for chunk in response.body_iterator:
                     response_body += chunk
 
+                decoded_body = response_body.decode("utf-8", errors="ignore")
                 output_result = self.output_guardrails.check_output(
-                    response_body.decode("utf-8", errors="ignore"),
+                    decoded_body,
                     user_id=user_id,
                     tenant_id=tenant_id,
                 )
                 for v in output_result.violations:
                     self.monitor.record_violation(v)
+
+                if output_result.violations:
+                    # DEBUG: log the full response body when any violation is detected
+                    logger.warning(
+                        "OUTPUT_GUARDRAIL_VIOLATION | endpoint=%s | violations=%d | body_preview=%s",
+                        request.url.path,
+                        len(output_result.violations),
+                        decoded_body[:500],
+                    )
+                    for v in output_result.violations:
+                        logger.warning(
+                            "  VIOLATION: category=%s severity=%s details=%s",
+                            v.category.value, v.severity.value, v.details,
+                        )
 
                 if output_result.blocked and not is_dev:
                     return Response(

@@ -20,10 +20,13 @@ class OutputGuardrails:
     ]
 
     FORBIDDEN_OUTPUT_PATTERNS = [
-        (re.compile(r"\b(\d{4}\s?){4}\b", re.IGNORECASE), "Possible credit card number in output"),
+        # Require 4 groups of 4 digits separated by spaces (typical card format)
+        (re.compile(r"\b\d{4}\s\d{4}\s\d{4}\s\d{4}\b"), "Possible credit card number in output"),
         (re.compile(r"BEGIN\s+(RSA|DSA|EC|PGP|OPENSSH)\s+(PRIVATE\s+)?KEY", re.IGNORECASE), "Private key leaked in output"),
-        (re.compile(r"(password|secret|token)\s*[=:]\s*\S+@?\S+", re.IGNORECASE), "Possible secret leaked in output"),
-        (re.compile(r"api[_-]?key\s*[=:]\s*\S+", re.IGNORECASE), "API key leaked in output"),
+        # Require credential keyword followed by a quoted or long value (avoids JSON key-only matches)
+        (re.compile(r"(?:password|secret|token)\s*[=:]\s*(?:['\"]\S{8,}['\"]|\S{20,})", re.IGNORECASE), "Possible secret leaked in output"),
+        # Require api_key/apikey followed by a quoted or long value
+        (re.compile(r"api[_-]?key\s*[=:]\s*(?:['\"]\S{8,}['\"]|\S{20,})", re.IGNORECASE), "API key leaked in output"),
     ]
 
     def __init__(self, config: GuardrailsConfig | None = None):

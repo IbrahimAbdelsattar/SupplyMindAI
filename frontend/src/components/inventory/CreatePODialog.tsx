@@ -25,6 +25,7 @@ type ProductItem = {
   category?: string;
   current_stock: number;
   unit_cost: number;
+  min_price?: number;
   reorder_point?: number;
 };
 
@@ -87,7 +88,8 @@ export function CreatePODialog({
   });
 
   const qty = parseInt(quantity, 10) || 0;
-  const totalCost = product ? qty * product.unit_cost : 0;
+  const effectiveUnitCost = product?.unit_cost ?? product?.min_price ?? 0;
+  const totalCost = product ? qty * effectiveUnitCost : 0;
 
   const canCreate =
     product &&
@@ -111,7 +113,7 @@ export function CreatePODialog({
               <p className="text-sm font-medium">{product.product_name}</p>
               <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                 <span>{t('po.currentStock')}: {product.current_stock}</span>
-                <span>{t('po.unitCost')}: {formatCurrency(product.unit_cost)}</span>
+                <span>{t('po.unitCost')}: {formatCurrency(effectiveUnitCost)}</span>
               </div>
             </div>
 
