@@ -28,6 +28,7 @@ RUN npm ci
 # Copy source and locale assets
 COPY src/ ./src/
 COPY locales/ ./locales/
+COPY public/ ./public/
 
 # Build application
 RUN npm run build

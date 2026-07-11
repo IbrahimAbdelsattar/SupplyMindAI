@@ -24,7 +24,7 @@ export const SupplyMindLogo: React.FC<SupplyMindLogoProps> = ({
     <span className={cn('inline-flex items-center gap-2.5', className)}>
       {/* Adaptive Logo Image */}
       <img
-        src="/supplymind-logo.jpg"
+        src={`${import.meta.env.BASE_URL}supplymind-logo.jpg`}
         alt="SupplyMind AI Logo"
         className={cn(
           'w-8 h-8 flex-shrink-0 object-contain transition-all duration-300',

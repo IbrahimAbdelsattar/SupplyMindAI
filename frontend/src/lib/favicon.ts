@@ -11,7 +11,7 @@ export function adaptFavicon() {
   };
 
   const img = new Image();
-  img.src = '/supplymind-logo.jpg';
+  img.src = `${import.meta.env.BASE_URL}supplymind-logo.jpg`;
   
   img.onload = () => {
     try {
@@ -21,7 +21,7 @@ export function adaptFavicon() {
       
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        setFavicon('/supplymind-logo.jpg');
+        setFavicon(`${import.meta.env.BASE_URL}supplymind-logo.jpg`);
         return;
       }
       
@@ -61,12 +61,12 @@ export function adaptFavicon() {
       setFavicon(dataUrl);
     } catch (e) {
       console.warn("Favicon adaptation failed, fallback to original image", e);
-      setFavicon('/supplymind-logo.jpg');
+      setFavicon(`${import.meta.env.BASE_URL}supplymind-logo.jpg`);
     }
   };
 
   img.onerror = () => {
-    setFavicon('/supplymind-logo.jpg');
+    setFavicon(`${import.meta.env.BASE_URL}supplymind-logo.jpg`);
   };
 }
 
