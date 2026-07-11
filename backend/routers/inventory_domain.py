@@ -236,6 +236,85 @@ def create_purchase_order(payload: dict, user: dict = Depends(require_permission
         LOGGER.error("Failed to create purchase order: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
+
+# ---------------------------------------------------------------------------
+# GET /purchase-orders — list all POs, optional ?status= filter
+# ---------------------------------------------------------------------------
+@router.get("/purchase-orders")
+def list_purchase_orders(
+    status: Optional[str] = Query(None),
+    user: dict = Depends(require_permission(Permission.VIEW_INVENTORY)),
+):
+    try:
+        pos = STORE.purchase_orders()
+        if status:
+            pos = pos[pos["status"] == status]
+        items = pos.to_dict(orient="records")
+        # Serialize created_at to ISO string
+        for item in items:
+            if hasattr(item.get("created_at"), "isoformat"):
+                item["created_at"] = item["created_at"].isoformat()
+        return {"items": items, "total": len(items)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# PATCH /purchase-orders/{po_id} — status transition: created→approved→received
+# ---------------------------------------------------------------------------
+_VALID_TRANSITIONS: dict[str, str] = {
+    "created": "approved",
+    "approved": "received",
+}
+
+@router.patch("/purchase-orders/{po_id}")
+def update_purchase_order(
+    po_id: str,
+    payload: dict,
+    user: dict = Depends(require_permission(Permission.MANAGE_INVENTORY)),
+):
+    try:
+        action = payload.get("action")
+        if action not in _VALID_TRANSITIONS:
+            raise HTTPException(status_code=400, detail=f"Invalid action '{action}'. Must be 'approve' or 'receive'.")
+
+        pos = STORE.purchase_orders()
+        mask = pos["po_id"] == po_id
+        if not mask.any():
+            raise HTTPException(status_code=404, detail=f"PO '{po_id}' not found")
+
+        row_idx = pos[mask].index[0]
+        current_status = str(pos.loc[row_idx, "status"])
+        expected_from = "created" if action == "approve" else "approved"
+        if current_status != expected_from:
+            raise HTTPException(status_code=409, detail=f"PO is '{current_status}', cannot {action}")
+
+        new_status = _VALID_TRANSITIONS[current_status]
+        pos.loc[row_idx, "status"] = new_status
+        pos.loc[row_idx, "updated_at"] = datetime.now(timezone.utc)
+        pos.loc[row_idx, "updated_by"] = getattr(user, "email", "") or ""
+
+        csv_path = DATA_DIR / "purchase_orders.csv"
+        pos.to_csv(csv_path, index=False)
+        STORE._cache["purchase_orders"] = pos
+
+        # On receive: auto-adjust inventory stock
+        if new_status == "received":
+            product_id = str(pos.loc[row_idx, "product_id"])
+            quantity = int(pos.loc[row_idx, "quantity"])
+            from backend.services.inventory_service import adjust_inventory
+            adjust_inventory(product_id, quantity, reason=f"PO {po_id} received")
+            LOGGER.info("PO %s received — stock adjusted +%d for %s", po_id, quantity, product_id)
+
+        LOGGER.info("PO %s status: %s → %s by %s", po_id, current_status, new_status, user.email if hasattr(user, 'email') else "unknown")
+        return {"success": True, "po_id": po_id, "status": new_status}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        LOGGER.error("Failed to update PO %s: %s", po_id, exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("/summary")
 def inventory_summary(user: dict = Depends(_get_current_user)):
     try:

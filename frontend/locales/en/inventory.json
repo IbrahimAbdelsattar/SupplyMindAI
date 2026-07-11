@@ -90,5 +90,38 @@
       "created": "PO has been created successfully.",
       "error": "Error"
     }
+  },
+  "poList": {
+    "title": "Purchase Orders",
+    "subtitle": "Manage and track purchase orders through their lifecycle",
+    "filter": {
+      "all": "All Status",
+      "created": "Created",
+      "approved": "Approved",
+      "received": "Received"
+    },
+    "table": {
+      "title": "All Purchase Orders",
+      "description": "{{total}} purchase order(s) total",
+      "empty": "No purchase orders found.",
+      "poId": "PO ID",
+      "product": "Product",
+      "qty": "Qty",
+      "unitCost": "Unit Cost",
+      "total": "Total",
+      "status": "Status",
+      "date": "Date",
+      "createdBy": "Created By",
+      "actions": "Actions"
+    },
+    "actions": {
+      "approve": "Approve",
+      "receive": "Receive"
+    },
+    "toast": {
+      "updated": "PO Updated",
+      "statusChanged": "PO {{id}} is now {{status}}.",
+      "error": "Error"
+    }
   }
 }

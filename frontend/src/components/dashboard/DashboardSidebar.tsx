@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  ShoppingCart,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import React, { useState } from 'react';
@@ -40,6 +41,7 @@ const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: s
   { icon: LayoutDashboard, labelKey: 'common:nav.dashboard', path: '/dashboard' },
   { icon: TrendingUp, labelKey: 'common:nav.forecasting', path: '/forecasting', minRole: 'analyst' },
   { icon: Package, labelKey: 'common:nav.inventory', path: '/inventory' },
+  { icon: ShoppingCart, labelKey: 'common:nav.purchaseOrders', path: '/purchase-orders', minRole: 'manager' },
   { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
   { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'manager' },
   { icon: AlertTriangle, labelKey: 'common:nav.alerts', path: '/alerts' },

@@ -21,6 +21,7 @@ const AIInsights = lazy(() => import("./pages/AIInsights"));
 const Reports = lazy(() => import("./pages/Reports"));
 const MLOps = lazy(() => import("./pages/MLOps"));
 const Alerts = lazy(() => import("./pages/Alerts"));
+const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
 
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -56,6 +57,7 @@ const AppRoutes = () => (
 
       {/* Manager+ required */}
       <Route path="/reports" element={<ProtectedRoute requiredRole="manager"><Reports /></ProtectedRoute>} />
+      <Route path="/purchase-orders" element={<ProtectedRoute requiredRole="manager"><PurchaseOrders /></ProtectedRoute>} />
       <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
 
       {/* Admin only */}
