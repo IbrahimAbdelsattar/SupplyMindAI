@@ -146,9 +146,9 @@ const MLOps = () => {
                       )}>
                         <item.icon className={cn('w-5 h-5 sm:w-6 sm:h-6', `text-${item.color}`)} />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate">{item.label}</p>
-                        <p className="text-base sm:text-xl font-bold truncate">{item.value}</p>
+                      <div className="flex-1">
+                        <p className="text-xs sm:text-sm text-muted-foreground leading-tight mb-1">{item.label}</p>
+                        <p className="text-base sm:text-lg font-bold leading-tight">{item.value}</p>
                       </div>
                     </div>
                   </CardContent>
