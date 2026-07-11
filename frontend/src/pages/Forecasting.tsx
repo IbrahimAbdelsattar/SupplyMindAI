@@ -337,14 +337,7 @@ const Forecasting = () => {
             </motion.div>
           )}
 
-          {selectedProduct && (
-            <AISummaryCard
-              title={t('forecasting:aiExplanation.title')}
-              productId={selectedProduct}
-              sourceType="forecast"
-              question={`Explain forecast changes and drivers for product ${selectedProduct}. What should planners watch next?`}
-            />
-          )}
+
 
           {/* Forecast Chart */}
           <motion.div
