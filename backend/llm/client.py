@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 LOGGER = logging.getLogger(__name__)
 
 # Primary model — fast, cheap, widely available on OpenRouter
-DEFAULT_MODEL = "qwen/qwen3-coder:free"
+DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 
 # Ordered fallback chain for OpenRouter models
 FALLBACK_MODELS = [
