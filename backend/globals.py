@@ -129,6 +129,16 @@ class DataStore:
         if "purchases" not in self._cache:
             self._cache["purchases"] = pd.DataFrame()
         return self._cache["purchases"]
+    def purchase_orders(self) -> pd.DataFrame:
+        if "purchase_orders" not in self._cache:
+            path = DATA_DIR / "purchase_orders.csv"
+            if path.exists():
+                self._cache["purchase_orders"] = pd.read_csv(path, parse_dates=["created_at"])
+            else:
+                self._cache["purchase_orders"] = pd.DataFrame(
+                    columns=["po_id", "product_id", "quantity", "unit_cost", "total_cost", "notes", "status", "created_at", "created_by"]
+                )
+        return self._cache["purchase_orders"]
 
 
 STORE = DataStore()

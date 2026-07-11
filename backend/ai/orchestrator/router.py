@@ -24,7 +24,8 @@ class AIOrchestrator:
         query: str,
         user_id: str,
         session_id: str,
-        product_id: str | None = None
+        product_id: str | None = None,
+        mode: str = "business",
     ) -> Dict[str, Any]:
         """Process user request synchronously through the complete orchestration lifecycle."""
         start_time = time.monotonic()
@@ -41,7 +42,11 @@ class AIOrchestrator:
             }
 
         # 2. Intent Detection & Routing Override
-        if os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
+        if mode == "business":
+            # Inventory page chatbot: full RAG access, bypass RESTRICT_CHATBOT
+            intent = "inventory"
+            confidence = 1.0
+        elif os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
             intent = "customer_support"
             confidence = 1.0
         else:
@@ -98,7 +103,8 @@ class AIOrchestrator:
         query: str,
         user_id: str,
         session_id: str,
-        product_id: str | None = None
+        product_id: str | None = None,
+        mode: str = "business",
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Process user request asynchronously yielding tokens and statuses."""
         start_time = time.monotonic()
@@ -110,7 +116,11 @@ class AIOrchestrator:
             return
 
         # 2. Intent Detection & Routing Override
-        if os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
+        if mode == "business":
+            # Inventory page chatbot: full RAG access, bypass RESTRICT_CHATBOT
+            intent = "inventory"
+            confidence = 1.0
+        elif os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
             intent = "customer_support"
             confidence = 1.0
         else:

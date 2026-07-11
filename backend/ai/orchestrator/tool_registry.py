@@ -17,9 +17,20 @@ class ToolRegistry:
     """Manages mapping and registration of tools for each agent role."""
 
     _registry = {
-        "inventory": [analyze_inventory, search_inventory_knowledge],
+        "inventory": [
+            analyze_inventory,
+            search_inventory_knowledge,
+            search_forecast_knowledge,
+            search_insights_knowledge,
+            recall_agent_memory_tool,
+        ],
         "forecast": [generate_forecast, search_forecast_knowledge],
-        "customer_support": [],
+        "customer_support": [
+            search_inventory_knowledge,
+            search_forecast_knowledge,
+            search_insights_knowledge,
+            recall_agent_memory_tool,
+        ],
         "documentation": [],
         "mlops": [get_mlops_metrics, search_mlops_knowledge],
         "executive_insights": [],

@@ -67,7 +67,8 @@ def copilot_chat(
         query=message,
         user_id=user_id,
         session_id=session_id,
-        product_id=product_id
+        product_id=product_id,
+        mode=mode,
     )
 
     return {

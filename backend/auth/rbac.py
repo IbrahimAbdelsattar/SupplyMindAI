@@ -121,7 +121,6 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     },
     Role.ANALYST: {
         Permission.VIEW_DASHBOARD,
-        Permission.VIEW_REPORTS,
         Permission.VIEW_DATA,
         Permission.VIEW_INVENTORY,
         Permission.VIEW_FORECASTS,
@@ -129,8 +128,6 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         Permission.VIEW_INSIGHTS,
         Permission.GENERATE_INSIGHTS,
         Permission.USE_COPILOT,
-        Permission.GENERATE_REPORTS,
-        Permission.DOWNLOAD_REPORTS,
         Permission.VIEW_MLOPS,
         Permission.VIEW_SETTINGS,
     },

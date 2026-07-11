@@ -94,6 +94,7 @@ export const AIChatbot = () => {
       body: JSON.stringify({
         message: question,
         session_id: sessionIdRef.current,
+        mode: 'support',
       }),
       callbacks: {
         onStart: () => {

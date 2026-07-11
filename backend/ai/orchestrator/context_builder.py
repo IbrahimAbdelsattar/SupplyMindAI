@@ -11,7 +11,7 @@ class ContextBuilder:
     _agent_source_types = {
         "inventory": ["inventory", "incident", "recommendation"],
         "forecast": ["forecast"],
-        "customer_support": ["general", "insight"],
+        "customer_support": ["general", "insight", "inventory", "incident", "forecast", "recommendation"],
         "documentation": ["general", "insight"],
         "mlops": ["mlops"],
         "executive_insights": ["insight", "report"],
@@ -60,6 +60,6 @@ class ContextBuilder:
     @classmethod
     def get_operational_snapshot_for_agent(cls, agent_type: str, product_id: str | None = None) -> str:
         """Provide operational snapshots only to authorized agents (e.g. inventory or forecast)."""
-        if agent_type in {"inventory", "forecast", "executive_insights", "report"}:
+        if agent_type in {"inventory", "forecast", "executive_insights", "report", "customer_support"}:
             return get_operational_snapshot(product_id)
         return ""

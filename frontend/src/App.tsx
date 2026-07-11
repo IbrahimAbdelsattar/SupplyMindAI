@@ -53,7 +53,9 @@ const AppRoutes = () => (
 
       {/* Analyst+ required */}
       <Route path="/forecasting" element={<ProtectedRoute requiredRole="analyst"><Forecasting /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute requiredRole="analyst"><Reports /></ProtectedRoute>} />
+
+      {/* Manager+ required */}
+      <Route path="/reports" element={<ProtectedRoute requiredRole="manager"><Reports /></ProtectedRoute>} />
       <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
 
       {/* Admin only */}

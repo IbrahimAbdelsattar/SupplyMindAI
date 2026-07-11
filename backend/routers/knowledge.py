@@ -59,7 +59,7 @@ class CopilotChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: Optional[str] = None
     product_id: Optional[str] = None
-    mode: Literal["business", "technical"] = "business"
+    mode: Literal["business", "technical", "support"] = "business"
 
 
 @router.get("/knowledge/status")

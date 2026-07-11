@@ -41,7 +41,7 @@ const navItems: { icon: React.ComponentType<{ className?: string }>; labelKey: s
   { icon: TrendingUp, labelKey: 'common:nav.forecasting', path: '/forecasting', minRole: 'analyst' },
   { icon: Package, labelKey: 'common:nav.inventory', path: '/inventory' },
   { icon: Brain, labelKey: 'common:nav.aiInsights', path: '/insights' },
-  { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'analyst' },
+  { icon: FileText, labelKey: 'common:nav.reports', path: '/reports', minRole: 'manager' },
   { icon: AlertTriangle, labelKey: 'common:nav.alerts', path: '/alerts' },
   { icon: Activity, labelKey: 'common:nav.mlops', path: '/mlops', minRole: 'admin' },
   { icon: Shield, labelKey: 'common:nav.admin', path: '/admin/users', minRole: 'admin' },

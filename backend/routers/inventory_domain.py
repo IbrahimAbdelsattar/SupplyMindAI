@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -11,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from backend.dependencies import _get_current_user, require_permission
 from backend.auth.rbac import Permission
-from backend.globals import PROJECT_ROOT, STORE
+from backend.globals import DATA_DIR, PROJECT_ROOT, STORE
 from backend.analytics import (
     daily_demand_stats,
     lead_time_days as calc_lead_time,
@@ -25,6 +27,7 @@ router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
 
 INVENTORY_REPORTS_DIR = PROJECT_ROOT / "reports" / "inventory"
 os.makedirs(INVENTORY_REPORTS_DIR, exist_ok=True)
+LOGGER = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +191,47 @@ def inventory_adjust(payload: dict, user: dict = Depends(require_permission(Perm
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
+
+# ---------------------------------------------------------------------------
+# POST /purchase-orders — create a new purchase order
+# ---------------------------------------------------------------------------
+@router.post("/purchase-orders")
+def create_purchase_order(payload: dict, user: dict = Depends(require_permission(Permission.MANAGE_INVENTORY))):
+    try:
+        product_id = payload.get("product_id")
+        quantity = payload.get("quantity", 0)
+        notes = payload.get("notes")
+        if not product_id:
+            raise HTTPException(status_code=400, detail="Missing product_id")
+        qty = int(quantity)
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail="Quantity must be a positive integer")
+        prods = STORE.products()
+        product_row = prods[prods["product_id"] == product_id]
+        if product_row.empty:
+            raise HTTPException(status_code=404, detail=f"Product '{product_id}' not found")
+        unit_cost = float(product_row.iloc[0].get("unit_cost", 0))
+        total_cost = round(unit_cost * qty, 2)
+        po_id = f"PO-{uuid.uuid4().hex[:8].upper()}"
+        pos = STORE.purchase_orders()
+        new_row = pd.DataFrame([{
+            "po_id": po_id, "product_id": product_id, "quantity": qty,
+            "unit_cost": unit_cost, "total_cost": total_cost,
+            "notes": notes or "", "status": "created",
+            "created_at": datetime.now(timezone.utc),
+            "created_by": user.get("email", ""),
+        }])
+        pos = pd.concat([pos, new_row], ignore_index=True)
+        csv_path = DATA_DIR / "purchase_orders.csv"
+        pos.to_csv(csv_path, index=False)
+        STORE._cache["purchase_orders"] = pos
+        LOGGER.info("Purchase order %s created for %s (qty=%s)", po_id, product_id, qty)
+        return {"success": True, "po_id": po_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        LOGGER.error("Failed to create purchase order: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 @router.get("/summary")
 def inventory_summary(user: dict = Depends(_get_current_user)):
