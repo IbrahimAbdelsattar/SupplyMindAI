@@ -58,10 +58,21 @@ def fetch_tracing_data(  # noqa: C901
     api_key = os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY", "")
     project = os.getenv("LANGCHAIN_PROJECT") or os.getenv("LANGSMITH_PROJECT", "supplymind-ai")
 
+    project_url = None
+    if enabled and api_key:
+        try:
+            client = get_langsmith_client()
+            if client is not None:
+                proj_info = client.read_project(project_name=project)
+                project_url = f"https://smith.langchain.com/o/{proj_info.tenant_id}/projects/p/{proj_info.id}?timeModel=%7B%22duration%22%3A%221d%22%7D"
+        except Exception as e:
+            LOGGER.warning("Could not dynamically resolve LangSmith project URL: %s", e)
+
     result: dict[str, Any] = {
         "enabled": enabled,
         "project": project,
         "api_key_configured": bool(api_key),
+        "project_url": project_url,
         "agents": [],
         "total_calls": 0,
         "errors_last_24h": 0,

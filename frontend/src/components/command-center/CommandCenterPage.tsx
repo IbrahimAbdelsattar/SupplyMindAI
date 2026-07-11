@@ -56,7 +56,10 @@ export function CommandCenterPage() {
 
   const handleAction = (actionLabel: string, relatedAlertId?: string) => {
     if (actionLabel.toLowerCase().includes('po') || actionLabel.includes('شراء')) {
-      navigate(relatedAlertId ? `/inventory?createPO=true&alertId=${relatedAlertId}` : '/inventory');
+      const url = relatedAlertId
+        ? `/inventory?createPO=true&alertId=${relatedAlertId}`
+        : `/inventory?createPO=true`;
+      navigate(url);
       return;
     }
     toast({ title: actionLabel, description: t('recommendations.toastExecuting') });

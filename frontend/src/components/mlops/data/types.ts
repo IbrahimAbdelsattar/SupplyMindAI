@@ -57,6 +57,7 @@ export type TracingData = {
   enabled: boolean;
   project: string;
   api_key_configured: boolean;
+  project_url?: string;
   agents: TracingAgent[];
   total_calls: number;
   errors_last_24h: number;

@@ -76,12 +76,12 @@ const Inventory = () => {
     },
   });
 
-  const { data: productsData } = useQuery({
+  const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['products-list'],
     queryFn: () => apiFetch<{ items: ProductItem[]; total: number }>('/inventory/products'),
   });
 
-  const { data: inventoryRecommendations = [] } = useQuery({
+  const { data: inventoryRecommendations = [], isLoading: recommendationsLoading } = useQuery({
     queryKey: ['inventory-optimize', 13],
     queryFn: () => apiFetch<InventoryRecommendation[]>('/inventory/optimize?limit=13'),
   });
@@ -94,12 +94,16 @@ const Inventory = () => {
   // Handle createPO query parameter from command center "Create PO" button
   useEffect(() => {
     const createPOFlag = searchParams.get('createPO');
-    if (createPOFlag === 'true' && products.length > 0) {
+    if (createPOFlag === 'true' && !productsLoading && !recommendationsLoading && products.length > 0) {
       const alertId = searchParams.get('alertId');
+      let matched = false;
+
       // Try to find the product related to this alert from recommendations
       if (alertId) {
+        // Strip prefixes like "alert-stockout-" or "alert-low-" to get raw product_id
+        const cleanProductId = alertId.replace(/^alert-(stockout|low)-/, '');
         const match = inventoryRecommendations.find(
-          (r) => r.product_id === alertId || r.product_name.toLowerCase().includes(alertId.toLowerCase())
+          (r) => r.product_id === cleanProductId || r.product_id === alertId || r.product_name.toLowerCase().includes(cleanProductId.toLowerCase())
         );
         if (match) {
           const product = products.find((p) => p.product_id === match.product_id);
@@ -107,26 +111,32 @@ const Inventory = () => {
             setSelectedProduct(product);
             setPoSuggestedQty(match.reorderQty);
             setShowCreatePO(true);
+            matched = true;
           }
         }
-      } else {
-        // No specific alert, just open with first high-risk product
+      }
+
+      // Fallback if no specific match was found or no alertId was provided
+      if (!matched) {
         const highRisk = inventoryRecommendations.find((r) => r.riskLevel === 'high');
-        if (highRisk) {
-          const product = products.find((p) => p.product_id === highRisk.product_id);
+        const fallback = highRisk || inventoryRecommendations[0] || products[0];
+        if (fallback) {
+          const product = products.find((p) => p.product_id === fallback.product_id) || products[0];
           if (product) {
             setSelectedProduct(product);
-            setPoSuggestedQty(highRisk.reorderQty);
+            const optMatch = inventoryRecommendations.find((r) => r.product_id === product.product_id);
+            setPoSuggestedQty(optMatch?.reorderQty || 100);
             setShowCreatePO(true);
           }
         }
       }
+
       // Clean up query params
       searchParams.delete('createPO');
       searchParams.delete('alertId');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams, products, inventoryRecommendations]);
+  }, [searchParams, setSearchParams, products, inventoryRecommendations, productsLoading, recommendationsLoading]);
 
   const totalSavings = useMemo(
     () => inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0),
@@ -336,11 +346,15 @@ const Inventory = () => {
                         <div className="flex items-center justify-between text-xs sm:text-sm mb-1.5">
                           <span className="text-muted-foreground">{t('inventory:aiRecommendations.stockLevel')}</span>
                           <span className="font-medium">
-                            {Math.round((item.currentStock / (item.reorderPoint + item.safetyStock)) * 100)}%
+                            {item.reorderPoint + item.safetyStock > 0
+                              ? Math.round((item.currentStock / (item.reorderPoint + item.safetyStock)) * 100)
+                              : 0}%
                           </span>
                         </div>
                         <Progress 
-                          value={(item.currentStock / (item.reorderPoint + item.safetyStock)) * 100}
+                          value={item.reorderPoint + item.safetyStock > 0
+                            ? Math.min(100, (item.currentStock / (item.reorderPoint + item.safetyStock)) * 100)
+                            : 0}
                           className="h-1.5 sm:h-2"
                         />
                       </div>

@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 LOGGER = logging.getLogger(__name__)
 
 # Primary model — fast, cheap, widely available on OpenRouter
-DEFAULT_MODEL = "google/gemini-2.5-flash"
+DEFAULT_MODEL = "qwen/qwen3-coder:free"
 
 # Ordered fallback chain for OpenRouter models
 FALLBACK_MODELS = [
@@ -147,6 +147,8 @@ def get_llm(temperature: float = 0.1, max_tokens: int = 1024) -> ChatOpenAI | No
     provider, detected_url, detected_model = _resolve_provider(key)
     base_url = os.getenv("LLM_BASE_URL") or detected_url
     model = os.getenv("LLM_MODEL") or detected_model
+    if model and model.startswith("LLM_MODEL="):
+        model = model.replace("LLM_MODEL=", "").strip()
     
     extra_headers = {}
     if base_url and "openrouter.ai" in base_url:
@@ -206,6 +208,8 @@ def get_llm_info() -> dict:
     provider, detected_url, detected_model = _resolve_provider(key)
     base_url = os.getenv("LLM_BASE_URL") or detected_url
     model = os.getenv("LLM_MODEL") or detected_model
+    if model and model.startswith("LLM_MODEL="):
+        model = model.replace("LLM_MODEL=", "").strip()
     
     return {
         "model": model,
