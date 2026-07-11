@@ -54,7 +54,7 @@ def fetch_tracing_data(  # noqa: C901
 ) -> dict[str, Any]:
     configure_langsmith()
 
-    enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes"} or os.getenv("LANGSMITH_TRACING", "").lower() in {"1", "true", "yes"}
+    enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() in {"1", "true", "yes", "on"} or os.getenv("LANGSMITH_TRACING", "").lower() in {"1", "true", "yes", "on"}
     api_key = os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY", "")
     project = os.getenv("LANGCHAIN_PROJECT") or os.getenv("LANGSMITH_PROJECT", "supplymind-ai")
 
@@ -94,27 +94,44 @@ def fetch_tracing_data(  # noqa: C901
         run_first_seen: dict[str, datetime | None] = {}
         run_last_seen: dict[str, datetime | None] = {}
 
+        # Map actual LangSmith traceable names to AGENT_LABELS keys
+        RUN_NAME_TO_AGENT_KEY = {
+            "supervisor_node": "supervisor_agent",
+            "forecasting_node": "forecasting_agent",
+            "inventory_node": "inventory_agent",
+            "rag_node": "rag_agent",
+            "mlops_node": "mlops_agent",
+            "insights_node": "insights_agent",
+            "copilot_chat": "copilot_chat",
+            "rag_query": "rag_query",
+            "forecast_reasoning_analyze": "forecast_reasoning",
+            "stream_forecast_reasoning": "forecast_reasoning",
+            "generate_insights": "insights_analyze",
+            "stream_insights": "insights_analyze",
+        }
+
         for run in runs:
             name = run.name or "unknown"
-            if name not in AGENT_LABELS:
+            agent_key = RUN_NAME_TO_AGENT_KEY.get(name)
+            if not agent_key:
                 continue
 
-            run_counts[name] = run_counts.get(name, 0) + 1
+            run_counts[agent_key] = run_counts.get(agent_key, 0) + 1
 
             if run.error:
-                run_errors[name] = run_errors.get(name, 0) + 1
+                run_errors[agent_key] = run_errors.get(agent_key, 0) + 1
 
             if run.latency_ms is not None:
-                run_latencies.setdefault(name, []).append(run.latency_ms / 1000.0)
+                run_latencies.setdefault(agent_key, []).append(run.latency_ms / 1000.0)
 
             if run.start_time:
                 dt = run.start_time
-                prev_first = run_first_seen.get(name)
+                prev_first = run_first_seen.get(agent_key)
                 if prev_first is None or dt < prev_first:
-                    run_first_seen[name] = dt
-                prev_last = run_last_seen.get(name)
+                    run_first_seen[agent_key] = dt
+                prev_last = run_last_seen.get(agent_key)
                 if prev_last is None or dt > prev_last:
-                    run_last_seen[name] = dt
+                    run_last_seen[agent_key] = dt
 
         result["total_calls"] = sum(run_counts.values())
         result["errors_last_24h"] = sum(run_errors.values())

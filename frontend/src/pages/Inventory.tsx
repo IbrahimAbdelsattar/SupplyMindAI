@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 
@@ -28,6 +29,7 @@ import InventoryTable, { type ProductItem } from '@/components/inventory/Invento
 import ChatBot from '@/components/inventory/ChatBot';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { CreatePODialog } from '@/components/inventory/CreatePODialog';
 
 type InventoryRecommendation = {
   product_id: string;
@@ -47,6 +49,9 @@ const Inventory = () => {
   const isAllowedToApply = userRole === 'admin' || userRole === 'manager';
   const { formatCurrency } = useCurrency();
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
+  const [showCreatePO, setShowCreatePO] = useState(false);
+  const [poSuggestedQty, setPoSuggestedQty] = useState<number | undefined>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { mutateAsync: applyMutation, isPending: isApplying } = useMutation({
@@ -85,6 +90,43 @@ const Inventory = () => {
     () => productsData?.items ?? [],
     [productsData?.items]
   );
+
+  // Handle createPO query parameter from command center "Create PO" button
+  useEffect(() => {
+    const createPOFlag = searchParams.get('createPO');
+    if (createPOFlag === 'true' && products.length > 0) {
+      const alertId = searchParams.get('alertId');
+      // Try to find the product related to this alert from recommendations
+      if (alertId) {
+        const match = inventoryRecommendations.find(
+          (r) => r.product_id === alertId || r.product_name.toLowerCase().includes(alertId.toLowerCase())
+        );
+        if (match) {
+          const product = products.find((p) => p.product_id === match.product_id);
+          if (product) {
+            setSelectedProduct(product);
+            setPoSuggestedQty(match.reorderQty);
+            setShowCreatePO(true);
+          }
+        }
+      } else {
+        // No specific alert, just open with first high-risk product
+        const highRisk = inventoryRecommendations.find((r) => r.riskLevel === 'high');
+        if (highRisk) {
+          const product = products.find((p) => p.product_id === highRisk.product_id);
+          if (product) {
+            setSelectedProduct(product);
+            setPoSuggestedQty(highRisk.reorderQty);
+            setShowCreatePO(true);
+          }
+        }
+      }
+      // Clean up query params
+      searchParams.delete('createPO');
+      searchParams.delete('alertId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, products, inventoryRecommendations]);
 
   const totalSavings = useMemo(
     () => inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0),
@@ -352,6 +394,13 @@ const Inventory = () => {
           </motion.div>
         </main>
       </div>
+
+      <CreatePODialog
+        open={showCreatePO}
+        onOpenChange={setShowCreatePO}
+        product={selectedProduct}
+        suggestedQuantity={poSuggestedQty}
+      />
     </div>
   );
 };

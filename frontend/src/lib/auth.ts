@@ -1,3 +1,5 @@
+import { getAuthBaseUrl } from './api';
+
 const ACCESS_TOKEN_KEY = 'sm_access_token';
 const REFRESH_TOKEN_KEY = 'sm_refresh_token';
 
@@ -26,7 +28,7 @@ async function _doRefreshInternal(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
   try {
-    const res = await fetch('/auth/refresh', {
+    const res = await fetch(`${getAuthBaseUrl()}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),

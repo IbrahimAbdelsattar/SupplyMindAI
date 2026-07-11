@@ -71,5 +71,24 @@
     "lowStock": "Low Stock",
     "outOfStock": "Out of Stock",
     "overstocked": "Overstocked"
+  },
+  "po": {
+    "title": "Create Purchase Order",
+    "description": "Create a new purchase order for this product.",
+    "currentStock": "Current Stock",
+    "unitCost": "Unit Cost",
+    "quantity": "Quantity",
+    "quantityPlaceholder": "Enter quantity to order",
+    "notes": "Notes (optional)",
+    "notesPlaceholder": "Add any special instructions...",
+    "estimatedTotal": "Estimated Total",
+    "cancel": "Cancel",
+    "create": "Create PO",
+    "creating": "Creating...",
+    "toast": {
+      "success": "Purchase Order Created",
+      "created": "PO has been created successfully.",
+      "error": "Error"
+    }
   }
 }

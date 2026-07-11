@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useCallback, useEffect, useState, useRef } from 'react';
+import { getAuthBaseUrl } from '@/lib/api';
 
 export type AppRole = 'admin' | 'manager' | 'analyst' | 'viewer';
 
@@ -107,9 +108,6 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
       refreshAccessToken().catch(() => {
         clearTokens();
         setUserState(null);
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
       });
     }, delayMs);
   }
@@ -130,13 +128,23 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!refreshToken) return null;
 
     try {
-      const res = await fetch('/auth/refresh', {
+      const res = await fetch(`${getAuthBaseUrl()}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
-      if (!res.ok) throw new Error('Refresh failed');
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Refresh token invalid or expired');
+        }
+        return null; // Don't log out for 5xx or network errors
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return null; // Received HTML instead of JSON, likely proxy error, don't log out
+      }
 
       const data = await res.json();
       storeTokens(data.access_token, data.refresh_token);
@@ -148,15 +156,17 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
       } catch { /* ignore decode errors */ }
 
       return data.access_token;
-    } catch {
-      clearTokens();
-      setUserState(null);
+    } catch (err: any) {
+      if (err.message === 'Refresh token invalid or expired') {
+        clearTokens();
+        setUserState(null);
+      }
       return null;
     }
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch('/auth/login', {
+    const res = await fetch(`${getAuthBaseUrl()}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -213,7 +223,7 @@ export const AuthContextProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // Best-effort server-side logout (blacklist refresh token)
     if (refreshToken) {
       try {
-        await fetch('/auth/logout', {
+        await fetch(`${getAuthBaseUrl()}/auth/logout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh_token: refreshToken }),

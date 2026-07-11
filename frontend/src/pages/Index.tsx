@@ -61,7 +61,7 @@ const IntroVideoOverlay = ({ onComplete }: { onComplete: () => void }) => {
     >
       <video
         ref={videoRef}
-        src={`${import.meta.env.BASE_URL}intro.mp4`}
+        src="/intro.mp4"
         className="w-full h-full object-cover"
         playsInline
         autoPlay

@@ -36,6 +36,14 @@
     "inventoryUpdated": "تم تحديث المخزون بنجاح.",
     "error": "خطأ"
   },
+  "stockChart": {
+    "snapshotDate": "تاريخ اللقطة",
+    "totalUnits": "إجمالي الوحدات",
+    "criticalItems": "العناصر الحرجة",
+    "activeProducts": "المنتجات النشطة",
+    "title": "المخزون الحالي حسب الفئة",
+    "description": "توزيع المخزون عبر فئات المنتجات"
+  },
   "table": {
     "title": "المخزون",
     "searchPlaceholder": "البحث بوحدة SKU أو المنتج أو الفئة...",
@@ -63,5 +71,24 @@
     "lowStock": "مخزون منخفض",
     "outOfStock": "نفد من المخزون",
     "overstocked": "مخزون زائد"
+  },
+  "po": {
+    "title": "إنشاء أمر شراء",
+    "description": "إنشاء أمر شراء جديد لهذا المنتج.",
+    "currentStock": "المخزون الحالي",
+    "unitCost": "تكلفة الوحدة",
+    "quantity": "الكمية",
+    "quantityPlaceholder": "أدخل الكمية المطلوب طلبها",
+    "notes": "ملاحظات (اختياري)",
+    "notesPlaceholder": "أضف أي تعليمات خاصة...",
+    "estimatedTotal": "المجموع المقدر",
+    "cancel": "إلغاء",
+    "create": "إنشاء أمر الشراء",
+    "creating": "جاري الإنشاء...",
+    "toast": {
+      "success": "تم إنشاء أمر الشراء",
+      "created": "تم إنشاء أمر الشراء بنجاح.",
+      "error": "خطأ"
+    }
   }
 }

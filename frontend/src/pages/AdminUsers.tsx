@@ -41,7 +41,6 @@ import {
 } from '@/components/ui/dialog';
 import { UserFormDialog } from '@/components/admin/UserFormDialog';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 
 interface UserProfile {
   id: string;
