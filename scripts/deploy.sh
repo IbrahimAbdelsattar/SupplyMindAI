@@ -42,15 +42,29 @@ echo "  Build mode   : $([ "$BUILD" = true ] && echo 'local' || echo 'pull')"
 # ── Pull latest images ────────────────────────────────────────────────────
 if [ "$BUILD" = false ]; then
   echo ""
-  echo ">>> Pulling latest images..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
+  echo ">>> Checking if required images exist locally..."
+  
+  MISSING_IMAGES="false"
+  for img in $(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --images 2>/dev/null); do
+    if ! docker image inspect "$img" >/dev/null 2>&1; then
+      MISSING_IMAGES="true"
+      break
+    fi
+  done
+
+  if [ "$MISSING_IMAGES" = "true" ]; then
+    echo ">>> Missing images detected. Pulling images..."
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
+  else
+    echo ">>> All required images already exist locally. Skipping pull."
+  fi
 fi
 
 # ── Build images ──────────────────────────────────────────────────────────
 if [ "$BUILD" = true ]; then
   echo ""
-  echo ">>> Building images..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --pull
+  echo ">>> Building images (using local cache if available)..."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build
 fi
 
 # ── Start core services (DB + Redis) first ────────────────────────────────

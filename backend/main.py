@@ -143,11 +143,27 @@ async def lifespan(app: FastAPI):
         if ENVIRONMENT == "production":
             raise RuntimeError(f"Missing required environment variables: {missing_vars}")
 
-    # ── Database ─────────────────────────────────────────────────────────────
     db_ok = False
     try:
         _run_migrations()
         create_tables()
+        
+        try:
+            from sqlalchemy import text
+            from backend.db import engine
+            with engine.begin() as conn:
+                conn.execute(text("""
+                    ALTER TABLE users 
+                    ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255),
+                    ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE NOT NULL,
+                    ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE,
+                    ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0 NOT NULL,
+                    ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP WITH TIME ZONE;
+                """))
+            logger.info("[DB] ✅ Patched users table with new authentication columns")
+        except Exception as patch_exc:
+            logger.warning("[DB] ⚠️ Could not patch users table: %s", patch_exc)
+
         from backend.db import seed_database
         seed_database()
         db_ok = True
