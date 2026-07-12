@@ -275,7 +275,7 @@ def update_purchase_order(
 ):
     try:
         action = payload.get("action")
-        if action not in _VALID_TRANSITIONS:
+        if action not in ["approve", "receive"]:
             raise HTTPException(status_code=400, detail=f"Invalid action '{action}'. Must be 'approve' or 'receive'.")
 
         pos = STORE.purchase_orders()
