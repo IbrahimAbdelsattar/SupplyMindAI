@@ -24,29 +24,45 @@ function fadeUpProps(reduceMotion: boolean) {
 
 // Cinematic Intro Overlay Component
 const IntroVideoOverlay = ({ onComplete }: { onComplete: () => void }) => {
-  const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const handleEnded = () => {
+    const handleComplete = () => {
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
       onComplete();
     };
 
-    video.addEventListener('ended', handleEnded);
+    // Failsafe: if video doesn't end within 12 seconds, skip it automatically
+    fallbackTimeoutRef.current = setTimeout(() => {
+      console.warn("Intro video timed out, skipping to app.");
+      handleComplete();
+    }, 12000);
+
+    video.addEventListener('ended', handleComplete);
+    video.addEventListener('error', handleComplete);
     
+    // Force muted to guarantee autoplay works in all browsers
+    video.defaultMuted = true;
+    video.muted = true;
+
     // Attempt autoplay
-    video.play().catch(() => {
-      // Browsers restrict auto-play with audio. Muting is standard.
-      setMuted(true);
-      video.muted = true;
-      video.play().catch(err => console.log('Autoplay blocked:', err));
-    });
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn('Autoplay blocked or failed:', err);
+        // If it completely fails to play even muted, skip to app immediately
+        handleComplete();
+      });
+    }
 
     return () => {
-      video.removeEventListener('ended', handleEnded);
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+      video.removeEventListener('ended', handleComplete);
+      video.removeEventListener('error', handleComplete);
     };
   }, [onComplete]);
 
@@ -62,11 +78,12 @@ const IntroVideoOverlay = ({ onComplete }: { onComplete: () => void }) => {
       <video
         ref={videoRef}
         src="/intro.mp4"
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover pointer-events-none"
         playsInline
         autoPlay
-        muted={muted}
+        muted
         loop={false}
+        onError={onComplete}
       />
     </motion.div>
   );
