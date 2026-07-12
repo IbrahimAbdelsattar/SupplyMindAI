@@ -42,13 +42,18 @@ class AIOrchestrator:
             }
 
         # 2. Intent Detection & Routing Override
+        # mode="business"  → Inventory / Stock Mind (data + RAG)
+        # mode="support"   → Customer service only (no datasets; RESTRICT_CHATBOT default)
+        # mode="technical" → allow intent routing to data agents when not restricted
         if mode == "business":
-            # Inventory page chatbot: full RAG access, bypass RESTRICT_CHATBOT
+            # Inventory page chatbot: full inventory RAG + tools
             intent = "inventory"
             confidence = 1.0
-        elif os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
+        elif mode == "support" or os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
+            # Global floating chatbot: always customer_support (no data isolation bypass)
             intent = "customer_support"
             confidence = 1.0
+            product_id = None  # never pass product scope into support
         else:
             intent_info = self.intent_detector.detect_intent(query)
             intent = intent_info.get("intent", "unknown")
@@ -57,6 +62,7 @@ class AIOrchestrator:
             # 3. Route & Selected Agent (with clarification fallback to Customer Support)
             if confidence < config.INTENT_CONFIDENCE_THRESHOLD or intent == "unknown":
                 intent = "customer_support"
+                product_id = None
 
         # 4. Agent Execution
         try:
@@ -115,22 +121,22 @@ class AIOrchestrator:
             yield {"type": "error", "message": "Security check triggered. Your request was flagged as unsafe."}
             return
 
-        # 2. Intent Detection & Routing Override
+        # 2. Intent Detection & Routing Override (same rules as execute_query)
         if mode == "business":
-            # Inventory page chatbot: full RAG access, bypass RESTRICT_CHATBOT
             intent = "inventory"
             confidence = 1.0
-        elif os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
+        elif mode == "support" or os.getenv("RESTRICT_CHATBOT", "true").lower() in {"true", "1", "yes", "on"}:
             intent = "customer_support"
             confidence = 1.0
+            product_id = None
         else:
             intent_info = self.intent_detector.detect_intent(query)
             intent = intent_info.get("intent", "unknown")
             confidence = intent_info.get("confidence", 0.0)
 
-            # 3. Route & Selected Agent (fallback to Customer Support)
             if confidence < config.INTENT_CONFIDENCE_THRESHOLD or intent == "unknown":
                 intent = "customer_support"
+                product_id = None
 
         # 4. Stream Execute Agent
         yield {"type": "status", "message": f"Routing query to {intent.replace('_', ' ').title()} Agent..."}

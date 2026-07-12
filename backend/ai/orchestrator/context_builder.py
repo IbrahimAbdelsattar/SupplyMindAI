@@ -11,12 +11,21 @@ class ContextBuilder:
     _agent_source_types = {
         "inventory": ["inventory", "incident", "recommendation"],
         "forecast": ["forecast"],
-        "customer_support": ["general", "insight", "inventory", "incident", "forecast", "recommendation"],
+        # Customer support: platform guides / FAQ only — never business datasets
+        "customer_support": ["general", "insight"],
         "documentation": ["general", "insight"],
         "mlops": ["mlops"],
         "executive_insights": ["insight", "report"],
         "report": ["report"],
     }
+
+    # Agents allowed to see live CSV-backed operational metrics
+    _agents_with_operational_snapshot = frozenset({
+        "inventory",
+        "forecast",
+        "executive_insights",
+        "report",
+    })
 
     @classmethod
     def get_filtered_context(
@@ -29,6 +38,10 @@ class ContextBuilder:
     ) -> tuple[str, list[dict[str, Any]]]:
         """Perform semantic search filtering documents by agent-allowed source types."""
         allowed_types = cls._agent_source_types.get(agent_type, ["general"])
+
+        # Support must never be scoped to a product or business SKU context
+        if agent_type == "customer_support":
+            product_id = None
         
         # Execute search for each allowed source type to guarantee agent bounds
         all_hits = []
@@ -59,7 +72,7 @@ class ContextBuilder:
 
     @classmethod
     def get_operational_snapshot_for_agent(cls, agent_type: str, product_id: str | None = None) -> str:
-        """Provide operational snapshots only to authorized agents (e.g. inventory or forecast)."""
-        if agent_type in {"inventory", "forecast", "executive_insights", "report", "customer_support"}:
+        """Provide operational snapshots only to data agents — never customer support."""
+        if agent_type in cls._agents_with_operational_snapshot:
             return get_operational_snapshot(product_id)
         return ""

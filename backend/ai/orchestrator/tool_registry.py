@@ -25,13 +25,10 @@ class ToolRegistry:
             recall_agent_memory_tool,
         ],
         "forecast": [generate_forecast, search_forecast_knowledge],
-        "customer_support": [
-            search_inventory_knowledge,
-            search_forecast_knowledge,
-            search_insights_knowledge,
-            recall_agent_memory_tool,
-        ],
-        "documentation": [],
+        # Support is a non-data guide only — no inventory/forecast tools or live analysis.
+        # Optional FAQ/docs retrieval is handled via ContextBuilder (general/insight RAG).
+        "customer_support": [],
+        "documentation": [search_insights_knowledge],
         "mlops": [get_mlops_metrics, search_mlops_knowledge],
         "executive_insights": [],
         "report": [],

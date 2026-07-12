@@ -41,13 +41,17 @@ class TestToolRegistry:
 
         support_tools = ToolRegistry.get_tools("customer_support")
         assert not any(t.name == "analyze_inventory" for t in support_tools)
+        assert not any(t.name == "search_inventory_knowledge" for t in support_tools)
+        assert not any(t.name == "search_forecast_knowledge" for t in support_tools)
+        # Support is guide-only: no dataset tools
+        assert support_tools == []
 
 
 class TestContextBuilder:
     @patch("backend.ai.orchestrator.context_builder.semantic_search")
     def test_rag_isolation(self, mock_search):
         mock_search.return_value = []
-        ContextBuilder.get_filtered_context("customer_support", "test query")
+        ContextBuilder.get_filtered_context("customer_support", "test query", product_id="P-001")
         
         # Verify that customer_support only searched general and insight
         searched_types = [call.kwargs.get("source_type") for call in mock_search.call_args_list]
@@ -55,6 +59,17 @@ class TestContextBuilder:
         assert "insight" in searched_types
         assert "inventory" not in searched_types
         assert "forecast" not in searched_types
+        # Product scope must be stripped for support
+        for call in mock_search.call_args_list:
+            assert call.kwargs.get("product_id") is None
+
+    @patch("backend.ai.orchestrator.context_builder.get_operational_snapshot")
+    def test_support_has_no_operational_snapshot(self, mock_snapshot):
+        mock_snapshot.return_value = "live data"
+        assert ContextBuilder.get_operational_snapshot_for_agent("customer_support") == ""
+        mock_snapshot.assert_not_called()
+        ContextBuilder.get_operational_snapshot_for_agent("inventory", product_id="P-1")
+        mock_snapshot.assert_called_once_with("P-1")
 
 
 class TestConversationManager:
