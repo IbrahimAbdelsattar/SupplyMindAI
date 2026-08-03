@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "2025-03-18",
+  "server": {
+    "name": "supplymind-webmcp",
+    "version": "0.1.0",
+    "description": "SupplyMind does NOT expose a remote MCP server. There is no /mcp HTTP endpoint or SSE/stdio transport. Capabilities are instead exposed as client-side WebMCP tools (navigator.modelContext / ModelContext.registerTool) registered by the frontend module src/lib/webmcp.ts. This card documents those tools for agents that discover MCP-style metadata; agents that understand WebMCP should read .well-known/agent-card.json. All tools authenticate with a SupplyMind bearer token (see https://supplymind.tech/.well-known/auth.md).",
+    "instructions": "Read https://supplymind.tech/.well-known/auth.md first to obtain a token, then call tools with an Authorization: Bearer <token> header. Tools are only available while the SupplyMind SPA is open in a WebMCP-capable browser; there is no standalone endpoint.",
+    "protocolVersion": "webmcp-0.1"
+  },
+  "transport": {
+    "type": "none",
+    "note": "No remote MCP transport exists. WebMCP tools are injected client-side by the SPA and do not require an outbound connection."
+  },
+  "tools": [
+    {
+      "name": "rag-query",
+      "description": "Answer a question grounded in the SupplyMind knowledge base (products, forecasting, platform operations). Returns the answer with cited sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string", "description": "The question to answer" },
+          "product_id": { "type": "string", "description": "Optional product SKU to scope the query" }
+        },
+        "required": ["question"]
+      },
+      "endpoint": "POST https://api.supplymind.tech/api/v1/rag/query"
+    },
+    {
+      "name": "forecast",
+      "description": "Generate a demand forecast for a product SKU over a horizon in days. Returns monthly summary and forecast points.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": "string", "description": "Product SKU to forecast" },
+          "horizon_days": { "type": "integer", "description": "Forecast horizon in days (default 90)" }
+        },
+        "required": ["product_id"]
+      },
+      "endpoint": "POST https://api.supplymind.tech/api/v1/forecast/predict"
+    },
+    {
+      "name": "inventory-optimization",
+      "description": "Fetch inventory optimization recommendations: reorder points, safety stock, ABC/XYZ classification. Optional limit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "description": "Maximum number of recommendations (default 13)" }
+        }
+      },
+      "endpoint": "GET https://api.supplymind.tech/api/v1/inventory/optimize"
+    },
+    {
+      "name": "executive-insights",
+      "description": "Generate AI executive insights for a product SKU: executive summary, insights with impact/confidence, and recommendations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": "string", "description": "Product SKU to analyze" }
+        },
+        "required": ["product_id"]
+      },
+      "endpoint": "POST https://api.supplymind.tech/api/v1/insights/generate"
+    }
+  ],
+  "related": {
+    "apiCatalog": "https://supplymind.tech/.well-known/api-catalog.json",
+    "agentCard": "https://supplymind.tech/.well-known/agent-card.json",
+    "authGuide": "https://supplymind.tech/.well-known/auth.md"
+  }
+}

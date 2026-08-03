@@ -1,0 +1,44 @@
+# SupplyMind AI
+
+> AI-powered demand forecasting and inventory optimization platform.
+
+## Overview
+
+SupplyMind helps supply-chain teams forecast demand, optimize inventory levels, and act on AI-generated insights. It is a full-stack web application (React SPA + FastAPI backend) with a Neumorphism design system, dark/light modes, and Arabic/English localization.
+
+## Key Facts
+
+- Official website: https://supplymind.tech
+- Public API base URL: https://api.supplymind.tech
+- API requires authentication: self-hosted JWT (HS256). See https://supplymind.tech/.well-known/auth.md for the full flow.
+- OpenAPI docs are disabled in production. The authoritative endpoint catalog is at https://supplymind.tech/.well-known/api-catalog.
+- Agent card (A2A): https://supplymind.tech/.well-known/agent-card.json
+
+## Core Capabilities
+
+1. **Demand forecasting** — Time-series demand forecasts with step-by-step AI reasoning and scenario/anomaly analysis.
+   - POST /api/v1/forecast/predict
+   - POST /api/v1/forecast/reasoning/stream (SSE)
+   - GET /api/v1/forecast/intelligence/scenarios
+   - GET /api/v1/forecast/intelligence/anomalies
+2. **Inventory optimization** — Reorder-point and safety-stock optimization, ABC/XYZ analysis, purchase orders.
+   - GET /api/v1/inventory/optimize
+   - POST /api/v1/inventory/purchase-orders
+3. **Executive AI insights** — AI-generated summaries and insights from sales/forecast/inventory data.
+   - POST /api/v1/insights/generate
+   - POST /api/v1/insights/generate/stream (SSE)
+4. **Grounded Q&A (RAG)** — Ask questions over the ingested knowledge base; answers cite retrieved context.
+   - POST /api/v1/rag/query
+5. **Copilot** — Conversational agent for the platform (agent-graph based).
+   - POST /api/v1/copilot/chat
+
+## Content Policy
+
+- All API endpoints require a valid Bearer access token. We allow AI systems to read our content for search, retrieval-augmented generation, and grounding.
+- We do NOT consent to training/fine-tuning on our content. See robots.txt Content Signals (search=yes, ai-input=yes, ai-train=no).
+
+## Guidance for AI Agents
+
+- Authenticate via POST https://api.supplymind.tech/auth/login with `{ "email", "password" }` to obtain a 15-minute access token; refresh with POST /auth/refresh.
+- Stream endpoints emit Server-Sent Events: `status`, `token`, `result`, `done`.
+- Role gate: analyst+ for forecasting/insights, manager+ for reports and purchase orders, admin for MLOps and user administration.

@@ -1,0 +1,75 @@
+# ============================================================================
+# SupplyMind AI — robots.txt
+# ============================================================================
+# Search engines may index the public marketing site. AI search / answer
+# engines (AI Input) may surface public pages as grounded context. Model
+# training is NOT licensed (ai-train=no). Authenticated areas (/login,
+# /unauthorized and all /app routes) are out of scope for crawlers.
+#
+# Sitemap:      https://supplymind.tech/sitemap.xml
+# Auth guide:   https://supplymind.tech/.well-known/auth.md
+# ============================================================================
+
+Sitemap: https://supplymind.tech/sitemap.xml
+
+# --- Default policy ---------------------------------------------------------
+# Content Signals (https://contentsignals.org): allow search + AI input,
+# do NOT grant permission to train AI models on this content.
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+Disallow: /login
+Disallow: /unauthorized
+
+# --- AI crawlers (explicit allow so the on-demand fetch path works) --------
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+# --- General search crawlers -----------------------------------------------
+User-agent: Googlebot
+Allow: /
+
+User-agent: bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /

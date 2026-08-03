@@ -1,0 +1,176 @@
+{
+  "catalog": {
+    "base_url": "https://api.supplymind.tech",
+    "spec_version": "1.0",
+    "generated": "2026-08-03",
+    "auth": {
+      "type": "jwt-bearer",
+      "description": "Self-hosted JWT (HS256). Obtain tokens via POST /auth/login.",
+      "guide": "https://supplymind.tech/.well-known/auth.md"
+    },
+    "openapi": null,
+    "note": "OpenAPI schema is disabled in production. This catalog is the authoritative endpoint reference."
+  },
+  "resources": [
+    {
+      "name": "Auth",
+      "base_path": "/auth",
+      "endpoints": [
+        { "method": "POST", "path": "/auth/login", "summary": "Login with email + password; returns access (15 min) + refresh (7 day) tokens. 401 invalid, 423 locked, 429 rate-limited.", "auth": "public" },
+        { "method": "POST", "path": "/auth/refresh", "summary": "Exchange opaque refresh token for a new token pair.", "auth": "public" },
+        { "method": "POST", "path": "/auth/logout", "summary": "Revoke the refresh token.", "auth": "public" },
+        { "method": "POST", "path": "/auth/change-password", "summary": "Change the current user's password.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "Auth Admin",
+      "base_path": "/auth/admin",
+      "endpoints": [
+        { "method": "GET", "path": "/auth/admin/users/me", "summary": "Current user profile.", "auth": "bearer" },
+        { "method": "GET", "path": "/auth/admin/users", "summary": "List users.", "auth": "bearer (admin)" },
+        { "method": "POST", "path": "/auth/admin/users", "summary": "Create user (201).", "auth": "bearer (admin)" },
+        { "method": "PATCH", "path": "/auth/admin/users/{user_id}", "summary": "Update user (role, status).", "auth": "bearer (admin)" },
+        { "method": "DELETE", "path": "/auth/admin/users/{user_id}", "summary": "Delete user (204).", "auth": "bearer (admin)" },
+        { "method": "DELETE", "path": "/auth/admin/users/{user_id}/purge", "summary": "Purge user data (204).", "auth": "bearer (admin)" },
+        { "method": "POST", "path": "/auth/admin/users/{user_id}/reset-password", "summary": "Reset a user's password.", "auth": "bearer (admin)" },
+        { "method": "GET", "path": "/auth/admin/roles", "summary": "List roles.", "auth": "bearer (admin)" }
+      ]
+    },
+    {
+      "name": "Command Center",
+      "base_path": "/api/v1/command-center",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/command-center/dashboard", "summary": "Dashboard aggregate.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "base_path": "/api/v1/inventory",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/inventory/products", "summary": "List products.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/inventory/", "summary": "Inventory root / overview.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/inventory/update", "summary": "Update product/inventory records.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/inventory/optimize", "summary": "Optimization overview.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/inventory/optimize/{product_id}", "summary": "Optimization for a product.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/inventory/optimize", "summary": "Run optimization.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/inventory/adjust", "summary": "Record a stock adjustment.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/inventory/purchase-orders", "summary": "Create purchase order.", "auth": "bearer (manager)" },
+        { "method": "GET", "path": "/api/v1/inventory/purchase-orders", "summary": "List purchase orders.", "auth": "bearer (manager)" },
+        { "method": "PATCH", "path": "/api/v1/inventory/purchase-orders/{po_id}", "summary": "Update purchase order.", "auth": "bearer (manager)" },
+        { "method": "GET", "path": "/api/v1/inventory/summary", "summary": "Inventory summary.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/inventory/health", "summary": "Inventory service health.", "auth": "public" },
+        { "method": "GET", "path": "/api/v1/inventory/abc-analysis", "summary": "ABC analysis.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/inventory/xyz-analysis", "summary": "XYZ analysis.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/inventory/historical-download", "summary": "Export historical data.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/inventory/rag-query", "summary": "Grounded RAG query scoped to inventory.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "Data",
+      "base_path": "/api/v1/data",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/data/products", "summary": "Product dataset.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/data/kpis", "summary": "KPI dataset.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/data/heatmap", "summary": "Heatmap data.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "Forecast",
+      "base_path": "/api/v1/forecast",
+      "endpoints": [
+        { "method": "POST", "path": "/api/v1/forecast/predict", "summary": "Run demand forecast.", "auth": "bearer (analyst)" },
+        { "method": "POST", "path": "/api/v1/forecast/insights", "summary": "Forecast-based insights.", "auth": "bearer (analyst)" },
+        { "method": "POST", "path": "/api/v1/forecast/insights/stream", "summary": "SSE streamed forecast insights.", "auth": "bearer (analyst)" },
+        { "method": "POST", "path": "/api/v1/forecast/reasoning/stream", "summary": "SSE streamed LLM forecast reasoning.", "auth": "bearer (analyst)" },
+        { "method": "GET", "path": "/api/v1/forecast/intelligence/analyze", "summary": "Intelligence analysis.", "auth": "bearer (analyst)" },
+        { "method": "GET", "path": "/api/v1/forecast/intelligence/scenarios", "summary": "Scenario analysis.", "auth": "bearer (analyst)" },
+        { "method": "GET", "path": "/api/v1/forecast/intelligence/anomalies", "summary": "Anomaly detection.", "auth": "bearer (analyst)" }
+      ]
+    },
+    {
+      "name": "Insights (AI)",
+      "base_path": "/api/v1/insights",
+      "endpoints": [
+        { "method": "POST", "path": "/api/v1/insights/generate", "summary": "Generate AI insights.", "auth": "bearer (analyst)" },
+        { "method": "POST", "path": "/api/v1/insights/generate/stream", "summary": "SSE streamed AI insights.", "auth": "bearer (analyst)" },
+        { "method": "GET", "path": "/api/v1/insights/monitor/stats", "summary": "LLM monitor statistics.", "auth": "bearer (admin)" },
+        { "method": "GET", "path": "/api/v1/insights/monitor/recent", "summary": "Recent LLM calls.", "auth": "bearer (admin)" },
+        { "method": "GET", "path": "/api/v1/insights/monitor/cache", "summary": "LLM response cache stats.", "auth": "bearer (admin)" }
+      ]
+    },
+    {
+      "name": "Knowledge / RAG / Copilot",
+      "base_path": "/api/v1",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/knowledge/status", "summary": "Knowledge base status.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/knowledge/ingest", "summary": "Ingest documents (async hooks).", "auth": "bearer (admin)" },
+        { "method": "POST", "path": "/api/v1/knowledge/search", "summary": "Semantic search over knowledge.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/rag/query", "summary": "Grounded RAG answer (cached).", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/copilot/chat", "summary": "Copilot chat (agent graph, max 3 tool calls).", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/copilot/chat/stream", "summary": "SSE streamed copilot chat.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "Quick Actions",
+      "base_path": "/api/v1",
+      "endpoints": [
+        { "method": "POST", "path": "/api/v1/forecast/run", "summary": "Run forecast action.", "auth": "bearer (analyst)" },
+        { "method": "POST", "path": "/api/v1/inventory/snapshot", "summary": "Take inventory snapshot.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/reports/generate", "summary": "Generate a report.", "auth": "bearer (manager)" },
+        { "method": "POST", "path": "/api/v1/mlops/train", "summary": "Trigger model training.", "auth": "bearer (admin)" },
+        { "method": "POST", "path": "/api/v1/data/sync", "summary": "Sync data.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "System",
+      "base_path": "/api/v1/system",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/system/user", "summary": "Current system user.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/system/alerts/active", "summary": "Active alerts.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/system/alerts/all", "summary": "All alerts.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/system/alerts/{alert_id}/acknowledge", "summary": "Acknowledge alert.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/system/alerts/{alert_id}/dismiss", "summary": "Dismiss alert.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/system/alerts/{alert_id}/restore", "summary": "Restore alert.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/system/reports/generate", "summary": "Generate report.", "auth": "bearer (manager)" },
+        { "method": "POST", "path": "/api/v1/system/reports/generate/{report_type}", "summary": "Generate report of type.", "auth": "bearer (manager)" },
+        { "method": "GET", "path": "/api/v1/system/reports/list", "summary": "List reports.", "auth": "bearer (manager)" },
+        { "method": "DELETE", "path": "/api/v1/system/reports/{report_id}", "summary": "Delete report.", "auth": "bearer (manager)" },
+        { "method": "GET", "path": "/api/v1/system/reports/download/{filename}", "summary": "Download report file.", "auth": "bearer (manager)" }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "base_path": "/api/v1/notifications",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/notifications", "summary": "List notifications.", "auth": "bearer" },
+        { "method": "GET", "path": "/api/v1/notifications/unread-count", "summary": "Unread count.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/notifications/{notification_id}/read", "summary": "Mark read.", "auth": "bearer" },
+        { "method": "POST", "path": "/api/v1/notifications/read-all", "summary": "Mark all read.", "auth": "bearer" },
+        { "method": "DELETE", "path": "/api/v1/notifications/{notification_id}", "summary": "Delete notification.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "MLOps",
+      "base_path": "/api/v1/mlops",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/mlops/metrics", "summary": "ML metrics.", "auth": "bearer (admin)" },
+        { "method": "GET", "path": "/api/v1/mlops/langsmith", "summary": "LangSmith integration status.", "auth": "bearer (admin)" }
+      ]
+    },
+    {
+      "name": "Settings",
+      "base_path": "/api/v1/settings",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/settings", "summary": "Get user settings.", "auth": "bearer" },
+        { "method": "PUT", "path": "/api/v1/settings", "summary": "Update user settings.", "auth": "bearer" }
+      ]
+    },
+    {
+      "name": "Storage",
+      "base_path": "/api/v1/storage",
+      "endpoints": [
+        { "method": "GET", "path": "/api/v1/storage/health", "summary": "Storage service health.", "auth": "public" }
+      ]
+    }
+  ]
+}

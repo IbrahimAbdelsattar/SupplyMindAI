@@ -1,0 +1,52 @@
+{
+  "name": "SupplyMind AI Copilot",
+  "description": "AI agent for SupplyMind, the AI-powered demand forecasting and inventory optimization platform. Answers grounded questions over ingested product/forecast knowledge, generates demand forecasts with reasoning, runs inventory optimization and ABC/XYZ analysis, and produces executive AI insights. All capabilities require a SupplyMind account token (see https://supplymind.tech/.well-known/auth.md).",
+  "url": "https://supplymind.tech",
+  "version": "0.1.0",
+  "protocolVersion": "0.2.0",
+  "authentication": {
+    "schemes": [
+      {
+        "type": "bearer"
+      }
+    ],
+    "credentials": "https://supplymind.tech/.well-known/auth.md"
+  },
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": [
+    {
+      "id": "rag-query",
+      "name": "Grounded knowledge Q&A",
+      "description": "Answer questions about products, forecasting, and platform operations using RAG over the ingested knowledge base.",
+      "tags": ["rag", "knowledge", "qa", "retrieval"],
+      "examples": ["How do we compute safety stock?", "Summarize what the platform guide says about reorder points."]
+    },
+    {
+      "id": "forecast",
+      "name": "Demand forecasting",
+      "description": "Generate demand forecasts and step-by-step reasoning for individual SKUs or the whole catalog.",
+      "tags": ["forecast", "ml", "demand", "time-series"],
+      "examples": ["Forecast demand for SKU-1001 for the next 4 weeks.", "What drives the expected spike in March?"]
+    },
+    {
+      "id": "inventory-optimization",
+      "name": "Inventory optimization",
+      "description": "Optimize reorder points and safety stock, run ABC/XYZ analysis, and propose purchase orders.",
+      "tags": ["inventory", "optimization", "abc", "xyz", "purchase-orders"],
+      "examples": ["Optimize inventory levels for the top 10 SKUs.", "Which SKUs are high value but volatile?"]
+    },
+    {
+      "id": "executive-insights",
+      "name": "Executive AI insights",
+      "description": "Produce executive summaries and AI-generated insights from sales, forecast, and inventory data.",
+      "tags": ["insights", "analytics", "ai", "summary"],
+      "examples": ["Give me this month's executive summary.", "What are the top risks in our inventory right now?"]
+    }
+  ]
+}

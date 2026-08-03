@@ -1,0 +1,123 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://supplymind.tech/.well-known/api-catalog.json",
+      "rel": "describedby",
+      "type": "application/json",
+      "title": "Full endpoint catalog (all resources)"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://supplymind.tech/.well-known/auth.md",
+      "rel": "describedby",
+      "type": "text/markdown",
+      "title": "Authentication guide"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/auth/login",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Login (obtain access + refresh tokens)"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/auth/refresh",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Refresh access token"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/command-center/dashboard",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Command center dashboard"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/inventory",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Inventory: products, optimization, ABC/XYZ, purchase orders"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/data/products",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Product & KPI data"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/forecast/predict",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Demand forecasting"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/insights/generate",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "AI insights generation"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/rag/query",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Grounded RAG Q&A over knowledge base"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/copilot/chat",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Copilot chat"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/system/alerts/active",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "System alerts & reports"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/notifications",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Notifications"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/mlops/metrics",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "MLOps metrics & monitoring"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/settings",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "User settings"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/storage/health",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Storage health"
+    },
+    {
+      "anchor": "https://api.supplymind.tech",
+      "href": "https://api.supplymind.tech/api/v1/knowledge/status",
+      "rel": "service-doc",
+      "type": "application/json",
+      "title": "Knowledge base status & ingestion"
+    }
+  ]
+}

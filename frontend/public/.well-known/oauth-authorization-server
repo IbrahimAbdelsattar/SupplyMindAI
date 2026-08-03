@@ -1,0 +1,24 @@
+{
+  "issuer": "https://supplymind.tech",
+  "description": "SupplyMind uses a custom self-hosted JWT flow, not a standards OAuth 2.0 authorization-code flow. These endpoints are published for agent discovery and point to the actual credential exchange endpoints. See https://supplymind.tech/.well-known/auth.md for the authoritative flow.",
+  "authorization_endpoint": "https://api.supplymind.tech/auth/login",
+  "token_endpoint": "https://api.supplymind.tech/auth/refresh",
+  "token_endpoint_auth_methods_supported": ["none"],
+  "grant_types_supported": ["refresh_token"],
+  "response_types_supported": [],
+  "scopes_supported": ["read", "write", "admin"],
+  "revocation_endpoint": "https://api.supplymind.tech/auth/logout",
+  "revocation_endpoint_auth_methods_supported": ["none"],
+  "jwks_uri": null,
+  "code_challenge_methods_supported": [],
+  "custom_flow": {
+    "login_endpoint": "https://api.supplymind.tech/auth/login",
+    "login_method": "POST",
+    "login_body": { "email": "string", "password": "string" },
+    "refresh_endpoint": "https://api.supplymind.tech/auth/refresh",
+    "access_token_lifetime_seconds": 900,
+    "refresh_token_lifetime_days": 7,
+    "token_type": "Bearer",
+    "guide": "https://supplymind.tech/.well-known/auth.md"
+  }
+}

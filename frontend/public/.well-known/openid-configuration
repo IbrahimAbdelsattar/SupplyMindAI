@@ -1,0 +1,18 @@
+{
+  "issuer": "https://supplymind.tech",
+  "description": "SupplyMind does NOT implement OpenID Connect. This metadata is published so agents that probe for OIDC do not hang; it is intentionally empty/minimal and points to the real custom JWT flow in auth.md. Treat this document as a negative-signal discovery record.",
+  "authorization_endpoint": "https://api.supplymind.tech/auth/login",
+  "token_endpoint": "https://api.supplymind.tech/auth/refresh",
+  "response_types_supported": [],
+  "subject_types_supported": [],
+  "id_token_signing_alg_values_supported": [],
+  "scopes_supported": [],
+  "token_endpoint_auth_methods_supported": ["none"],
+  "claims_supported": ["sub", "name", "email", "role"],
+  "userinfo_endpoint": null,
+  "jwks_uri": null,
+  "custom_flow": {
+    "type": "jwt",
+    "guide": "https://supplymind.tech/.well-known/auth.md"
+  }
+}

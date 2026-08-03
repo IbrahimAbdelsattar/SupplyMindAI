@@ -1,0 +1,45 @@
+{
+  "name": "SupplyMind AI Agent Skills Index",
+  "version": "0.1.0",
+  "description": "Discovery index for machine-consumable skills/capabilities exposed by SupplyMind. SupplyMind does NOT run a remote MCP server; all machine interfaces are documented here and in the api-catalog. Client-side WebMCP tools are listed for completeness with their source module.",
+  "updated": "2026-08-03",
+  "skills": [
+    {
+      "id": "rag-query",
+      "name": "Grounded knowledge Q&A",
+      "kind": "webmcp-tool",
+      "interface": "client-side (navigator.modelContext)",
+      "source": "https://supplymind.tech/mcp/server-card.json",
+      "documentation": "https://supplymind.tech/.well-known/agent-card.json"
+    },
+    {
+      "id": "forecast",
+      "name": "Demand forecasting",
+      "kind": "webmcp-tool",
+      "interface": "client-side (navigator.modelContext)",
+      "source": "https://supplymind.tech/mcp/server-card.json",
+      "documentation": "https://supplymind.tech/.well-known/agent-card.json"
+    },
+    {
+      "id": "inventory-optimization",
+      "name": "Inventory optimization",
+      "kind": "webmcp-tool",
+      "interface": "client-side (navigator.modelContext)",
+      "source": "https://supplymind.tech/mcp/server-card.json",
+      "documentation": "https://supplymind.tech/.well-known/agent-card.json"
+    },
+    {
+      "id": "executive-insights",
+      "name": "Executive AI insights",
+      "kind": "webmcp-tool",
+      "interface": "client-side (navigator.modelContext)",
+      "source": "https://supplymind.tech/mcp/server-card.json",
+      "documentation": "https://supplymind.tech/.well-known/agent-card.json"
+    }
+  ],
+  "related": {
+    "apiCatalog": "https://supplymind.tech/.well-known/api-catalog.json",
+    "mcpServerCard": "https://supplymind.tech/mcp/server-card.json",
+    "authGuide": "https://supplymind.tech/.well-known/auth.md"
+  }
+}

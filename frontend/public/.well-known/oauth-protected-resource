@@ -1,0 +1,14 @@
+{
+  "resource": "https://api.supplymind.tech",
+  "description": "Protected resource metadata for the SupplyMind API. Access requires a Bearer access token obtained from https://api.supplymind.tech/auth/login (see https://supplymind.tech/.well-known/auth.md).",
+  "authorization_servers": [
+    {
+      "issuer": "https://supplymind.tech",
+      "authorization_server": "https://supplymind.tech/.well-known/oauth-authorization-server"
+    }
+  ],
+  "scopes_supported": ["read", "write", "admin"],
+  "bearer_methods_supported": ["header"],
+  "resource_signing_alg_values_supported": [],
+  "api_catalog": "https://supplymind.tech/.well-known/api-catalog"
+}
