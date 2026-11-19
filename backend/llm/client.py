@@ -6,10 +6,11 @@ from langchain_openai import ChatOpenAI
 
 LOGGER = logging.getLogger(__name__)
 
-# Primary model — fast, cheap, widely available on OpenRouter
+# Primary model — fast, cheap, widely available on OmniRoute / OpenRouter
 DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+OMNIROUTE_DEFAULT_BASE_URL = "https://omniroute.wajehni-ai.space/v1"
 
-# Ordered fallback chain for OpenRouter models
+# Ordered fallback chain for OmniRoute / OpenRouter models
 FALLBACK_MODELS = [
     "qwen/qwen-2.5-7b-instruct",
     "meta-llama/llama-3-8b-instruct:free",
@@ -20,12 +21,13 @@ FALLBACK_MODELS = [
 def _resolve_key() -> str | None:
     """Resolve LLM API key from env vars (priority order)."""
     for var in (
+        "OMNIROUTE_API_KEY",
         "LLM_REASONING_API_KEY",
         "RAG_API_KEY",
         "CHATBOT_API_KEY",
         "OPENROUTER_API_KEY",
         "AGENTROUTER_API_KEY",
-        "OPENAI_API_KEY"
+        "OPENAI_API_KEY",
     ):
         key = os.getenv(var)
         if key:
@@ -34,37 +36,65 @@ def _resolve_key() -> str | None:
                 masked = key_str[:8] + "..." + key_str[-4:] if len(key_str) > 12 else "..."
                 LOGGER.info("Resolved LLM API key from environment variable '%s': %s", var, masked)
                 return key_str
+
+    # If OmniRoute is the configured/default provider, allow fallback key so calls to proxy don't fail validation
+    provider = os.getenv("LLM_PROVIDER", "omniroute").strip().lower()
+    base_url = os.getenv("OMNIROUTE_BASE_URL") or os.getenv("LLM_BASE_URL") or OMNIROUTE_DEFAULT_BASE_URL
+    if provider == "omniroute" or "omniroute" in base_url or "20128" in base_url or "localhost" in base_url or "127.0.0.1" in base_url:
+        fallback_key = "omniroute-local-key"
+        LOGGER.info("Using OmniRoute fallback gateway key for connection: %s", fallback_key)
+        return fallback_key
+
     LOGGER.warning("No LLM API key could be resolved from any expected environment variable.")
     return None
 
 
 def _resolve_provider(key: str | None) -> tuple[str, str, str]:
     """Detect provider, base_url, and default model."""
-    provider = os.getenv("LLM_PROVIDER", "openrouter").strip().lower()
-    
+    provider = os.getenv("LLM_PROVIDER", "omniroute").strip().lower()
+
     # If key has a known prefix, override provider
     if key:
-        if key.startswith("nvapi-"):
+        if key.startswith("omni-") or key.startswith("sk-omni-"):
+            provider = "omniroute"
+        elif key.startswith("nvapi-"):
             provider = "nvidia"
         elif key.startswith("sk-or-"):
             provider = "openrouter"
-        elif key.startswith("sk-"):
+        elif key.startswith("sk-") and provider not in ("omniroute", "openrouter"):
             provider = "openai"
 
-    if provider == "nvidia":
+    if provider == "omniroute":
+        base_url = os.getenv("OMNIROUTE_BASE_URL") or os.getenv("LLM_BASE_URL") or OMNIROUTE_DEFAULT_BASE_URL
+        return "omniroute", base_url, DEFAULT_MODEL
+    elif provider == "openrouter":
+        return "openrouter", "https://openrouter.ai/api/v1", DEFAULT_MODEL
+    elif provider == "nvidia":
         return "nvidia", "https://integrate.api.nvidia.com/v1", DEFAULT_MODEL
     elif provider == "openai":
         return "openai", "https://api.openai.com/v1", DEFAULT_MODEL
     else:
-        # Default to OpenRouter
-        return "openrouter", "https://openrouter.ai/api/v1", DEFAULT_MODEL
+        # Default to OmniRoute
+        base_url = os.getenv("OMNIROUTE_BASE_URL") or os.getenv("LLM_BASE_URL") or OMNIROUTE_DEFAULT_BASE_URL
+        return "omniroute", base_url, DEFAULT_MODEL
 
 
-def _openrouter_headers() -> dict[str, str]:
+def _omniroute_headers() -> dict[str, str]:
     return {
         "HTTP-Referer": "https://supplymind.ai",
         "X-Title": "SupplyMind AI",
     }
+
+
+def _openrouter_headers() -> dict[str, str]:
+    return _omniroute_headers()
+
+
+def get_active_provider() -> str:
+    """Returns the resolved active LLM provider (e.g. 'omniroute', 'openrouter', 'nvidia', 'openai')."""
+    key = _resolve_key()
+    provider, _, _ = _resolve_provider(key)
+    return provider
 
 
 def _safe_create_chat_openai(
@@ -136,9 +166,10 @@ def get_llm(temperature: float = 0.1, max_tokens: int = 1024) -> ChatOpenAI | No
     
     # Audit log print diagnostics as required by Phase 2
     LOGGER.info("LLM_MODEL=%s", os.getenv("LLM_MODEL"))
+    LOGGER.info("OMNIROUTE_API_KEY exists=%s", bool(os.getenv("OMNIROUTE_API_KEY")))
     LOGGER.info("OPENROUTER_API_KEY exists=%s", bool(os.getenv("OPENROUTER_API_KEY")))
     LOGGER.info("AGENTROUTER_API_KEY exists=%s", bool(os.getenv("AGENTROUTER_API_KEY")))
-    
+
     key = _resolve_key()
     if not key:
         LOGGER.warning("No LLM API key configured — returning None and disabling AI features")
@@ -149,15 +180,21 @@ def get_llm(temperature: float = 0.1, max_tokens: int = 1024) -> ChatOpenAI | No
     model = os.getenv("LLM_MODEL") or detected_model
     if model and model.startswith("LLM_MODEL="):
         model = model.replace("LLM_MODEL=", "").strip()
-    
+
     extra_headers = {}
-    if base_url and "openrouter.ai" in base_url:
+    if base_url and ("omniroute" in base_url or "20128" in base_url):
+        extra_headers = _omniroute_headers()
+        if key:
+            extra_headers["Authorization"] = f"Bearer {key}"
+    elif base_url and "openrouter.ai" in base_url:
         extra_headers = _openrouter_headers()
         # OpenRouter requires an explicit Authorization header. LangChain's ChatOpenAI
         # does NOT reliably send the api_key as Authorization when base_url is overridden,
         # so we must set it manually in default_headers to avoid 401 errors.
         if key:
             extra_headers["Authorization"] = f"Bearer {key}"
+    elif key and ("localhost" in (base_url or "") or "127.0.0.1" in (base_url or "")):
+        extra_headers["Authorization"] = f"Bearer {key}"
     
     timeout = float(os.getenv("LLM_TIMEOUT", "30.0"))
     max_retries = int(os.getenv("LLM_MAX_RETRIES", "3"))

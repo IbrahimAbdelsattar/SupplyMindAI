@@ -105,7 +105,8 @@ class BaseAgent:
         max_rounds = 3
         while round_num < max_rounds:
             from backend.llm.monitor import monitor_llm_call
-            with monitor_llm_call(feature=f"agent_{self.agent_type}", model=self.model.model_name if hasattr(self.model, "model_name") else "unknown", provider="openrouter") as ctx:
+            from backend.llm.client import get_active_provider
+            with monitor_llm_call(feature=f"agent_{self.agent_type}", model=self.model.model_name if hasattr(self.model, "model_name") else "unknown", provider=get_active_provider()) as ctx:
                 response = model_with_tools.invoke(messages)
                 ctx["record_tokens"](response, input_len=0, output_len=0)
 
@@ -178,12 +179,13 @@ class BaseAgent:
         max_rounds = 3
         while round_num < max_rounds:
             from backend.llm.monitor import monitor_llm_call
-            
-            # Since nvidia/openrouter models sometimes output tool_calls, check if the model returns immediately
+            from backend.llm.client import get_active_provider
+
+            # Since omniroute/nvidia/openrouter models sometimes output tool_calls, check if the model returns immediately
             # or streams. We call invoke when tool binding is present to detect tools, and stream final result.
             if self.tools:
                 # We invoke first to let model choose to use tools
-                with monitor_llm_call(feature=f"agent_{self.agent_type}_stream_probe", model=self.model.model_name if hasattr(self.model, "model_name") else "unknown", provider="openrouter") as ctx:
+                with monitor_llm_call(feature=f"agent_{self.agent_type}_stream_probe", model=self.model.model_name if hasattr(self.model, "model_name") else "unknown", provider=get_active_provider()) as ctx:
                     response = model_with_tools.invoke(messages)
                     ctx["record_tokens"](response, input_len=0, output_len=0)
 
@@ -225,7 +227,7 @@ class BaseAgent:
                 with monitor_llm_call(
                     feature=f"agent_{self.agent_type}_stream",
                     model=self.model.model_name if hasattr(self.model, "model_name") else "unknown",
-                    provider="openrouter"
+                    provider=get_active_provider(),
                 ) as ctx:
                     async for chunk in self.model.astream(messages):
                         if chunk and hasattr(chunk, "content") and chunk.content:

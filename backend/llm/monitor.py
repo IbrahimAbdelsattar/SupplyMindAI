@@ -205,15 +205,21 @@ llm_monitor = LLMMonitor()
 # Context manager for easy instrumentation
 # ---------------------------------------------------------------------------
 @contextmanager
-def monitor_llm_call(feature: str, model: str = "unknown", provider: str = "unknown"):
+def monitor_llm_call(feature: str, model: str = "unknown", provider: str = "omniroute"):
     """Context manager that records LLM call metrics on exit.
 
     Usage:
-        with monitor_llm_call("ai_insights", "nvidia/nemotron-3-super-120b-a12b:free", "openrouter") as ctx:
+        with monitor_llm_call("ai_insights", "nvidia/nemotron-3-super-120b-a12b:free", "omniroute") as ctx:
             response = llm.invoke(messages)
             # Optional: extract token counts after the call
             ctx["record_tokens"](response)
     """
+    if provider in ("unknown", None):
+        try:
+            from backend.llm.client import get_active_provider
+            provider = get_active_provider()
+        except Exception:
+            provider = "omniroute"
     start = time.monotonic()
     ctx = {"success": True, "error": None, "input_tokens": 0, "output_tokens": 0, "context_length": 0, "response_length": 0}
 

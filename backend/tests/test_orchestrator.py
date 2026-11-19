@@ -130,9 +130,63 @@ class TestAIOrchestrator:
         mock_agent.execute.return_value = {"answer": "Forecast analysis", "sources": []}
         mock_factory.get_agent.return_value = mock_agent
 
-        orchestrator = AIOrchestrator()
-        result = orchestrator.execute_query("Predict demand", "user_1", "sess_1")
-        
+        with patch.dict(os.environ, {"RESTRICT_CHATBOT": "false"}):
+            orchestrator = AIOrchestrator()
+            result = orchestrator.execute_query("Predict demand", "user_1", "sess_1", mode="technical")
+
         assert result["answer"] == "Forecast analysis"
         assert result["engine"] == "orchestrator:forecast"
         mock_factory.get_agent.assert_called_with("forecast")
+
+
+class TestModelRegistryAndOmniRoute:
+    def test_omniroute_default_resolution(self):
+        from backend.ai.orchestrator.model_registry import ModelRegistry
+        from backend.llm.client import _resolve_provider, get_active_provider
+
+        with patch.dict(os.environ, {
+            "LLM_PROVIDER": "omniroute",
+            "OMNIROUTE_API_KEY": "sk-omni-test-global-key",
+        }, clear=False):
+            # Verify provider detection
+            provider, base_url, _ = _resolve_provider("sk-omni-test-global-key")
+            assert provider == "omniroute"
+            assert "omniroute" in base_url
+            assert get_active_provider() == "omniroute"
+
+            # Default agent env resolution
+            model, resolved_url, key, _, _ = ModelRegistry.resolve_agent_env("inventory")
+            assert resolved_url == "https://omniroute.wajehni-ai.space/v1"
+            assert key == "sk-omni-test-global-key"
+
+    def test_agent_specific_env_overrides(self):
+        from backend.ai.orchestrator.model_registry import ModelRegistry
+
+        with patch.dict(os.environ, {
+            "INVENTORY_MODEL": "custom/inventory-llm:v1",
+            "INVENTORY_BASE_URL": "https://custom-inventory.space/v1",
+            "INVENTORY_API_KEY": "sk-inv-secret-12345",
+            "FORECAST_MODEL": "custom/forecast-llm:v2",
+            "FORECAST_BASE_URL": "https://custom-forecast.space/v1",
+            "FORECAST_API_KEY": "sk-fc-secret-67890",
+            "SUPPORT_MODEL": "custom/support-llm:v3",
+            "SUPPORT_BASE_URL": "https://custom-support.space/v1",
+            "SUPPORT_API_KEY": "sk-supp-secret-99999",
+        }, clear=False):
+            # Test inventory agent specific overrides
+            inv_model, inv_url, inv_key, _, _ = ModelRegistry.resolve_agent_env("inventory")
+            assert inv_model == "custom/inventory-llm:v1"
+            assert inv_url == "https://custom-inventory.space/v1"
+            assert inv_key == "sk-inv-secret-12345"
+
+            # Test forecast agent specific overrides
+            fc_model, fc_url, fc_key, _, _ = ModelRegistry.resolve_agent_env("forecast")
+            assert fc_model == "custom/forecast-llm:v2"
+            assert fc_url == "https://custom-forecast.space/v1"
+            assert fc_key == "sk-fc-secret-67890"
+
+            # Test customer support agent specific overrides
+            supp_model, supp_url, supp_key, _, _ = ModelRegistry.resolve_agent_env("customer_support")
+            assert supp_model == "custom/support-llm:v3"
+            assert supp_url == "https://custom-support.space/v1"
+            assert supp_key == "sk-supp-secret-99999"
