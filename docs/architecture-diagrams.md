@@ -75,7 +75,7 @@ flowchart LR
 
         raw["Business CSV Datasets<br/>Products<br/>Sales<br/>Inventory<br/>Production<br/>Suppliers<br/>Contracts<br/>Raw Materials<br/>BOM"]
 
-        postgres[("PostgreSQL / Supabase")]
+        postgres[("PostgreSQL 16 (Local VPS)")]
 
         training["Training Pipeline<br/>XGBoost<br/>Scikit Learn"]
 

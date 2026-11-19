@@ -74,8 +74,8 @@ else:
         LOGGER.warning(
             "No IPv4 (A) record found for %s — only IPv6 is available. "
             "If your runtime environment does not support IPv6, database "
-            "connections will hang or fail. Consider using the Supabase "
-            "connection pooler hostname or enabling IPv6 in your deployment.",
+            "connections will hang or fail. Ensure your local database hostname is "
+            "correct or enable IPv6 in your deployment.",
             _db_host,
         )
 

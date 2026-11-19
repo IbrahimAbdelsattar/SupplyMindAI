@@ -58,7 +58,7 @@ flowchart LR
 
     subgraph DATA["Data and ML Platform (Current)"]
         raw["CSV Datasets<br/>Products<br/>Sales<br/>Inventory<br/>Production<br/>Suppliers<br/>Contracts<br/>Raw Materials<br/>Bill of Materials"]
-        postgres[("PostgreSQL / Supabase")]
+        postgres[("PostgreSQL 16 (Local VPS)")]
         training["Training Pipeline<br/>XGBoost<br/>Scikit Learn"]
         registry["MLflow<br/>Model Registry"]
         drift["Model Drift Detection<br/>Automatic Retraining"]

@@ -28,10 +28,9 @@ if _USE_SQLITE and not _FORCE_POSTGRES:
     db_url = f"sqlite:///{_SQLITE_PATH}"
 else:
     db_url = os.getenv("MIGRATION_DATABASE_URL") or os.getenv("DATABASE_URL")
-    # Supabase pgBouncer (port 6543) does not support Alembic session-level features.
-    # Auto-switch to the direct connection (port 5432) for migrations.
-    if db_url and ".pooler.supabase.com:6543" in db_url:
-        db_url = db_url.replace(".pooler.supabase.com:6543", ".supabase.com:5432")
+    # Ensure direct port 5432 is used for schema migrations
+    if db_url and ":6543" in db_url:
+        db_url = db_url.replace(":6543", ":5432")
 
 if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
