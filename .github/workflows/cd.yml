@@ -113,14 +113,27 @@ jobs:
         run: |
           mkdir -p deploy
           IMAGE_PREFIX="$(printf '%s' '${{ env.REGISTRY }}/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          PG_USER="${{ secrets.POSTGRES_USER || 'supplymind_prod' }}"
+          PG_PASS="${{ secrets.POSTGRES_PASSWORD || 'supplymind_secure_pass_2026' }}"
+          PG_DB="${{ secrets.POSTGRES_DB || 'supplymind_prod' }}"
+          REDIS_PASS="${{ secrets.REDIS_PASSWORD || 'supplymind_redis_pass_2026' }}"
+          PG_URL="${{ secrets.DATABASE_URL }}"
+          if [ -z "$PG_URL" ]; then
+            PG_URL="postgresql://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}"
+          fi
+          REDIS_CONN="${{ secrets.REDIS_URL }}"
+          if [ -z "$REDIS_CONN" ]; then
+            REDIS_CONN="redis://:${REDIS_PASS}@redis:6379"
+          fi
           cat > deploy/.env <<EOF
           BACKEND_IMAGE=${IMAGE_PREFIX}/backend:${{ github.sha }}
           FRONTEND_IMAGE=${IMAGE_PREFIX}/frontend:${{ github.sha }}
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          POSTGRES_USER=${PG_USER}
+          POSTGRES_PASSWORD=${PG_PASS}
+          POSTGRES_DB=${PG_DB}
+          DATABASE_URL=${PG_URL}
+          REDIS_PASSWORD=${REDIS_PASS}
+          REDIS_URL=${REDIS_CONN}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           SESSION_SECRET=${{ secrets.SESSION_SECRET }}
           AUTHORIZED_EMAILS=${{ vars.AUTHORIZED_EMAILS }}

@@ -22,13 +22,15 @@ services:
       - no-new-privileges:true
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-supplymind_prod}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supplymind_secure_pass_2026}
       POSTGRES_DB: ${POSTGRES_DB:-supplymind_prod}
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-supplymind_prod}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-supplymind_prod} -d ${POSTGRES_DB:-supplymind_prod}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,12 +47,12 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required} --maxmemory 512mb --maxmemory-policy allkeys-lru
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-supplymind_redis_pass_2026}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-supplymind_redis_pass_2026} --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-supplymind_redis_pass_2026}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,19 +75,41 @@ services:
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://supplymind.tech,https://www.supplymind.tech}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-supplymind_prod}:${POSTGRES_PASSWORD:-supplymind_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-supplymind_prod}}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://supplymind.tech,https://www.supplymind.tech,http://localhost,http://localhost:80}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
-      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:?CLERK_SECRET_KEY is required}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-sk_live_placeholder_secret_key}
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY:-pk_live_Y2xlcmsuc3VwcGx5bWluZC50ZWNoJA}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supplymind-production-jwt-secret-key-32chars}
       - LLM_PROVIDER=${LLM_PROVIDER:-omniroute}
       - OMNIROUTE_API_KEY=${OMNIROUTE_API_KEY:-}
       - OMNIROUTE_BASE_URL=${OMNIROUTE_BASE_URL:-https://omniroute.wajehni-ai.space/v1}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - LLM_BASE_URL=${LLM_BASE_URL:-https://omniroute.wajehni-ai.space/v1}
       - LLM_MODEL=${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b:free}
+      # Agent specific model & endpoint overrides
+      - INVENTORY_MODEL=${INVENTORY_MODEL:-}
+      - INVENTORY_BASE_URL=${INVENTORY_BASE_URL:-}
+      - INVENTORY_API_KEY=${INVENTORY_API_KEY:-}
+      - FORECAST_MODEL=${FORECAST_MODEL:-}
+      - FORECAST_BASE_URL=${FORECAST_BASE_URL:-}
+      - FORECAST_API_KEY=${FORECAST_API_KEY:-}
+      - SUPPORT_MODEL=${SUPPORT_MODEL:-}
+      - SUPPORT_BASE_URL=${SUPPORT_BASE_URL:-}
+      - SUPPORT_API_KEY=${SUPPORT_API_KEY:-}
+      - INSIGHTS_MODEL=${INSIGHTS_MODEL:-}
+      - INSIGHTS_BASE_URL=${INSIGHTS_BASE_URL:-}
+      - INSIGHTS_API_KEY=${INSIGHTS_API_KEY:-}
+      - REPORT_MODEL=${REPORT_MODEL:-}
+      - REPORT_BASE_URL=${REPORT_BASE_URL:-}
+      - REPORT_API_KEY=${REPORT_API_KEY:-}
+      - SECURITY_MODEL=${SECURITY_MODEL:-}
+      - SECURITY_BASE_URL=${SECURITY_BASE_URL:-}
+      - SECURITY_API_KEY=${SECURITY_API_KEY:-}
+      - COPILOT_MODEL=${COPILOT_MODEL:-}
+      - COPILOT_BASE_URL=${COPILOT_BASE_URL:-}
+      - COPILOT_API_KEY=${COPILOT_API_KEY:-}
       - ALLOWED_DOMAIN=${ALLOWED_DOMAIN:-supplymind.tech}
       - RESTRICT_CHATBOT=${RESTRICT_CHATBOT:-true}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
@@ -96,7 +120,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)\" || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/api/v1/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -108,7 +132,7 @@ services:
       - dokploy-network
 
   # -------------------------------------------------------------------------
-  # 4. Frontend (Nginx)
+  # 4. Frontend (Nginx + SPA + Reverse Proxy to API)
   # -------------------------------------------------------------------------
   frontend:
     image: ${FRONTEND_IMAGE:-supplymind-frontend:latest}
@@ -117,14 +141,22 @@ services:
       dockerfile: Dockerfile.prod
       args:
         - VITE_API_URL=/api/v1
-        - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY:?VITE_CLERK_PUBLISHABLE_KEY is required}
+        - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY:-pk_live_Y2xlcmsuc3VwcGx5bWluZC50ZWNoJA}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+    ports:
+      - "${PORT:-80}:80"
     expose:
       - "80"
     depends_on:
       - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.supplymind-frontend.rule=Host(`${DOMAIN:-supplymind.tech}`)"
+      - "traefik.http.routers.supplymind-frontend.entrypoints=websecure"
+      - "traefik.http.routers.supplymind-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.supplymind-frontend.loadbalancer.server.port=80"
     networks:
       - supplymind_net
       - dokploy-network
@@ -145,9 +177,13 @@ services:
     command: ["celery", "-A", "worker.celery_app", "worker", "-Q", "default,ml,rag", "--loglevel=info", "--concurrency=2"]
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
-      - LLM_MODEL=${LLM_MODEL:-deepseek/deepseek-v4-flash:free}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-supplymind_prod}:${POSTGRES_PASSWORD:-supplymind_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-supplymind_prod}}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379}
+      - LLM_PROVIDER=${LLM_PROVIDER:-omniroute}
+      - OMNIROUTE_API_KEY=${OMNIROUTE_API_KEY:-}
+      - OMNIROUTE_BASE_URL=${OMNIROUTE_BASE_URL:-https://omniroute.wajehni-ai.space/v1}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://omniroute.wajehni-ai.space/v1}
+      - LLM_MODEL=${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b:free}
       - ALLOWED_DOMAIN=${ALLOWED_DOMAIN:-supplymind.tech}
       - RESTRICT_CHATBOT=${RESTRICT_CHATBOT:-true}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
@@ -175,8 +211,8 @@ services:
     command: ["celery", "-A", "worker.celery_app", "beat", "--loglevel=info", "-s", "/data/celerybeat-schedule"]
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-supplymind_prod}:${POSTGRES_PASSWORD:-supplymind_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-supplymind_prod}}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379}
     depends_on:
       redis:
         condition: service_healthy

@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -19,8 +20,10 @@ COPY data/ ./data/
 COPY ml_platform/ ./ml_platform/
 COPY scripts/ ./scripts/
 
-# Create non-root user and change ownership
-RUN useradd -m appuser && chown -R appuser:appuser /app
+# Create storage directory and non-root user with ownership
+RUN mkdir -p /app/data/storage && \
+    useradd -m appuser && \
+    chown -R appuser:appuser /app
 USER appuser
 
 # Start the application
