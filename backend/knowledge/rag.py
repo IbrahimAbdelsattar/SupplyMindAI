@@ -167,11 +167,12 @@ OPERATIONAL_SNAPSHOT:
 
         try:
             from backend.llm.monitor import monitor_llm_call
+            from backend.llm.client import get_active_provider
             messages = [SystemMessage(content=GROUNDED_SYSTEM), HumanMessage(content=user_content)]
 
             def _call_llm():
                 llm = _llm()
-                with monitor_llm_call(feature="rag_query", model="rag", provider="openrouter") as ctx:
+                with monitor_llm_call(feature="rag_query", model="rag", provider=get_active_provider()) as ctx:
                     response = llm.invoke(messages)
                     ctx["record_tokens"](response, input_len=len(user_content), output_len=0)
                 return response

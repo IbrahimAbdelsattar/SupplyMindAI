@@ -72,8 +72,9 @@ def _invoke_llm(system: str, human: str, feature: str = "forecast_reasoning") ->
         SystemMessage(content=system),
         HumanMessage(content=human),
     ]
+    from backend.llm.client import get_active_provider
     try:
-        with monitor_llm_call(feature=feature, model="reasoning", provider="openrouter") as ctx:
+        with monitor_llm_call(feature=feature, model="reasoning", provider=get_active_provider()) as ctx:
             response = llm.invoke(messages)
             ctx["record_tokens"](response, input_len=len(system), output_len=0)
         content = response.content if hasattr(response, "content") else str(response)

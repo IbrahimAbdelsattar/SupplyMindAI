@@ -78,12 +78,13 @@ async def stream_insights(product_id: str) -> AsyncGenerator[str, None]:
         # Step 5: Get LLM
         llm = ModelRegistry.get_model("executive_insights")
         if llm is None:
-            yield sse_event("error", {"message": "AI Insights requires an LLM. Configure OPENROUTER_API_KEY."})
+            yield sse_event("error", {"message": "AI Insights requires an LLM. Configure OMNIROUTE_API_KEY or OPENROUTER_API_KEY."})
             yield sse_event("done", {})
             return
 
         # Step 6: Build messages
         from backend.llm.executive_prompts import SUPPLY_CHAIN_INSIGHTS_PROMPT, INVENTORY_INTELLIGENCE_PROMPT
+        from backend.llm.client import get_active_provider
         base_prompt = PromptRegistry.get_prompt("executive_insights")
         full_system_prompt = base_prompt + "\n\n" + SUPPLY_CHAIN_INSIGHTS_PROMPT.format(context=context)
         system_msg = SystemMessage(content=full_system_prompt)
@@ -97,7 +98,7 @@ async def stream_insights(product_id: str) -> AsyncGenerator[str, None]:
         with monitor_llm_call(
             feature="ai_insights_stream",
             model=llm.model_name if hasattr(llm, "model_name") else "unknown",
-            provider="openrouter",
+            provider=get_active_provider(),
         ) as ctx:
             async for chunk in llm.astream(messages):
                 if chunk and hasattr(chunk, "content") and chunk.content:
@@ -189,10 +190,12 @@ async def stream_forecast_reasoning(
         yield sse_event("status", {"message": "Analyzing forecast data..."})
         full_response: list[str] = []
 
+        from backend.llm.client import get_active_provider
+
         with monitor_llm_call(
             feature="forecast_reasoning_stream",
             model=llm.model_name if hasattr(llm, "model_name") else "unknown",
-            provider="openrouter",
+            provider=get_active_provider(),
         ) as ctx:
             async for chunk in llm.astream(messages):
                 if chunk and hasattr(chunk, "content") and chunk.content:

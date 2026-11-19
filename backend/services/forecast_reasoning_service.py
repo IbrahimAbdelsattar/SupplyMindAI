@@ -122,7 +122,8 @@ You MUST respond ONLY with a valid JSON object matching the following structure:
 
         try:
             from backend.llm.monitor import monitor_llm_call
-            with monitor_llm_call(feature="forecast_reasoning", model="reasoning", provider="openrouter") as ctx:
+            from backend.llm.client import get_active_provider
+            with monitor_llm_call(feature="forecast_reasoning", model="reasoning", provider=get_active_provider()) as ctx:
                 response = self.llm.invoke(messages)
                 ctx["record_tokens"](response, input_len=len(user_message), output_len=0)
             content = response.content if hasattr(response, "content") else str(response)

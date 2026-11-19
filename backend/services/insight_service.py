@@ -208,7 +208,7 @@ def _invoke_llm(context: str) -> dict[str, Any]:
     llm = ModelRegistry.get_model("executive_insights")
     if llm is None:
         raise RuntimeError(
-            "AI Insights requires an LLM. Configure OPENROUTER_API_KEY or LLM_REASONING_API_KEY."
+            "AI Insights requires an LLM. Configure OMNIROUTE_API_KEY, OPENROUTER_API_KEY or LLM_REASONING_API_KEY."
         )
 
     # Truncate context to token budget
@@ -223,9 +223,10 @@ def _invoke_llm(context: str) -> dict[str, Any]:
     human_msg = HumanMessage(content="Analyze the supply chain data provided in the system message. Return JSON only.")
 
     from backend.llm.monitor import monitor_llm_call
+    from backend.llm.client import get_active_provider
 
     try:
-        with monitor_llm_call(feature="ai_insights", model=llm.model_name if hasattr(llm, "model_name") else "unknown", provider="openrouter") as ctx:
+        with monitor_llm_call(feature="ai_insights", model=llm.model_name if hasattr(llm, "model_name") else "unknown", provider=get_active_provider()) as ctx:
             response = llm.invoke([system_msg, human_msg])
             ctx["record_tokens"](response, input_len=len(context), output_len=0)
         content = response.content if hasattr(response, "content") else str(response)

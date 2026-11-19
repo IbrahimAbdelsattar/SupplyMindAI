@@ -44,13 +44,14 @@ class CopilotService:
         configure_langsmith()
 
         from backend.llm.monitor import monitor_llm_call
+        from backend.llm.client import get_active_provider
 
         messages = [
             SystemMessage(content=COPILOT_SYSTEM_PROMPT),
             HumanMessage(content=message)
         ]
-        
-        with monitor_llm_call(feature="copilot_chat", model="platform_guide", provider="openrouter") as ctx:
+
+        with monitor_llm_call(feature="copilot_chat", model="platform_guide", provider=get_active_provider()) as ctx:
             response = self.llm.invoke(messages)
             ctx["record_tokens"](response, input_len=len(message), output_len=0)
         return response.content if hasattr(response, "content") else str(response)

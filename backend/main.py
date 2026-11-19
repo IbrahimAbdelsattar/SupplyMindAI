@@ -503,8 +503,14 @@ def health() -> dict[str, Any]:
                 provider = "openai"
             elif "integrate.api.nvidia.com" in base_url:
                 provider = "nvidia"
-            else:
+            elif "openrouter.ai" in base_url:
                 provider = "openrouter"
+            elif "omniroute" in base_url or "20128" in base_url:
+                provider = "omniroute"
+            else:
+                provider = os.getenv("LLM_PROVIDER", "omniroute")
+        else:
+            provider = os.getenv("LLM_PROVIDER", "omniroute")
 
     data_ok = all((DATA_DIR / name).exists() for name in ["products.csv", "sales_daily.csv", "inventory.csv"])
     try:
@@ -532,6 +538,7 @@ def health() -> dict[str, Any]:
             "data_csv": data_ok,
             "ml_model": ML_MODEL is not None,
             "ml_trained": bool(ML_MODEL and getattr(ML_MODEL, "is_trained_model_loaded", False)),
+            "omniroute_key": llm_available,
             "openrouter_key": llm_available,
             "knowledge_configured": bool(k_settings and k_settings.is_configured),
             "knowledge_connected": knowledge_ok,
