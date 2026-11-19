@@ -40,7 +40,7 @@
   <img src="https://img.shields.io/badge/Neumorphism-Design-EC4899?style=for-the-badge&logo=tailwindcss&logoColor=white"/>
   <img src="https://img.shields.io/badge/React%20Query-State-FF4154?style=for-the-badge&logo=reactquery&logoColor=white"/>
   <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
-  <img src="https://img.shields.io/badge/OpenRouter-LLM%20Powered-412991?style=for-the-badge&logo=openai&logoColor=white"/>
+  <img src="https://img.shields.io/badge/OmniRoute-LLM%20Gateway-412991?style=for-the-badge&logo=openai&logoColor=white"/>
   <img src="https://img.shields.io/badge/License-Academic-lightgrey?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Status-Active%20Development-brightgreen?style=for-the-badge"/>
 </p>
@@ -76,7 +76,7 @@
 - 🤖 **Advanced ML Models** — XGBoost demand forecasting (R² = 0.9984, WAPE = 1.51%)
 - 🔍 **Explainability Layer** — SHAP-powered feature attribution and business insights
 - 📦 **Inventory Intelligence** — EOQ, Safety Stock, Reorder Point automation
-- 🧠 **LLM-Powered Analytics** — OpenRouter multi-model gateway for natural-language supply chain reasoning
+- 🧠 **LLM-Powered Analytics** — OmniRoute multi-model gateway (`https://omniroute.wajehni-ai.space/v1`) with per-agent model, base URL, and API key environment configuration
 - 🛡️ **Production Guardrails** — Input/output sanitization, rate limiting, prompt injection defense
 - 🌐 **Bilingual Interface** — Full EN/AR support with RTL layout
 
@@ -443,7 +443,7 @@ flowchart TD
 | **AutoML** | Scikit-learn + SHAP | Feature selection & explainability |
 | **MLOps** | MLflow + LangSmith | Model registry & agent tracing |
 | **Vector DB** | ChromaDB | RAG knowledge base |
-| **LLM** | OpenRouter (multi-model gateway) | Natural language insights |
+| **LLM** | OmniRoute (multi-model gateway: `https://omniroute.wajehni-ai.space/v1`) | Natural language insights |
 | **Queue** | Celery + Redis | Async task processing |
 | **Guardrails** | Custom middleware | Input/output safety, rate limiting |
 | **Containers** | Docker Compose (dev + prod) | Scalable deployment |
@@ -496,7 +496,7 @@ graph TD
    * **MLOps Agent**: Tracks system memory, forecasting pipeline drift, and accuracy rates.
    * **Security Agent / Guardrails**: Inspects inputs and filters output response text for private data or hallucinations.
 6. **Isolated registries**:
-   * **Model Registry**: Instantiates distinct `ChatOpenAI` client instances per agent role. Since API providers charge per token, **all agents share the single OpenRouter API key** for billing consolidation, but they maintain **complete logical isolation** with independent hyperparameters (temperature, max tokens, timeouts, retries, and callback tracing).
+   * **Model Registry**: Instantiates distinct `ChatOpenAI` client instances per agent role. Every agent dynamically resolves its **model**, **base_url**, and **api_key** from environment variables (e.g. `INVENTORY_MODEL`, `INVENTORY_BASE_URL`, `INVENTORY_API_KEY`), defaulting to the OmniRoute gateway (`https://omniroute.wajehni-ai.space/v1`), maintaining **complete logical isolation** with independent hyperparameters (temperature, max tokens, timeouts, retries, and callback tracing).
    * **Prompt Registry**: Supplies immutable system prompt configurations per agent role, avoiding context pollution or system prompt leakage.
    * **Memory Isolation**: Restricts memory read/write requests to SQL records where `AgentMemory.agent_type == agent_type`.
    * **Knowledge Document Isolation**: Restricts vector searches to permitted document files using strict metadata filtering.
@@ -1221,11 +1221,13 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# ── LLM / AI (OpenRouter) ────────────────────────────────
-CHATBOT_API_KEY=sk-or-...       # General chatbot
-LLM_REASONING_API_KEY=sk-or-... # LLM reasoning / insights
-RAG_API_KEY=sk-or-...           # RAG knowledge retrieval
-LLM_MODEL=moonshotai/kimi-k2.6:free
+# ── LLM / AI (OmniRoute Gateway) ────────────────────────
+LLM_PROVIDER=omniroute
+OMNIROUTE_API_KEY=sk-omni-...
+OMNIROUTE_BASE_URL=https://omniroute.wajehni-ai.space/v1
+LLM_BASE_URL=https://omniroute.wajehni-ai.space/v1
+LLM_MODEL=nvidia/nemotron-3-super-120b-a12b:free
+# Per-agent overrides: {AGENT}_MODEL, {AGENT}_BASE_URL, {AGENT}_API_KEY
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 
 # ── Database ──────────────────────────────────────────────
@@ -1288,7 +1290,7 @@ gantt
 - [x] RBAC with 4 roles and 19 permissions
 - [x] Guardrails middleware (input/output/rate limiting)
 - [x] RAG pipeline (ChromaDB + embeddings + semantic search)
-- [x] LLM copilot chat (OpenRouter multi-model)
+- [x] LLM copilot chat (OmniRoute multi-model gateway)
 - [x] i18n with EN/AR and RTL support
 - [x] Neumorphism design system (light/dark mode)
 - [x] Docker Compose (dev + prod stacks)
@@ -1355,7 +1357,7 @@ This project is developed for **academic and research purposes** as part of a un
 <br/>
 
 <img src="https://img.shields.io/badge/Made%20with-Python-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
-<img src="https://img.shields.io/badge/Powered%20by-OpenRouter-412991?style=for-the-badge&logo=openai&logoColor=white"/>
+<img src="https://img.shields.io/badge/Powered%20by-OmniRoute-412991?style=for-the-badge&logo=openai&logoColor=white"/>
 <img src="https://img.shields.io/badge/Deployed%20with-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
 
 <br/><br/>
