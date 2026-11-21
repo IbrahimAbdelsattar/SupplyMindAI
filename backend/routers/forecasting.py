@@ -8,8 +8,9 @@ from fastapi.responses import StreamingResponse
 
 from backend.dependencies import _get_current_user, require_permission
 from backend.auth.rbac import Permission
-from backend.globals import STORE, load_ml_model
-from backend.schemas.forecast import ForecastPredictRequest, ForecastPredictResponse, ForecastPoint, MonthlyPrediction
+from backend.globals import STORE
+from backend.schemas.forecast import ForecastPredictRequest, ForecastPredictResponse, ForecastPoint
+from backend.services.monthly_forecast import ForecastUnavailable, monthly_predictions
 
 router = APIRouter(prefix="/api/v1/forecast", tags=["forecasting"])
 
@@ -18,11 +19,10 @@ router = APIRouter(prefix="/api/v1/forecast", tags=["forecasting"])
 def predict_forecast(payload: ForecastPredictRequest, user: dict = Depends(require_permission(Permission.GENERATE_FORECASTS))):
     try:
         import pandas as pd
-        from datetime import date, timedelta
+        from datetime import timedelta
         
-        ML_MODEL = load_ml_model()
-        if not ML_MODEL:
-            raise HTTPException(status_code=503, detail="ML Model not available")
+        n_months = max(1, payload.horizon_days // 30)
+        monthly_summary = monthly_predictions(payload.product_id, n_months)
 
         # Get historical data for the chart's 'actual' line
         sales = STORE.sales_daily()
@@ -47,54 +47,22 @@ def predict_forecast(payload: ForecastPredictRequest, user: dict = Depends(requi
                     )
                 )
 
-        # Get forecast from ML_MODEL
-        n_months = max(1, payload.horizon_days // 30)
-        df_forecast = ML_MODEL.predict(payload.product_id, n_months=n_months)
-        
-        monthly_summary = []
         forecast_points = []
-        
-        last_date = sub["date"].max() if not sub.empty and pd.notna(sub["date"].max()) else pd.Timestamp(date.today())
-        
-        # Extract last historical value to anchor the forecast
-        last_historical_val = historical_points[-1].actual if historical_points else 0.0
-        if pd.isna(last_historical_val) or last_historical_val is None:
-            last_historical_val = 0.0
-        
-        # Build monthly summary and daily forecast points
-        current_date = last_date + timedelta(days=1)
+        last_historical_val = (historical_points[-1].actual if historical_points else None) or 0.0
+        current_date = pd.Period(monthly_summary[0].period, freq="M").start_time
         day_index = 0
         import math
-        
-        for _, row in df_forecast.iterrows():
-            pred_demand = float(row.get("predicted_demand", 0.0))
-            if pd.isna(pred_demand): pred_demand = 0.0
-            
-            conf_level = float(row.get("confidence_level", 85.0))
-            if pd.isna(conf_level): conf_level = 85.0
-            
-            rev_forecast = row.get("revenue_forecast", None)
-            if rev_forecast is not None:
-                rev_forecast = float(rev_forecast)
-                if pd.isna(rev_forecast): rev_forecast = None
-                
-            monthly_summary.append(
-                MonthlyPrediction(
-                    period=str(row.get("period", "")),
-                    predicted_demand=pred_demand,
-                    confidence_level=conf_level,
-                    demand_trend=str(row.get("demand_trend", "stable")),
-                    revenue_forecast=rev_forecast
-                )
-            )
-            
+
+        for prediction in monthly_summary:
+            pred_demand = prediction.predicted_demand
+            conf_level = prediction.confidence_level
             # Create daily points for the forecast horizon
             target_daily_demand = pred_demand / 30.0
             conf_margin = (100.0 - conf_level) / 100.0
             
             # Append ~30 days for this month
             for _ in range(30):
-                if (current_date - last_date).days > payload.horizon_days:
+                if day_index >= payload.horizon_days:
                     break
                 
                 # Interpolate from historical to prevent a sharp cliff (over 14 days)
@@ -127,7 +95,7 @@ def predict_forecast(payload: ForecastPredictRequest, user: dict = Depends(requi
                 current_date += timedelta(days=1)
                 day_index += 1
                 
-            if (current_date - last_date).days > payload.horizon_days:
+            if day_index >= payload.horizon_days:
                 break
                 
         series = historical_points + forecast_points
@@ -138,6 +106,8 @@ def predict_forecast(payload: ForecastPredictRequest, user: dict = Depends(requi
             series=series,
             monthly_summary=monthly_summary
         )
+    except ForecastUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         import traceback
         traceback.print_exc()

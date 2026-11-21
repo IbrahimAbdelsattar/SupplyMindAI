@@ -416,7 +416,9 @@ def _compute_and_save_shap(model, X_test: pd.DataFrame, df_full: pd.DataFrame) -
 # =============================================================================
 # STEP 5 — FUTURE FORECAST (next N months per product)
 # =============================================================================
-def forecast_future(df: pd.DataFrame, model, n_months: int = 3) -> pd.DataFrame:
+def forecast_future(
+    df: pd.DataFrame, model, n_months: int = 3, *, start_period: pd.Period | None = None
+) -> pd.DataFrame:
     """
     Iteratively predict next n_months for every product.
     Each predicted value feeds the next period's lag features.
@@ -458,7 +460,11 @@ def forecast_future(df: pd.DataFrame, model, n_months: int = 3) -> pd.DataFrame:
         cov_days      = last_row["coverage_days"]
         p_lag1_price  = last_row["avg_price"]      # price lag approximation
 
-        for step in range(1, n_months + 1):
+        first_step = 1
+        if start_period is not None:
+            first_step = max(1, start_period.ordinal - last_per.to_period("M").ordinal)
+
+        for step in range(1, first_step + n_months):
             fp = last_per + pd.DateOffset(months=step)
             m  = fp.month
             q  = (m - 1) // 3 + 1
@@ -500,6 +506,9 @@ def forecast_future(df: pd.DataFrame, model, n_months: int = 3) -> pd.DataFrame:
             pred = max(0, round(float(model.predict(row)[0])))
             qty_hist.append(pred)
 
+            if step < first_step:
+                continue
+
             # Demand trend from the last 3 predicted values
             recent = qty_hist[-3:]
             slope  = np.polyfit(range(len(recent)), recent, 1)[0] if len(recent) == 3 else 0
@@ -538,8 +547,9 @@ def forecast_future(df: pd.DataFrame, model, n_months: int = 3) -> pd.DataFrame:
             })
 
     future_df = pd.DataFrame(all_future)
-    future_df.to_csv(FUTURE_OUT, index=False)
-    print(f"   Saved -> {FUTURE_OUT}  |  shape: {future_df.shape}")
+    if start_period is None:
+        future_df.to_csv(FUTURE_OUT, index=False)
+        print(f"   Saved -> {FUTURE_OUT}  |  shape: {future_df.shape}")
     return future_df
 
 
@@ -626,7 +636,9 @@ class ForecastModel:
         return obj
 
     # ── PREDICT — single product ──────────────────────────────────────────────
-    def predict(self, product_id: str, n_months: int = 3) -> pd.DataFrame:
+    def predict(
+        self, product_id: str, n_months: int = 3, *, start_period: pd.Period | None = None
+    ) -> pd.DataFrame:
         """
         Predict demand for ONE product and return 12 features + confidence_level.
 
@@ -652,7 +664,7 @@ class ForecastModel:
                 f"Product '{product_id}' not found.\n"
                 f"Available products: {available}"
             )
-        return forecast_future(subset, self._model, n_months=n_months)
+        return forecast_future(subset, self._model, n_months=n_months, start_period=start_period)
 
     # ── PREDICT — all products ────────────────────────────────────────────────
     def predict_all(self, n_months: int = 3) -> pd.DataFrame:

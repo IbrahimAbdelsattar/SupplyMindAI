@@ -131,6 +131,11 @@ Response: same as login (new `access_token` + new `refresh_token`).
 | GET | `/api/v1/inventory/xyz` | `get_current_user` | XYZ analysis |
 | GET | `/api/v1/inventory/reorder` | `get_current_user` | Reorder recommendations |
 | GET | `/api/v1/inventory/stockout-risk` | `get_current_user` | Stockout risk per product |
+| GET | `/api/v1/inventory/raw-materials` | `VIEW_INVENTORY` | Raw-material catalog and recorded stock balances |
+| PUT | `/api/v1/inventory/raw-materials/{material_id}` | `MANAGE_INVENTORY` | Replace the physical stock count with `{"on_hand": 0}` or another nonnegative whole count |
+| GET | `/api/v1/inventory/material-plan` | `GENERATE_FORECASTS` | Forecast-based BOM requirements for `product_id` and a `horizon_days` of 30, 90, or 180 |
+
+Material plans apply the on-hand stock once over the selected forecast horizon. Each line reports units per product, required quantity, purchase quantity, remaining stock, and the first month with a shortage. An unrecorded balance returns `null` for `on_hand`, `to_buy`, and `remaining`.
 
 **InventorySummaryOut:**
 ```json

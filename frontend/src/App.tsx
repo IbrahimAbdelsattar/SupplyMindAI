@@ -17,6 +17,7 @@ const Index = lazy(() => import("./pages/Index"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Forecasting = lazy(() => import("./pages/Forecasting"));
 const Inventory = lazy(() => import("./pages/Inventory"));
+const Bom = lazy(() => import("./pages/Bom"));
 const AIInsights = lazy(() => import("./pages/AIInsights"));
 const Reports = lazy(() => import("./pages/Reports"));
 const MLOps = lazy(() => import("./pages/MLOps"));
@@ -54,6 +55,7 @@ const AppRoutes = () => (
 
       {/* Analyst+ required */}
       <Route path="/forecasting" element={<ProtectedRoute requiredRole="analyst"><Forecasting /></ProtectedRoute>} />
+      <Route path="/bom" element={<ProtectedRoute requiredRole="analyst"><Bom /></ProtectedRoute>} />
 
       {/* Manager+ required */}
       <Route path="/reports" element={<ProtectedRoute requiredRole="manager"><Reports /></ProtectedRoute>} />

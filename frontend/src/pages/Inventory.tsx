@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 
@@ -30,6 +30,7 @@ import ChatBot from '@/components/inventory/ChatBot';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { CreatePODialog } from '@/components/inventory/CreatePODialog';
+import { RawMaterialInventory } from '@/components/inventory/RawMaterialInventory';
 
 type InventoryRecommendation = {
   product_id: string;
@@ -52,6 +53,17 @@ const Inventory = () => {
   const [showCreatePO, setShowCreatePO] = useState(false);
   const [poSuggestedQty, setPoSuggestedQty] = useState<number | undefined>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const showRawMaterials = searchParams.get('view') === 'raw-materials';
+  const planningParams = new URLSearchParams();
+  for (const key of ['product', 'horizon']) {
+    const value = searchParams.get(key);
+    if (value) planningParams.set(key, value);
+  }
+  const rawInventoryParams = new URLSearchParams(planningParams);
+  rawInventoryParams.set('view', 'raw-materials');
+  const planLink = userRole && userRole !== 'viewer'
+    ? { pathname: '/bom', search: planningParams.toString() }
+    : undefined;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { mutateAsync: applyMutation, isPending: isApplying } = useMutation({
@@ -79,11 +91,13 @@ const Inventory = () => {
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['products-list'],
     queryFn: () => apiFetch<{ items: ProductItem[]; total: number }>('/inventory/products'),
+    enabled: !showRawMaterials,
   });
 
   const { data: inventoryRecommendations = [], isLoading: recommendationsLoading } = useQuery({
     queryKey: ['inventory-optimize', 13],
     queryFn: () => apiFetch<InventoryRecommendation[]>('/inventory/optimize?limit=13'),
+    enabled: !showRawMaterials,
   });
 
   const products: ProductItem[] = useMemo(
@@ -94,7 +108,7 @@ const Inventory = () => {
   // Handle createPO query parameter from command center "Create PO" button
   useEffect(() => {
     const createPOFlag = searchParams.get('createPO');
-    if (createPOFlag === 'true' && !productsLoading && !recommendationsLoading && products.length > 0) {
+    if (!showRawMaterials && createPOFlag === 'true' && !productsLoading && !recommendationsLoading && products.length > 0) {
       const alertId = searchParams.get('alertId');
       let matched = false;
 
@@ -136,7 +150,7 @@ const Inventory = () => {
       searchParams.delete('alertId');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams, products, inventoryRecommendations, productsLoading, recommendationsLoading]);
+  }, [searchParams, setSearchParams, products, inventoryRecommendations, productsLoading, recommendationsLoading, showRawMaterials]);
 
   const totalSavings = useMemo(
     () => inventoryRecommendations.reduce((sum, item) => sum + item.costSavings, 0),
@@ -163,6 +177,19 @@ const Inventory = () => {
         />
 
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
+          <nav aria-label={t('bom:inventoryViews')} className="flex flex-wrap gap-2">
+            <Button asChild variant={showRawMaterials ? 'outline' : 'default'} size="sm">
+              <Link to="/inventory" aria-current={showRawMaterials ? undefined : 'page'}>{t('bom:finishedProducts')}</Link>
+            </Button>
+            <Button asChild variant={showRawMaterials ? 'default' : 'outline'} size="sm">
+              <Link to={{ pathname: '/inventory', search: rawInventoryParams.toString() }} aria-current={showRawMaterials ? 'page' : undefined}>
+                {t('bom:rawMaterials')}
+              </Link>
+            </Button>
+          </nav>
+          {showRawMaterials ? (
+            <RawMaterialInventory canEdit={isAllowedToApply} planLink={planLink} />
+          ) : <>
           <AISummaryCard
             title={t('inventory:aiSummaryTitle')}
             sourceType="inventory"
@@ -406,6 +433,7 @@ const Inventory = () => {
               </CardContent>
             </Card>
           </motion.div>
+          </>}
         </main>
       </div>
 

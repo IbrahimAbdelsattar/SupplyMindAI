@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine, event
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
@@ -17,7 +17,15 @@ LOGGER = logging.getLogger("backend.db")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+
+def database_driver_url(url: str) -> str:
+    if url.startswith("postgresql://"):
+        # The project installs psycopg2. SQLAlchemy 2.1 defaults to psycopg 3.
+        return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return url
+
+
+DATABASE_URL = database_driver_url(os.getenv("DATABASE_URL") or "")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
 # ---------------------------------------------------------------------------
@@ -183,6 +191,15 @@ class RefreshToken(Base):
 
 
 
+
+
+class RawMaterialStock(Base):
+    __tablename__ = "raw_material_stock"
+    __table_args__ = (CheckConstraint("on_hand >= 0", name="ck_raw_material_stock_on_hand"),)
+
+    material_id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    on_hand: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class ForecastResult(Base):

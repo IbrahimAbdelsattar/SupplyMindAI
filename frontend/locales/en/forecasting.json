@@ -4,6 +4,7 @@
   "product": "Product",
   "horizonLabel": "Forecast Horizon",
   "exportCsv": "Export CSV",
+  "forecastError": "Could not load the forecast for this product.",
   "parameters": {
     "title": "Forecast Parameters",
     "description": "Select a product and forecast future demand"
