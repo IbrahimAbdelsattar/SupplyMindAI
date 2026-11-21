@@ -10,12 +10,19 @@ from sqlalchemy.orm import Session
 
 from backend.auth.dependencies import require_permission
 from backend.auth.rbac import Permission
-from backend.db import RawMaterialStock, get_db
+from backend.db import RawMaterialQuote, RawMaterialStock, get_db
 from backend.globals import STORE
-from backend.schemas.materials import MaterialPlan, ProductionPlan, RawMaterialBalance, UpdateRawMaterialBalance
+from backend.schemas.materials import (
+    MaterialPlan,
+    MaterialSupplierQuote,
+    ProductionPlan,
+    RawMaterialBalance,
+    RawMaterialInventoryEntry,
+    UpdateRawMaterialBalance,
+)
 from backend.services.material_planning import build_material_plan, material_catalog, raw_material_balances
 from backend.services.monthly_forecast import ForecastUnavailable, monthly_predictions
-from backend.services.production_planning import build_production_plan
+from backend.services.production_planning import build_production_plan, raw_material_quotes
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,8 +32,13 @@ logger = logging.getLogger(__name__)
     "/raw-materials",
     dependencies=[Depends(require_permission(Permission.VIEW_INVENTORY))],
 )
-def list_raw_materials(db: Session = Depends(get_db)) -> list[RawMaterialBalance]:
-    return list(raw_material_balances(db, material_catalog()).values())
+def list_raw_materials(db: Session = Depends(get_db)) -> list[RawMaterialInventoryEntry]:
+    balances = raw_material_balances(db, material_catalog())
+    quotes = raw_material_quotes(db, list(balances))
+    return [
+        RawMaterialInventoryEntry(**balance.model_dump(), quote=quotes.get(material_id))
+        for material_id, balance in balances.items()
+    ]
 
 
 @router.put(
@@ -43,20 +55,32 @@ def update_raw_material(
         raise HTTPException(status_code=404, detail="Raw material not found")
 
     updated_at = datetime.now(timezone.utc)
-    insert = postgres_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
-    statement = insert(RawMaterialStock).values(
-        material_id=material_id, on_hand=payload.on_hand, updated_at=updated_at
-    )
-    db.execute(
-        statement.on_conflict_do_update(
-            index_elements=[RawMaterialStock.material_id],
-            set_={"on_hand": statement.excluded.on_hand, "updated_at": statement.excluded.updated_at},
-        )
-    )
-    db.commit()
+    _upsert_material(db, RawMaterialStock, material_id, {"on_hand": payload.on_hand, "updated_at": updated_at})
     return RawMaterialBalance(
         material_id=material_id, material_name=material_name, on_hand=payload.on_hand, updated_at=updated_at
     )
+
+
+@router.put(
+    "/raw-materials/{material_id}/quote",
+    dependencies=[Depends(require_permission(Permission.MANAGE_INVENTORY))],
+)
+def save_raw_material_quote(
+    material_id: str, payload: MaterialSupplierQuote, db: Session = Depends(get_db)
+) -> MaterialSupplierQuote:
+    if material_id not in material_catalog():
+        raise HTTPException(status_code=404, detail="Raw material not found")
+    _upsert_material(db, RawMaterialQuote, material_id, payload.model_dump())
+    return payload
+
+
+def _upsert_material(
+    db: Session, model: type[RawMaterialStock] | type[RawMaterialQuote], material_id: str, values: dict
+) -> None:
+    insert = postgres_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
+    statement = insert(model).values(material_id=material_id, **values)
+    db.execute(statement.on_conflict_do_update(index_elements=[model.material_id], set_=values))
+    db.commit()
 
 
 @router.get(
@@ -86,7 +110,8 @@ def plan_production(
 ) -> ProductionPlan:
     quantities, catalog = product_materials(product_id)
     balances = raw_material_balances(db, catalog)
-    return build_production_plan(product_id, target_units, daily_capacity, deadline_days, quantities, balances)
+    quotes = raw_material_quotes(db, list(quantities))
+    return build_production_plan(product_id, target_units, daily_capacity, deadline_days, quantities, balances, quotes)
 
 
 def product_materials(product_id: str) -> tuple[dict[str, int], dict[str, str]]:

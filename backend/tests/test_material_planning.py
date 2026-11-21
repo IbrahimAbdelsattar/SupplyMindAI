@@ -1,4 +1,5 @@
 from datetime import date, datetime, timezone
+from decimal import Decimal
 
 import pandas as pd
 import pytest
@@ -107,11 +108,16 @@ def test_plan_uses_forecast_and_current_raw_inventory(material_client):
     assert plastic["to_buy"] == 3800
     assert plastic["first_shortage_period"] == "2027-01"
     forecast = client.post("/api/v1/forecast/predict", headers=planner, json=parameters).raise_for_status().json()
+    assert all(month["confidence_level"] is None and month["demand_trend"] is None for month in forecast["monthly_summary"])
     assert six_months["monthly_demand"] == [
         {key: month[key] for key in ("period", "predicted_demand")}
         for month in forecast["monthly_summary"]
     ]
-    assert next(point["date"] for point in forecast["series"] if point["actual"] is None) == "2026-12-01"
+    future = [point for point in forecast["series"] if point["actual"] is None]
+    assert future[0]["date"] == "2026-12-01"
+    assert {point["forecast"] for point in future if point["date"].startswith("2026-12")} == {64.52}
+    assert all(point["lower"] is None and point["upper"] is None for point in future)
+    assert all(point["forecast"] is None for point in forecast["series"] if point["actual"] is not None)
 
     another_product = client.get(
         plan_path, headers=planner, params={"product_id": "AF_5", "horizon_days": 90}
@@ -153,11 +159,10 @@ def test_production_plan_minimizes_new_purchases_and_finishes_as_early_as_possib
         assert client.get(path, params={**params, "target_units": invalid}, headers=planner).status_code == 422
 
     estimate = client.get(path, params=params, headers=planner).raise_for_status().json()
-    assert estimate["full_purchase_cost"] == "88000"
+    assert estimate["full_purchase_cost"] is None
     assert estimate["new_material_spend"] is None
     assert estimate["completion_days"] is None
-    assert estimate["daily_capacity"] == 49
-    assert estimate["capacity_history_through"] == "2024-12-31"
+    assert estimate["daily_capacity"] is None
 
     for material, on_hand in [("RM_PLASTIC", 1600), ("RM_STEEL", 4000), ("RM_HEATER", 1000)]:
         client.put(
@@ -166,16 +171,32 @@ def test_production_plan_minimizes_new_purchases_and_finishes_as_early_as_possib
             headers=headers["manager"],
         ).raise_for_status()
 
-    plan = client.get(
-        path, params={**params, "daily_capacity": 100, "deadline_days": 12}, headers=planner
-    ).raise_for_status().json()
+    planning_params = {**params, "daily_capacity": 100, "deadline_days": 12}
+    without_quotes = client.get(path, params=planning_params, headers=planner).raise_for_status().json()
+    assert without_quotes["new_material_spend"] is None
+    assert without_quotes["completion_days"] is None
+
+    stock_path = "/api/v1/inventory/raw-materials"
+    first_quote = {"supplier_name": "Test supplier", "unit_price": "5.75", "lead_time_days": 7}
+    assert client.put(f"{stock_path}/RM_PLASTIC/quote", json=first_quote, headers=planner).status_code == 403
+    for invalid in ({"unit_price": "-1"}, {"unit_price": "1.234"}, {"lead_time_days": -1}, {"supplier_name": " "}):
+        assert client.put(
+            f"{stock_path}/RM_PLASTIC/quote", json={**first_quote, **invalid}, headers=headers["manager"]
+        ).status_code == 422
+    client.put(f"{stock_path}/RM_PLASTIC/quote", json=first_quote, headers=headers["manager"]).raise_for_status()
+    inventory = client.get(stock_path, headers=planner).raise_for_status().json()
+    plastic = next(row for row in inventory if row["material_id"] == "RM_PLASTIC")
+    assert plastic["quote"] == first_quote
+    assert plastic["on_hand"] == 1600
+
+    plan = client.get(path, params=planning_params, headers=planner).raise_for_status().json()
     materials = {material["material_id"]: material for material in plan["materials"]}
     assert materials["RM_PLASTIC"]["to_buy"] == 2400
-    assert materials["RM_PLASTIC"]["supplier_name"] == "Supplier_4"
+    assert materials["RM_PLASTIC"]["supplier_name"] == "Test supplier"
     assert materials["RM_PLASTIC"]["lead_time_days"] == 7
     assert materials["RM_STEEL"]["to_buy"] == materials["RM_HEATER"]["to_buy"] == 0
-    assert plan["new_material_spend"] == "12000"
-    assert plan["capacity_history_through"] is None
+    assert Decimal(plan["new_material_spend"]) == Decimal("13800")
+    assert plan["full_purchase_cost"] is None
     assert plan["completion_days"] == 13 > plan["deadline_days"]
     assert plan["phases"] == [
         {"first_day": 1, "last_day": 4, "units": 400},
@@ -185,15 +206,26 @@ def test_production_plan_minimizes_new_purchases_and_finishes_as_early_as_possib
     fully_stocked = client.get(
         path, params={**params, "target_units": 350, "daily_capacity": 100}, headers=planner
     ).raise_for_status().json()
-    assert fully_stocked["new_material_spend"] == "0"
+    assert Decimal(fully_stocked["new_material_spend"]) == 0
     assert fully_stocked["phases"] == [{"first_day": 1, "last_day": 4, "units": 350}]
 
-    for material in materials:
+    revised_quote = {**first_quote, "unit_price": "6.15", "lead_time_days": 9}
+    client.put(f"{stock_path}/RM_PLASTIC/quote", json=revised_quote, headers=headers["manager"]).raise_for_status()
+    revised = client.get(path, params=planning_params, headers=planner).raise_for_status().json()
+    assert Decimal(revised["new_material_spend"]) == Decimal("14760")
+    assert revised["completion_days"] == 15
+
+    for material, price, lead in (("RM_STEEL", "12.00", 10), ("RM_HEATER", "20.00", 5)):
         client.put(
-            f"/api/v1/inventory/raw-materials/{material}",
-            json={"on_hand": 0},
+            f"{stock_path}/{material}/quote",
+            json={"supplier_name": "Another test supplier", "unit_price": price, "lead_time_days": lead},
             headers=headers["manager"],
         ).raise_for_status()
-    from_empty = client.get(path, params=params, headers=planner).raise_for_status().json()
-    assert from_empty["new_material_spend"] == "88000"
-    assert from_empty["phases"] == [{"first_day": 11, "last_day": 31, "units": 1000}]
+    for material in materials:
+        client.put(f"{stock_path}/{material}", json={"on_hand": 0}, headers=headers["manager"]).raise_for_status()
+
+    costs_only = client.get(path, params=params, headers=planner).raise_for_status().json()
+    assert costs_only["completion_days"] is None
+    from_empty = client.get(path, params=planning_params, headers=planner).raise_for_status().json()
+    assert Decimal(from_empty["full_purchase_cost"]) == Decimal(from_empty["new_material_spend"]) == Decimal("92600")
+    assert from_empty["phases"] == [{"first_day": 11, "last_day": 20, "units": 1000}]

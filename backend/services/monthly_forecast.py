@@ -30,14 +30,15 @@ def monthly_predictions(product_id: str, months: int) -> list[MonthlyPrediction]
         if predictions and str(period - 1) != predictions[-1].period:
             raise ForecastUnavailable("The demand model returned nonconsecutive months")
 
-        confidence = row.get("confidence_level", 85.0)
+        confidence = row.get("confidence_level")
+        trend = row.get("demand_trend")
         revenue = row.get("revenue_forecast")
         predictions.append(
             MonthlyPrediction(
                 period=str(period),
                 predicted_demand=demand,
-                confidence_level=85.0 if pd.isna(confidence) else float(confidence),
-                demand_trend=str(row.get("demand_trend", "stable")),
+                confidence_level=None if pd.isna(confidence) else float(confidence),
+                demand_trend=None if pd.isna(trend) else str(trend),
                 revenue_forecast=None if pd.isna(revenue) else float(revenue),
             )
         )

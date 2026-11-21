@@ -22,7 +22,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Area,
   ComposedChart,
   Legend,
 } from 'recharts';
@@ -67,8 +66,8 @@ interface ForecastReasoningResult {
 }
 
 type Product = { product_id: string; product_name: string; category?: string };
-type ForecastPoint = { date: string; actual?: number | null; forecast: number; lower: number; upper: number };
-type MonthlyPrediction = { period: string; predicted_demand: number; confidence_level: number; demand_trend: string; revenue_forecast?: number | null };
+type ForecastPoint = { date: string; actual?: number | null; forecast: number | null; lower: number | null; upper: number | null };
+type MonthlyPrediction = { period: string; predicted_demand: number; confidence_level: number | null; demand_trend: string | null; revenue_forecast?: number | null };
 type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[]; monthly_summary?: MonthlyPrediction[] | null };
 
 const Forecasting = () => {
@@ -193,15 +192,16 @@ const Forecasting = () => {
   const summary = useMemo(() => {
     if (!monthlyData.length) return null;
     const totalDemand = monthlyData.reduce((s, m) => s + m.predicted_demand, 0);
-    const avgConfidence = monthlyData.reduce((s, m) => s + m.confidence_level, 0) / monthlyData.length;
-    const latestTrend = monthlyData[monthlyData.length - 1]?.demand_trend ?? 'stable';
+    const confidence = monthlyData.flatMap((month) => month.confidence_level === null ? [] : [month.confidence_level]);
+    const avgConfidence = confidence.length ? confidence.reduce((sum, value) => sum + value, 0) / confidence.length : null;
+    const latestTrend = monthlyData[monthlyData.length - 1]?.demand_trend;
     const totalRevenue = monthlyData.reduce((s, m) => s + (m.revenue_forecast ?? 0), 0);
     return { totalDemand, avgConfidence, latestTrend, totalRevenue };
   }, [monthlyData]);
 
   const handleExport = () => {
     const csv = chartData
-      .map((row) => `${row.date},${row.actual || ''},${row.forecast},${row.lower},${row.upper}`)
+      .map((row) => `${row.date},${row.actual ?? ''},${row.forecast ?? ''},${row.lower ?? ''},${row.upper ?? ''}`)
       .join('\n');
     const header = 'Date,Actual,Forecast,Lower,Upper\n';
     const blob = new Blob([header + csv], { type: 'text/csv' });
@@ -314,7 +314,7 @@ const Forecasting = () => {
                 <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
                   <CardDescription className="text-xs truncate">{t('forecasting:kpi.confidenceLevel')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl truncate">
-                    {Math.round(summary.avgConfidence)}%
+                    {summary.avgConfidence === null ? '—' : `${Math.round(summary.avgConfidence)}%`}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground truncate">{t('forecasting:kpi.confidenceLevelDesc')}</p>
                 </CardHeader>
@@ -323,7 +323,7 @@ const Forecasting = () => {
                 <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
                   <CardDescription className="text-xs truncate">{t('forecasting:kpi.demandTrend')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl capitalize truncate">
-                    {summary.latestTrend}
+                    {summary.latestTrend ?? '—'}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground truncate">{t('forecasting:kpi.demandTrendDesc')}</p>
                 </CardHeader>
@@ -367,12 +367,6 @@ const Forecasting = () => {
                 <div className="h-60 sm:h-96">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData}>
-                      <defs>
-                        <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
@@ -390,20 +384,6 @@ const Forecasting = () => {
                         }}
                       />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Area
-                        type="monotone"
-                        dataKey="upper"
-                        stroke="none"
-                        fill="url(#confidenceGradient)"
-                        name={t('forecasting:chart.upperBound')}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="lower"
-                        stroke="none"
-                        fill="hsl(var(--background))"
-                        name={t('forecasting:chart.lowerBound')}
-                      />
                       <Line
                         type="monotone"
                         dataKey="actual"
@@ -414,7 +394,7 @@ const Forecasting = () => {
                         connectNulls={false}
                       />
                       <Line
-                        type="monotone"
+                        type="stepAfter"
                         dataKey="forecast"
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
@@ -579,10 +559,10 @@ const Forecasting = () => {
                             {row.predicted_demand.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-right text-xs sm:text-sm">
-                            {row.confidence_level}%
+                            {row.confidence_level === null ? '—' : `${row.confidence_level}%`}
                           </TableCell>
                           <TableCell className="text-right text-xs sm:text-sm capitalize">
-                            {row.demand_trend}
+                            {row.demand_trend ?? '—'}
                           </TableCell>
                         </TableRow>
                       ))}

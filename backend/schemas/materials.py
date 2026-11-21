@@ -1,7 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 
 class RawMaterialBalance(BaseModel):
@@ -13,6 +14,18 @@ class RawMaterialBalance(BaseModel):
 
 class UpdateRawMaterialBalance(BaseModel):
     on_hand: int = Field(strict=True, ge=0, le=2_147_483_647)
+
+
+class MaterialSupplierQuote(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    supplier_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    unit_price: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
+    lead_time_days: int = Field(strict=True, ge=0, le=2_147_483_647)
+
+
+class RawMaterialInventoryEntry(RawMaterialBalance):
+    quote: MaterialSupplierQuote | None = None
 
 
 class MaterialRequirement(RawMaterialBalance):
@@ -52,7 +65,6 @@ class ProductionPlan(BaseModel):
     product_id: str
     target_units: int
     daily_capacity: int | None
-    capacity_history_through: str | None = None
     deadline_days: int | None = None
     completion_days: int | None = None
     new_material_spend: Decimal | None = None

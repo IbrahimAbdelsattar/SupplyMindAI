@@ -6,7 +6,6 @@ and SQL database tables into a single unified directory ('data/powerbi_export/')
 optimized for Power BI import.
 """
 
-import os
 import sqlite3
 import pandas as pd
 from pathlib import Path
@@ -50,46 +49,25 @@ def export_csv_file(name, source_path):
         return False
 
 def export_db_table():
-    print("Connecting to SQLite database to export forecast_results...")
-    if not DB_PATH.exists():
-        print(f"SQLite database not found at: {DB_PATH}. Creating an empty mock forecast table...")
-        # Create a mock dataframe if DB doesn't exist
-        mock_forecasts = pd.DataFrame([
-            {"product_id": "FAN_STD", "period": "2026-06", "predicted_demand": 1200, "confidence_level": 88.0, "demand_trend": "increasing", "current_stock": 850, "stock_risk_level": "low", "recommended_order_qty": 600, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 42000.0},
-            {"product_id": "FAN_STD", "period": "2026-07", "predicted_demand": 1450, "confidence_level": 91.0, "demand_trend": "increasing", "current_stock": 850, "stock_risk_level": "medium", "recommended_order_qty": 900, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 50750.0},
-            {"product_id": "BL_KIT", "period": "2026-06", "predicted_demand": 850, "confidence_level": 82.0, "demand_trend": "stable", "current_stock": 450, "stock_risk_level": "medium", "recommended_order_qty": 500, "supplier_score": 81.0, "best_supplier": "Global Logistics", "lead_time_days": 14.0, "delay_risk": "medium", "avg_delay": 1.8, "profit_margin": 0.40, "revenue_forecast": 34000.0}
-        ])
-        mock_forecasts.to_csv(EXPORT_DIR / "forecast_results.csv", index=False)
-        print(f"Mock forecast table written to {EXPORT_DIR / 'forecast_results.csv'}")
-        return
-
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        # Check if table exists
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='forecast_results'")
-        table_exists = cursor.fetchone()
-        
-        if not table_exists:
-            print("Table 'forecast_results' does not exist in SQLite DB. Exporting empty template...")
-            df = pd.DataFrame(columns=[
-                "id", "product_id", "period", "predicted_demand", "confidence_level", 
-                "demand_trend", "current_stock", "stock_risk_level", "recommended_order_qty",
-                "supplier_score", "best_supplier", "lead_time_days", "delay_risk", "avg_delay",
-                "profit_margin", "revenue_forecast", "created_at"
-            ])
-        else:
-            df = pd.read_sql_query("SELECT * FROM forecast_results", conn)
-            # Add formatted date for mapping periods (first day of the month for Power BI compatibility)
-            if "period" in df.columns:
+    columns = [
+        "id", "product_id", "period", "predicted_demand", "confidence_level", "demand_trend",
+        "current_stock", "stock_risk_level", "recommended_order_qty", "supplier_score", "best_supplier",
+        "lead_time_days", "delay_risk", "avg_delay", "profit_margin", "revenue_forecast", "created_at",
+        "forecast_date",
+    ]
+    df = pd.DataFrame(columns=columns)
+    if DB_PATH.exists():
+        with sqlite3.connect(DB_PATH) as conn:
+            table_exists = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='forecast_results'"
+            ).fetchone()
+            if table_exists:
+                df = pd.read_sql_query("SELECT * FROM forecast_results", conn)
                 df["forecast_date"] = pd.to_datetime(df["period"] + "-01").dt.strftime("%Y-%m-%d")
-        
-        target_path = EXPORT_DIR / "forecast_results.csv"
-        df.to_csv(target_path, index=False)
-        print(f"Successfully exported SQL table: {target_path} ({len(df)} rows)")
-        conn.close()
-    except Exception as e:
-        print(f"Error reading database forecast_results: {e}")
+    target_path = EXPORT_DIR / "forecast_results.csv"
+    df.to_csv(target_path, index=False)
+    print(f"Exported {target_path} ({len(df)} forecast rows)")
+
 
 def generate_date_dimension():
     """Generates a complete Calendar/Date dimension for robust Power BI time intelligence."""

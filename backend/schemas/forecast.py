@@ -20,16 +20,16 @@ class ForecastPredictRequest(BaseModel):
 class ForecastPoint(BaseModel):
     date: str
     actual: Optional[float] = None
-    forecast: float
-    lower: float
-    upper: float
+    forecast: Optional[float] = None
+    lower: Optional[float] = None
+    upper: Optional[float] = None
 
 
 class MonthlyPrediction(BaseModel):
     period: str
     predicted_demand: float
-    confidence_level: float
-    demand_trend: str
+    confidence_level: Optional[float] = None
+    demand_trend: Optional[str] = None
     revenue_forecast: Optional[float] = None
 
 

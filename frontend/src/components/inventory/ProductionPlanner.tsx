@@ -56,12 +56,12 @@ export function ProductionPlanner({ selection, onPlan }: {
             <div className="space-y-2">
               <Label htmlFor="production-units">{t('targetUnits')}</Label>
               <Input id="production-units" name="units" type="number" min={1} max={quantityLimit}
-                step={1} inputMode="numeric" placeholder="1000" required defaultValue={units} />
+                step={1} inputMode="numeric" required defaultValue={units} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="production-daily">{t('dailyCapacity')}</Label>
               <Input id="production-daily" name="daily" type="number" min={1} max={quantityLimit}
-                step={1} inputMode="numeric" placeholder={t('historicalDefault')} defaultValue={daily} />
+                step={1} inputMode="numeric" defaultValue={daily} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="production-deadline">{t('deadlineDays')}</Label>
@@ -83,10 +83,11 @@ export function ProductionPlanner({ selection, onPlan }: {
 
 function ProductionResults({ result }: { result: ProductionPlan }) {
   const { t, i18n } = useTranslation('bom');
-  const number = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format;
-  const date = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'UTC' });
+  const number = new Intl.NumberFormat(i18n.language).format;
+  const price = new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'EGP' }).format;
   const unknown = result.materials.some((material) => material.on_hand === null);
-  const amount = (value: string | null) => value === null ? '—' : number(Number(value));
+  const missingQuote = result.materials.some((material) => (material.to_buy ?? 0) > 0 && !material.supplier_name);
+  const amount = (value: string | null) => value === null ? '—' : price(Number(value));
   const metrics = [
     { label: 'minimumSpend', value: amount(result.new_material_spend) },
     { label: 'fullPurchaseCost', value: amount(result.full_purchase_cost) },
@@ -111,6 +112,11 @@ function ProductionResults({ result }: { result: ProductionPlan }) {
         {unknown && (
           <p role="status" className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
             {t('unknownProductionStock')}
+          </p>
+        )}
+        {missingQuote && (
+          <p role="status" className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
+            {t('missingProductionQuotes')}
           </p>
         )}
       </section>
@@ -150,12 +156,9 @@ function ProductionResults({ result }: { result: ProductionPlan }) {
       <Card hoverLift={false} className="p-0">
         <CardHeader className="p-4 sm:p-6">
           <h2 className="text-lg font-semibold">{t('productionSchedule')}</h2>
-          <CardDescription>
-            {result.daily_capacity !== null && t('capacitySummary', { capacity: number(result.daily_capacity) })}
-            {result.capacity_history_through && (
-              <> {t('historicalCapacityNote', { date: date.format(new Date(`${result.capacity_history_through}T00:00:00Z`)) })}</>
-            )}
-          </CardDescription>
+          {result.daily_capacity !== null && (
+            <CardDescription>{t('capacitySummary', { capacity: number(result.daily_capacity) })}</CardDescription>
+          )}
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-6">
           {result.completion_days === null ? (

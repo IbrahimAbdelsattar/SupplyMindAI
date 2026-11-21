@@ -19,6 +19,16 @@ export type RawMaterialBalance = {
   updated_at: string | null;
 };
 
+export type MaterialSupplierQuote = {
+  supplier_name: string;
+  unit_price: string;
+  lead_time_days: number;
+};
+
+export type RawMaterialInventoryEntry = RawMaterialBalance & {
+  quote: MaterialSupplierQuote | null;
+};
+
 export type MaterialRequirement = RawMaterialBalance & {
   quantity_per_unit: number;
   required: number;
@@ -39,7 +49,6 @@ export type ProductionPlan = {
   product_id: string;
   target_units: number;
   daily_capacity: number | null;
-  capacity_history_through: string | null;
   deadline_days: number | null;
   completion_days: number | null;
   new_material_spend: string | null;

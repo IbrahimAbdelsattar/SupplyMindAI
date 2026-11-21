@@ -19,91 +19,37 @@ router = APIRouter(prefix="/api/v1/forecast", tags=["forecasting"])
 def predict_forecast(payload: ForecastPredictRequest, user: dict = Depends(require_permission(Permission.GENERATE_FORECASTS))):
     try:
         import pandas as pd
-        from datetime import timedelta
-        
+
         n_months = max(1, payload.horizon_days // 30)
         monthly_summary = monthly_predictions(payload.product_id, n_months)
 
-        # Get historical data for the chart's 'actual' line
         sales = STORE.sales_daily()
-        sub = sales[sales["product_id"] == payload.product_id].copy()
-        
-        historical_points = []
-        if not sub.empty:
-            sub = sub.sort_values("date").tail(30) # Last 30 days of actuals
-            for _, row in sub.iterrows():
-                dt_str = row["date"].strftime("%Y-%m-%d") if pd.notna(row["date"]) else str(row["date"])
-                
-                qty_val = row.get("qty", row.get("total_qty", 0.0))
-                qty = float(qty_val) if not pd.isna(qty_val) and qty_val is not None else 0.0
-                
-                historical_points.append(
-                    ForecastPoint(
-                        date=dt_str,
-                        actual=qty,
-                        forecast=qty,
-                        lower=qty,
-                        upper=qty
-                    )
-                )
+        qty_col = "qty" if "qty" in sales.columns else "total_qty"
+        history = sales.loc[sales["product_id"] == payload.product_id, ["date", qty_col]].copy()
+        history[qty_col] = pd.to_numeric(history[qty_col], errors="coerce")
+        daily_sales = history.groupby("date")[qty_col].sum(min_count=1).dropna().sort_index().tail(30)
+        historical_points = [
+            ForecastPoint(date=day.strftime("%Y-%m-%d"), actual=float(quantity))
+            for day, quantity in daily_sales.items()
+        ]
 
+        # The model predicts monthly totals. Chart the daily average within each calendar month.
         forecast_points = []
-        last_historical_val = (historical_points[-1].actual if historical_points else None) or 0.0
-        current_date = pd.Period(monthly_summary[0].period, freq="M").start_time
-        day_index = 0
-        import math
-
         for prediction in monthly_summary:
-            pred_demand = prediction.predicted_demand
-            conf_level = prediction.confidence_level
-            # Create daily points for the forecast horizon
-            target_daily_demand = pred_demand / 30.0
-            conf_margin = (100.0 - conf_level) / 100.0
-            
-            # Append ~30 days for this month
-            for _ in range(30):
-                if day_index >= payload.horizon_days:
-                    break
-                
-                # Interpolate from historical to prevent a sharp cliff (over 14 days)
-                if last_historical_val > 0 and day_index < 14:
-                    weight = day_index / 14.0
-                    base_val = last_historical_val * (1.0 - weight) + target_daily_demand * weight
-                else:
-                    base_val = target_daily_demand
-                    
-                # Apply day of week seasonality multipliers (Mon=0, Sun=6)
-                dow_multipliers = [0.95, 0.98, 1.02, 1.05, 1.15, 1.10, 0.75]
-                dow = current_date.weekday()
-                
-                # Add slight deterministic noise for organic visualization
-                noise = math.sin(day_index * 1.5) * 0.05 + 1.0
-                
-                f_val = base_val * dow_multipliers[dow] * noise
-                
-                lower = f_val * (1 - conf_margin)
-                upper = f_val * (1 + conf_margin)
-                
-                forecast_points.append(
-                    ForecastPoint(
-                        date=current_date.strftime("%Y-%m-%d"),
-                        forecast=round(f_val, 2),
-                        lower=round(lower, 2),
-                        upper=round(upper, 2)
-                    )
-                )
-                current_date += timedelta(days=1)
-                day_index += 1
-                
-            if day_index >= payload.horizon_days:
+            period = pd.Period(prediction.period, freq="M")
+            days = min(period.days_in_month, payload.horizon_days - len(forecast_points))
+            if days <= 0:
                 break
-                
-        series = historical_points + forecast_points
+            daily_average = prediction.predicted_demand / period.days_in_month
+            forecast_points.extend(
+                ForecastPoint(date=day.strftime("%Y-%m-%d"), forecast=round(daily_average, 2))
+                for day in pd.date_range(period.start_time, periods=days)
+            )
 
         return ForecastPredictResponse(
             product_id=payload.product_id,
             horizon_days=payload.horizon_days,
-            series=series,
+            series=historical_points + forecast_points,
             monthly_summary=monthly_summary
         )
     except ForecastUnavailable as exc:

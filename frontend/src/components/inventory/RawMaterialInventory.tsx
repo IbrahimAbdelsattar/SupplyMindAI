@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useId, useState, type FormEvent } from 'react';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { Boxes } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, type To } from 'react-router-dom';
@@ -12,18 +12,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiFetch } from '@/lib/api';
-import type { RawMaterialBalance } from '@/lib/materialPlanning';
+import type { MaterialSupplierQuote, RawMaterialBalance, RawMaterialInventoryEntry } from '@/lib/materialPlanning';
 
 const balancesKey = ['raw-material-balances'];
+
+function invalidateMaterialQueries(queryClient: QueryClient) {
+  void queryClient.invalidateQueries({ queryKey: balancesKey });
+  void queryClient.invalidateQueries({ queryKey: ['material-plan'] });
+  void queryClient.invalidateQueries({ queryKey: ['production-plan'] });
+}
 
 export function RawMaterialInventory({ canEdit, planLink }: { canEdit: boolean; planLink?: To }) {
   const { t, i18n } = useTranslation('bom');
   const balances = useQuery({
     queryKey: balancesKey,
-    queryFn: ({ signal }) => apiFetch<RawMaterialBalance[]>('/inventory/raw-materials', { signal }),
+    queryFn: ({ signal }) => apiFetch<RawMaterialInventoryEntry[]>('/inventory/raw-materials', { signal }),
   });
   const numbers = new Intl.NumberFormat(i18n.language);
   const dates = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' });
+  const prices = new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'EGP' });
 
   return (
     <Card hoverLift={false} className="p-0">
@@ -54,6 +61,11 @@ export function RawMaterialInventory({ canEdit, planLink }: { canEdit: boolean; 
                 <div>
                   <h3 className="font-medium">{material.material_name}</h3>
                   <p className="text-xs text-muted-foreground"><bdi>{material.material_id}</bdi></p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {material.quote
+                      ? <><bdi>{material.quote.supplier_name}</bdi> · {prices.format(Number(material.quote.unit_price))} · {t('leadDays', { days: numbers.format(material.quote.lead_time_days) })}</>
+                      : t('noSupplierQuote')}
+                  </p>
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -69,7 +81,12 @@ export function RawMaterialInventory({ canEdit, planLink }: { canEdit: boolean; 
                     </dd>
                   </div>
                 </dl>
-                {canEdit && <RawMaterialStockEditor material={material} />}
+                {canEdit && (
+                  <div className="flex flex-wrap gap-2">
+                    <RawMaterialStockEditor material={material} />
+                    <RawMaterialQuoteEditor material={material} />
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -92,9 +109,7 @@ function RawMaterialStockEditor({ material }: { material: RawMaterialBalance }) 
       { method: 'PUT', body: JSON.stringify({ on_hand: onHand }) },
     ),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: balancesKey });
-      void queryClient.invalidateQueries({ queryKey: ['material-plan'] });
-      void queryClient.invalidateQueries({ queryKey: ['production-plan'] });
+      invalidateMaterialQueries(queryClient);
       toast({ title: t('saved') });
       setOpen(false);
     },
@@ -143,6 +158,78 @@ function RawMaterialStockEditor({ material }: { material: RawMaterialBalance }) 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" disabled={mutation.isPending} onClick={() => setOpen(false)}>{t('cancel')}</Button>
             <Button type="submit" disabled={mutation.isPending}>{t(mutation.isPending ? 'saving' : 'save')}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RawMaterialQuoteEditor({ material }: { material: RawMaterialInventoryEntry }) {
+  const { t } = useTranslation('bom');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const inputId = useId();
+  const [open, setOpen] = useState(false);
+  const { quote } = material;
+  const mutation = useMutation({
+    mutationFn: (payload: MaterialSupplierQuote) => apiFetch<MaterialSupplierQuote>(
+      `/inventory/raw-materials/${encodeURIComponent(material.material_id)}/quote`,
+      { method: 'PUT', body: JSON.stringify(payload) },
+    ),
+    onSuccess: () => {
+      invalidateMaterialQueries(queryClient);
+      toast({ title: t('quoteSaved') });
+      setOpen(false);
+    },
+  });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    mutation.mutate({
+      supplier_name: String(form.get('supplier')).trim(),
+      unit_price: String(form.get('price')),
+      lead_time_days: Number(form.get('lead')),
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => {
+      if (mutation.isPending) return;
+      if (next) mutation.reset();
+      setOpen(next);
+    }}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          {t(quote ? 'updateQuote' : 'recordQuote')}<span className="sr-only"> · {material.material_name}</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader className="text-start">
+          <DialogTitle>{t('quoteForMaterial', { material: material.material_name })}</DialogTitle>
+          <DialogDescription>{t('quoteDescription')}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor={`${inputId}-supplier`}>{t('supplierName')}</Label>
+            <Input id={`${inputId}-supplier`} name="supplier" required maxLength={120} pattern=".*\S.*"
+              disabled={mutation.isPending} defaultValue={quote?.supplier_name} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${inputId}-price`}>{t('quoteUnitPrice')}</Label>
+            <Input id={`${inputId}-price`} name="price" type="number" inputMode="decimal"
+              required min={0} max={9999999999.99} step="0.01" disabled={mutation.isPending} defaultValue={quote?.unit_price} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${inputId}-lead`}>{t('quoteLeadDays')}</Label>
+            <Input id={`${inputId}-lead`} name="lead" type="number" inputMode="numeric"
+              required min={0} max={2_147_483_647} step={1} disabled={mutation.isPending} defaultValue={quote?.lead_time_days} />
+          </div>
+          {mutation.isError && <p role="alert" className="text-sm text-destructive">{t('quoteSaveError')}</p>}
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" disabled={mutation.isPending} onClick={() => setOpen(false)}>{t('cancel')}</Button>
+            <Button type="submit" disabled={mutation.isPending}>{t(mutation.isPending ? 'saving' : 'saveQuote')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
