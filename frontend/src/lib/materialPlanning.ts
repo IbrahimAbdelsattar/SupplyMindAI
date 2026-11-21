@@ -34,3 +34,20 @@ export type MaterialPlan = {
   monthly_demand: { period: string; predicted_demand: number }[];
   materials: MaterialRequirement[];
 };
+
+export type ProductionPlan = {
+  product_id: string;
+  target_units: number;
+  daily_capacity: number | null;
+  capacity_history_through: string | null;
+  deadline_days: number | null;
+  completion_days: number | null;
+  new_material_spend: string | null;
+  full_purchase_cost: string | null;
+  materials: (MaterialRequirement & {
+    supplier_name: string | null;
+    lead_time_days: number | null;
+    purchase_cost: string | null;
+  })[];
+  phases: { first_day: number; last_day: number; units: number }[];
+};

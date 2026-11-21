@@ -55,7 +55,7 @@ const Inventory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const showRawMaterials = searchParams.get('view') === 'raw-materials';
   const planningParams = new URLSearchParams();
-  for (const key of ['product', 'horizon']) {
+  for (const key of ['product', 'horizon', 'mode', 'units', 'daily', 'deadline']) {
     const value = searchParams.get(key);
     if (value) planningParams.set(key, value);
   }

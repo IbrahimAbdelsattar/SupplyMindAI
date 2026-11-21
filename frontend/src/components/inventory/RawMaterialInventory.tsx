@@ -94,6 +94,7 @@ function RawMaterialStockEditor({ material }: { material: RawMaterialBalance }) 
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: balancesKey });
       void queryClient.invalidateQueries({ queryKey: ['material-plan'] });
+      void queryClient.invalidateQueries({ queryKey: ['production-plan'] });
       toast({ title: t('saved') });
       setOpen(false);
     },

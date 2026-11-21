@@ -141,3 +141,59 @@ def test_material_access_and_validation(material_client):
         assert client.put(
             f"{stock_path}/RM_PLASTIC", json={"on_hand": count}, headers=headers["manager"]
         ).status_code == 422
+
+
+def test_production_plan_minimizes_new_purchases_and_finishes_as_early_as_possible(material_client):
+    client, headers = material_client
+    path = "/api/v1/inventory/production-plan"
+    params = {"product_id": "FAN_STD", "target_units": 1000}
+    planner = headers["analyst"]
+    assert client.get(path, params=params, headers=headers["viewer"]).status_code == 403
+    for invalid in (0, 1.5, -1):
+        assert client.get(path, params={**params, "target_units": invalid}, headers=planner).status_code == 422
+
+    estimate = client.get(path, params=params, headers=planner).raise_for_status().json()
+    assert estimate["full_purchase_cost"] == "88000"
+    assert estimate["new_material_spend"] is None
+    assert estimate["completion_days"] is None
+    assert estimate["daily_capacity"] == 49
+    assert estimate["capacity_history_through"] == "2024-12-31"
+
+    for material, on_hand in [("RM_PLASTIC", 1600), ("RM_STEEL", 4000), ("RM_HEATER", 1000)]:
+        client.put(
+            f"/api/v1/inventory/raw-materials/{material}",
+            json={"on_hand": on_hand},
+            headers=headers["manager"],
+        ).raise_for_status()
+
+    plan = client.get(
+        path, params={**params, "daily_capacity": 100, "deadline_days": 12}, headers=planner
+    ).raise_for_status().json()
+    materials = {material["material_id"]: material for material in plan["materials"]}
+    assert materials["RM_PLASTIC"]["to_buy"] == 2400
+    assert materials["RM_PLASTIC"]["supplier_name"] == "Supplier_4"
+    assert materials["RM_PLASTIC"]["lead_time_days"] == 7
+    assert materials["RM_STEEL"]["to_buy"] == materials["RM_HEATER"]["to_buy"] == 0
+    assert plan["new_material_spend"] == "12000"
+    assert plan["capacity_history_through"] is None
+    assert plan["completion_days"] == 13 > plan["deadline_days"]
+    assert plan["phases"] == [
+        {"first_day": 1, "last_day": 4, "units": 400},
+        {"first_day": 8, "last_day": 13, "units": 600},
+    ]
+
+    fully_stocked = client.get(
+        path, params={**params, "target_units": 350, "daily_capacity": 100}, headers=planner
+    ).raise_for_status().json()
+    assert fully_stocked["new_material_spend"] == "0"
+    assert fully_stocked["phases"] == [{"first_day": 1, "last_day": 4, "units": 350}]
+
+    for material in materials:
+        client.put(
+            f"/api/v1/inventory/raw-materials/{material}",
+            json={"on_hand": 0},
+            headers=headers["manager"],
+        ).raise_for_status()
+    from_empty = client.get(path, params=params, headers=planner).raise_for_status().json()
+    assert from_empty["new_material_spend"] == "88000"
+    assert from_empty["phases"] == [{"first_day": 11, "last_day": 31, "units": 1000}]

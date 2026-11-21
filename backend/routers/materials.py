@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime, timezone
+from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
@@ -11,9 +12,10 @@ from backend.auth.dependencies import require_permission
 from backend.auth.rbac import Permission
 from backend.db import RawMaterialStock, get_db
 from backend.globals import STORE
-from backend.schemas.materials import MaterialPlan, RawMaterialBalance, UpdateRawMaterialBalance
+from backend.schemas.materials import MaterialPlan, ProductionPlan, RawMaterialBalance, UpdateRawMaterialBalance
 from backend.services.material_planning import build_material_plan, material_catalog, raw_material_balances
 from backend.services.monthly_forecast import ForecastUnavailable, monthly_predictions
+from backend.services.production_planning import build_production_plan
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -64,6 +66,30 @@ def update_raw_material(
 def plan_materials(product_id: str, horizon_days: int = 30, db: Session = Depends(get_db)) -> MaterialPlan:
     if horizon_days not in {30, 90, 180}:
         raise HTTPException(status_code=422, detail="Select a one-, three-, or six-month horizon")
+    quantities, catalog = product_materials(product_id)
+
+    try:
+        forecast = monthly_predictions(product_id, horizon_days // 30)
+    except ForecastUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return build_material_plan(product_id, horizon_days, forecast, quantities, raw_material_balances(db, catalog))
+
+
+@router.get("/production-plan", dependencies=[Depends(require_permission(Permission.GENERATE_FORECASTS))])
+def plan_production(
+    product_id: str,
+    target_units: Annotated[int, Query(gt=0, le=2_147_483_647)],
+    daily_capacity: Annotated[int | None, Query(gt=0, le=2_147_483_647)] = None,
+    deadline_days: Annotated[int | None, Query(gt=0, le=2_147_483_647)] = None,
+    db: Session = Depends(get_db),
+) -> ProductionPlan:
+    quantities, catalog = product_materials(product_id)
+    balances = raw_material_balances(db, catalog)
+    return build_production_plan(product_id, target_units, daily_capacity, deadline_days, quantities, balances)
+
+
+def product_materials(product_id: str) -> tuple[dict[str, int], dict[str, str]]:
     if product_id not in STORE.products()["product_id"].values:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -81,10 +107,4 @@ def plan_materials(product_id: str, horizon_days: int = 30, db: Session = Depend
             raise HTTPException(status_code=503, detail="Bill of materials is incomplete")
         quantities[material_id] = quantities.get(material_id, 0) + int(quantity)
 
-    try:
-        forecast = monthly_predictions(product_id, horizon_days // 30)
-    except ForecastUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    balances = raw_material_balances(db, {material_id: catalog[material_id] for material_id in quantities})
-    return build_material_plan(product_id, horizon_days, forecast, quantities, balances)
+    return quantities, {material_id: catalog[material_id] for material_id in quantities}

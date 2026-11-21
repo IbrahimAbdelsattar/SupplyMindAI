@@ -134,8 +134,11 @@ Response: same as login (new `access_token` + new `refresh_token`).
 | GET | `/api/v1/inventory/raw-materials` | `VIEW_INVENTORY` | Raw-material catalog and recorded stock balances |
 | PUT | `/api/v1/inventory/raw-materials/{material_id}` | `MANAGE_INVENTORY` | Replace the physical stock count with `{"on_hand": 0}` or another nonnegative whole count |
 | GET | `/api/v1/inventory/material-plan` | `GENERATE_FORECASTS` | Forecast-based BOM requirements for `product_id` and a `horizon_days` of 30, 90, or 180 |
+| GET | `/api/v1/inventory/production-plan` | `GENERATE_FORECASTS` | Minimum raw-material purchases and earliest estimated build schedule for `product_id`, `target_units`, and optional `daily_capacity` and `deadline_days` |
 
 Material plans apply the on-hand stock once over the selected forecast horizon. Each line reports units per product, required quantity, purchase quantity, remaining stock, and the first month with a shortage. An unrecorded balance returns `null` for `on_hand`, `to_buy`, and `remaining`.
+
+A production target uses the listed supplier and price for each material. The minimum purchase is the positive gap between BOM requirements and on-hand stock. To minimize completion time, the schedule maximizes feasible production before each supplier delivery and places all required orders at the start. The default capacity is the average actual output for the last 28 recorded production days, rounded down. New spend and completion remain unknown while balances are missing. Costs reflect catalog units and exclude labor, overhead, and delivery fees.
 
 **InventorySummaryOut:**
 ```json
