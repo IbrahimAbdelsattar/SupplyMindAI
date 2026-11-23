@@ -74,6 +74,5 @@ CMD ["opentelemetry-instrument", \
      "--port", "8000", \
      "--workers", "1", \
      "--loop", "uvloop", \
-     "--timeout", "120", \
      "--access-log", \
      "--use-colors"]

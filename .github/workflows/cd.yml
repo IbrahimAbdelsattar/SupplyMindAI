@@ -110,7 +110,11 @@ jobs:
           EOF
 
       - name: Copy docker-compose and nginx config
+        env:
+          SUPPLYMIND_ADMIN_EMAIL: ${{ vars.SUPPLYMIND_ADMIN_EMAIL }}
+          SUPPLYMIND_ADMIN_PASSWORD: ${{ secrets.SUPPLYMIND_ADMIN_PASSWORD }}
         run: |
+          umask 077
           mkdir -p deploy
           IMAGE_PREFIX="$(printf '%s' '${{ env.REGISTRY }}/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
           PG_USER="${{ secrets.POSTGRES_USER || 'supplymind_prod' }}"
@@ -159,6 +163,14 @@ jobs:
           LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
           LANGCHAIN_PROJECT=${{ vars.LANGCHAIN_PROJECT }}
           EOF
+          python3 - <<'PY'
+          import os
+
+          with open("deploy/.env", "a", encoding="utf-8") as env_file:
+              for key in ("SUPPLYMIND_ADMIN_EMAIL", "SUPPLYMIND_ADMIN_PASSWORD"):
+                  value = os.environ[key].replace("'", "\\'")
+                  env_file.write(f"{key}='{value}'\n")
+          PY
           ssh deploy-host "mkdir -p ~/supplymind/ssl"
           ssh deploy-host "mkdir -p ~/supplymind/scripts"
           scp docker-compose.prod.yml deploy-host:~/supplymind/docker-compose.yml
