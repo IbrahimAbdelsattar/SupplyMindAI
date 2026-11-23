@@ -38,6 +38,8 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 _SQLITE_PATH = PROJECT_ROOT / "backend" / "data" / "supplymind_dev.db"
 _USE_SQLITE = ENVIRONMENT == "development" or os.getenv("DB_USE_SQLITE", "").lower() in {"1", "true", "yes", "on"}
 
+using_postgres_fallback = False
+
 if _USE_SQLITE and not os.getenv("DB_FORCE_POSTGRES", "").lower() in {"1", "true", "yes", "on"}:
     _SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
     engine = create_engine(
@@ -117,6 +119,7 @@ else:
         engine = create_engine(DATABASE_URL, **engine_options)
         LOGGER.info("Primary database connected successfully: %s", DATABASE_URL)
     except Exception as _exc:
+        using_postgres_fallback = True
         LOGGER.warning("Primary database unavailable — falling back to local SQLite: %s", _exc)
         _SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
         engine = create_engine(

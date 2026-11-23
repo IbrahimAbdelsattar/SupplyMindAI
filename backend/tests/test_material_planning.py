@@ -43,6 +43,7 @@ def material_client(monkeypatch):
     )
     session = sessionmaker(bind=engine)
     monkeypatch.setattr(db, "SessionLocal", session)
+    monkeypatch.setattr(db, "using_postgres_fallback", False)
     db.Base.metadata.create_all(engine)
     monkeypatch.setattr(monthly_forecast, "date", FixedDate)
     monkeypatch.setattr(monthly_forecast, "load_ml_model", ForecastStub)
@@ -229,3 +230,25 @@ def test_production_plan_minimizes_new_purchases_and_finishes_as_early_as_possib
     from_empty = client.get(path, params=planning_params, headers=planner).raise_for_status().json()
     assert Decimal(from_empty["full_purchase_cost"]) == Decimal(from_empty["new_material_spend"]) == Decimal("92600")
     assert from_empty["phases"] == [{"first_day": 11, "last_day": 20, "units": 1000}]
+
+
+
+def test_material_inventory_rejects_postgres_fallback(material_client, monkeypatch):
+    from backend import db
+
+    client, headers = material_client
+    manager = headers["manager"]
+    stock_path = "/api/v1/inventory/raw-materials"
+    material_path = f"{stock_path}/RM_PLASTIC"
+    quote = {"supplier_name": "Local Supplier", "unit_price": "5.00", "lead_time_days": 2}
+
+    with monkeypatch.context() as fallback:
+        fallback.setattr(db, "using_postgres_fallback", True)
+        assert client.get(stock_path, headers=manager).status_code == 503
+        assert client.put(material_path, headers=manager, json={"on_hand": 12}).status_code == 503
+        assert client.put(f"{material_path}/quote", headers=manager, json=quote).status_code == 503
+
+    inventory = client.get(stock_path, headers=manager).raise_for_status().json()
+    plastic = next(item for item in inventory if item["material_id"] == "RM_PLASTIC")
+    assert plastic["on_hand"] is None
+    assert plastic["quote"] is None

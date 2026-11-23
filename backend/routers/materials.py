@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
+from backend import db as database
 from backend.auth.dependencies import require_permission
 from backend.auth.rbac import Permission
 from backend.db import RawMaterialQuote, RawMaterialStock, get_db
@@ -28,11 +29,17 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def get_material_db(db: Session = Depends(get_db)) -> Session:
+    if database.using_postgres_fallback:
+        raise HTTPException(status_code=503, detail="The shared inventory database is unavailable")
+    return db
+
+
 @router.get(
     "/raw-materials",
     dependencies=[Depends(require_permission(Permission.VIEW_INVENTORY))],
 )
-def list_raw_materials(db: Session = Depends(get_db)) -> list[RawMaterialInventoryEntry]:
+def list_raw_materials(db: Session = Depends(get_material_db)) -> list[RawMaterialInventoryEntry]:
     balances = raw_material_balances(db, material_catalog())
     quotes = raw_material_quotes(db, list(balances))
     return [
@@ -48,7 +55,7 @@ def list_raw_materials(db: Session = Depends(get_db)) -> list[RawMaterialInvento
 def update_raw_material(
     material_id: str,
     payload: UpdateRawMaterialBalance,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_material_db),
 ) -> RawMaterialBalance:
     material_name = material_catalog().get(material_id)
     if material_name is None:
@@ -66,7 +73,7 @@ def update_raw_material(
     dependencies=[Depends(require_permission(Permission.MANAGE_INVENTORY))],
 )
 def save_raw_material_quote(
-    material_id: str, payload: MaterialSupplierQuote, db: Session = Depends(get_db)
+    material_id: str, payload: MaterialSupplierQuote, db: Session = Depends(get_material_db)
 ) -> MaterialSupplierQuote:
     if material_id not in material_catalog():
         raise HTTPException(status_code=404, detail="Raw material not found")
@@ -87,7 +94,7 @@ def _upsert_material(
     "/material-plan",
     dependencies=[Depends(require_permission(Permission.GENERATE_FORECASTS))],
 )
-def plan_materials(product_id: str, horizon_days: int = 30, db: Session = Depends(get_db)) -> MaterialPlan:
+def plan_materials(product_id: str, horizon_days: int = 30, db: Session = Depends(get_material_db)) -> MaterialPlan:
     if horizon_days not in {30, 90, 180}:
         raise HTTPException(status_code=422, detail="Select a one-, three-, or six-month horizon")
     quantities, catalog = product_materials(product_id)
@@ -106,7 +113,7 @@ def plan_production(
     target_units: Annotated[int, Query(gt=0, le=2_147_483_647)],
     daily_capacity: Annotated[int | None, Query(gt=0, le=2_147_483_647)] = None,
     deadline_days: Annotated[int | None, Query(gt=0, le=2_147_483_647)] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_material_db),
 ) -> ProductionPlan:
     quantities, catalog = product_materials(product_id)
     balances = raw_material_balances(db, catalog)
