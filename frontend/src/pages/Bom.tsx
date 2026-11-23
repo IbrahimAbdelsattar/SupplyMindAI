@@ -4,32 +4,38 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { BomCatalogImport } from '@/components/inventory/BomCatalogImport';
 import { MaterialPlanResults } from '@/components/inventory/MaterialPlanResults';
 import { ProductionOptimizer } from '@/components/inventory/ProductionOptimizer';
 import { ProductionPlanner } from '@/components/inventory/ProductionPlanner';
+import { RawMaterialInventory } from '@/components/inventory/RawMaterialInventory';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { apiFetch } from '@/lib/api';
-import { FORECAST_HORIZONS, forecastHorizon, forecastSelection, type MaterialPlan } from '@/lib/materialPlanning';
-
-type Product = { product_id: string; product_name: string };
+import {
+  FORECAST_HORIZONS, bomCatalogKey, forecastHorizon, forecastSelection, type BomCatalogSummary, type MaterialPlan,
+} from '@/lib/materialPlanning';
 
 const selectClassName = 'neu-basin h-11 w-full rounded-md border border-input bg-background ps-3 pe-7 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60';
 
 export default function Bom() {
   const { t } = useTranslation('bom');
+  const { userRole } = useAuthContext();
+  const canEdit = userRole === 'admin' || userRole === 'manager';
   const [params, setParams] = useSearchParams();
-  const products = useQuery({
-    queryKey: ['products'],
-    queryFn: ({ signal }) => apiFetch<Product[]>('/data/products', { signal }),
+  const catalog = useQuery({
+    queryKey: bomCatalogKey,
+    queryFn: ({ signal }) => apiFetch<BomCatalogSummary>('/inventory/bom-catalog', { signal }),
   });
+  const products = catalog.data?.products ?? [];
   const requestedProduct = params.get('product');
   const productionMode = params.get('mode') === 'production';
   const optimizationMode = params.get('mode') === 'optimize';
   const forecastMode = !productionMode && !optimizationMode;
-  const productId = products.data?.find((product) => product.product_id === requestedProduct)?.product_id
-    ?? products.data?.[0]?.product_id ?? '';
+  const productId = products.find((product) => product.product_id === requestedProduct)?.product_id
+    ?? products[0]?.product_id ?? '';
   const horizon = forecastHorizon(params.get('horizon'));
   const query = useQuery({
     queryKey: ['material-plan', productId, horizon],
@@ -63,6 +69,9 @@ export default function Bom() {
             <CardHeader className="flex flex-col gap-3 space-y-0 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h2 className="text-lg font-semibold">{t('controls')}</h2>
               <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline">
+                  <a href="#current-materials">{t('currentMaterials')}</a>
+                </Button>
                 <Button asChild size="sm" variant="outline">
                   <Link to={{ pathname: '/forecasting', search: selection.toString() }}>
                     <ChartNoAxesCombined aria-hidden="true" />
@@ -99,11 +108,11 @@ export default function Bom() {
                     id="bom-product"
                     className={selectClassName}
                     value={productId}
-                    disabled={!products.data?.length}
+                    disabled={!products.length}
                     onChange={(event) => changeSelection('product', event.target.value)}
                   >
                     {!productId && <option value="">{t('chooseProduct')}</option>}
-                    {products.data?.map((product) => (
+                    {products.map((product) => (
                       <option key={product.product_id} value={product.product_id}>{product.product_name}</option>
                     ))}
                   </select>
@@ -127,12 +136,12 @@ export default function Bom() {
             </CardContent>
           </Card>
 
-          {products.isPending && <p role="status" className="px-2 text-sm text-muted-foreground">{t('loadingProducts')}</p>}
-          {products.isSuccess && !productId && <p className="px-2 text-sm text-muted-foreground">{t('noProducts')}</p>}
-          {(products.isError || (forecastMode && query.isError)) && (
+          {catalog.isPending && <p role="status" className="px-2 text-sm text-muted-foreground">{t('loadingProducts')}</p>}
+          {catalog.isSuccess && !productId && <p className="px-2 text-sm text-muted-foreground">{t(canEdit ? 'catalog.empty' : 'catalog.askManager')}</p>}
+          {(catalog.isError || (forecastMode && query.isError)) && (
             <Card hoverLift={false} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <p role="alert" className="text-sm text-destructive">{t(products.isError ? 'productsError' : 'planError')}</p>
-              <Button variant="outline" size="sm" onClick={() => void (products.isError ? products.refetch() : query.refetch())}>
+              <p role="alert" className="text-sm text-destructive">{t(catalog.isError ? 'productsError' : 'planError')}</p>
+              <Button variant="outline" size="sm" onClick={() => void (catalog.isError ? catalog.refetch() : query.refetch())}>
                 {t('retry')}
               </Button>
             </Card>
@@ -144,7 +153,9 @@ export default function Bom() {
           {productionMode && !!productId && (
             <ProductionPlanner selection={planningSelection} onPlan={(next) => setParams(next, { replace: true })} />
           )}
-          {optimizationMode && !!products.data?.length && <ProductionOptimizer products={products.data} />}
+          {optimizationMode && !!products.length && <ProductionOptimizer key={catalog.data?.version} products={products} />}
+          <RawMaterialInventory canEdit={canEdit} planningView />
+          {canEdit && <BomCatalogImport configured={!!catalog.data?.version} />}
         </main>
       </div>
     </div>

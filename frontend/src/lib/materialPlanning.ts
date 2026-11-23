@@ -19,6 +19,13 @@ export type RawMaterialBalance = {
   updated_at: string | null;
 };
 
+export type BomCatalogSummary = {
+  version: string | null;
+  products: { product_id: string; product_name: string }[];
+};
+
+export const bomCatalogKey = ['bom-catalog'];
+
 export type MaterialSupplierQuote = {
   supplier_name: string;
   unit_price: string;

@@ -22,7 +22,11 @@ function invalidateMaterialQueries(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: ['production-plan'] });
 }
 
-export function RawMaterialInventory({ canEdit, planLink }: { canEdit: boolean; planLink?: To }) {
+export function RawMaterialInventory({ canEdit, planLink, planningView = false }: {
+  canEdit: boolean;
+  planLink?: To;
+  planningView?: boolean;
+}) {
   const { t, i18n } = useTranslation('bom');
   const balances = useQuery({
     queryKey: balancesKey,
@@ -33,11 +37,12 @@ export function RawMaterialInventory({ canEdit, planLink }: { canEdit: boolean; 
   const prices = new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'EGP' });
 
   return (
-    <Card hoverLift={false} className="p-0">
+    <Card hoverLift={false} className="p-0" id={planningView ? 'current-materials' : undefined}
+      tabIndex={planningView ? -1 : undefined}>
       <CardHeader className="flex flex-col gap-3 space-y-0 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold">{t('rawMaterials')}</h2>
-          <CardDescription>{t('rawMaterialsDescription')}</CardDescription>
+          <h2 className="text-lg font-semibold">{t(planningView ? 'currentMaterials' : 'rawMaterials')}</h2>
+          <CardDescription>{t(planningView ? 'currentMaterialsDescription' : 'rawMaterialsDescription')}</CardDescription>
         </div>
         {planLink && (
           <Button asChild variant="outline" size="sm" className="self-start sm:self-auto">
