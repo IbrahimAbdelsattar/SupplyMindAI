@@ -197,6 +197,17 @@ class RefreshToken(Base):
 
 
 
+class BomCatalog(Base):
+    __tablename__ = "bom_catalog"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_bom_catalog_singleton"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    version: Mapped[str] = mapped_column(String(36), nullable=False)
+    products: Mapped[dict] = mapped_column(JSON, nullable=False)
+    materials: Mapped[dict] = mapped_column(JSON, nullable=False)
+    recipes: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
 class RawMaterialStock(Base):
     __tablename__ = "raw_material_stock"
     __table_args__ = (CheckConstraint("on_hand >= 0", name="ck_raw_material_stock_on_hand"),)

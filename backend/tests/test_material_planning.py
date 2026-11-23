@@ -89,7 +89,7 @@ def test_optimizer_shares_stock_and_handles_lead_time_capacity_and_budget(materi
 
 
 @pytest.fixture
-def material_client(monkeypatch):
+def material_client(monkeypatch, request):
     monkeypatch.setenv("JWT_SECRET_KEY", "local-test-material-planning-signing-key")
     from backend import db
     from backend.auth.tokens import create_access_token
@@ -124,8 +124,56 @@ def material_client(monkeypatch):
     app.include_router(forecasting.router)
     app.include_router(inventory_domain.router)
     with TestClient(app) as client:
+        if getattr(request, "param", True):
+            client.put("/api/v1/inventory/bom-catalog", headers=headers["manager"], json={"csv": (
+                "product_id,product_name,material_id,material_name,qty\n"
+                "FAN_STD,Fan,RM_PLASTIC,Plastic Housing,4\n"
+                "FAN_STD,Fan,RM_STEEL,Steel Body,4\n"
+                "FAN_STD,Fan,RM_HEATER,Heating Element,1\n"
+                "EX_FLAT,Extractor,RM_STEEL,Steel Body,4\n"
+                "EX_FLAT,Extractor,RM_PACK,Packaging,1\n"
+                "EX_FLAT,Extractor,RM_HEATER,Heating Element,1\n"
+                "AF_5,Air Fryer,RM_COPPER,Copper Motor,3\n"
+                "AF_5,Air Fryer,RM_BOARD,Electronics Board,2\n"
+                "AF_5,Air Fryer,RM_PLASTIC,Plastic Housing,4\n"
+            )}).raise_for_status()
         yield client, headers
     engine.dispose()
+
+
+@pytest.mark.parametrize("material_client", [False], indirect=True)
+def test_operational_catalog_starts_empty_and_drives_optimizer(material_client):
+    client, headers = material_client
+    planner, manager = headers["analyst"], headers["manager"]
+    catalog = "/api/v1/inventory/bom-catalog"
+    raw = "/api/v1/inventory/raw-materials"
+    solve = "/api/v1/inventory/production-plan/optimize"
+    assert client.get(catalog, headers=planner).json() == {"version": None, "products": []}
+    assert client.get(raw, headers=planner).json() == []
+    recipe = "product_id,product_name,material_id,material_name,qty\nP-001,Real part,M-001,Verified stock,3\n"
+    assert client.put(catalog, headers=planner, json={"csv": recipe}).status_code == 403
+    saved = client.put(catalog, headers=manager, json={"csv": recipe}).raise_for_status().json()
+    assert saved["products"] == [{"product_id": "P-001", "product_name": "Real part"}]
+    bad = client.put(catalog, headers=manager, json={"csv": recipe + recipe.splitlines()[1]})
+    assert bad.status_code == 422
+    assert client.get(catalog, headers=planner).json() == saved
+
+    payload = {"daily_minutes": 480, "targets": [
+        {"product_id": "P-001", "units": 4, "due_day": 1, "minutes_per_unit": 10, "priority": 1},
+    ]}
+    result = client.post(solve, headers=planner, json=payload).raise_for_status().json()
+    assert result["missing_stock"] == ["M-001"]
+    client.put(f"{raw}/M-001", headers=manager, json={"on_hand": 9}).raise_for_status()
+    optimized = client.post(solve, headers=planner, json=payload).raise_for_status().json()
+    assert optimized["baseline"]["builds"][0]["units"] == 3
+    assert optimized["baseline"]["orders"] == []
+    assert optimized["missing_quotes"] == ["M-001"]
+    replaced = client.put(catalog, headers=manager, json={"csv": recipe.replace(",3", ",2")}).raise_for_status().json()
+    assert replaced["version"] != saved["version"]
+    assert client.get(raw, headers=planner).json()[0]["on_hand"] == 9
+    assert client.post(solve, headers=planner, json=payload).json()["baseline"]["builds"][0]["units"] == 4
+    payload["targets"][0]["product_id"] = "FAN_STD"
+    assert client.post(solve, headers=planner, json=payload).status_code == 404
 
 
 def test_plan_uses_forecast_and_current_raw_inventory(material_client):

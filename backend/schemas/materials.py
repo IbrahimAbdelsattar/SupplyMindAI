@@ -5,6 +5,20 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 
+class BomCatalogImport(BaseModel):
+    csv: str = Field(min_length=1, max_length=250_000)
+
+
+class BomProduct(BaseModel):
+    product_id: str
+    product_name: str
+
+
+class BomCatalogSummary(BaseModel):
+    version: str | None
+    products: list[BomProduct]
+
+
 class RawMaterialBalance(BaseModel):
     material_id: str
     material_name: str

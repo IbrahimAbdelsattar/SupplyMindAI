@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -11,9 +10,10 @@ from sqlalchemy.orm import Session
 from backend import db as database
 from backend.auth.dependencies import require_permission
 from backend.auth.rbac import Permission
-from backend.db import RawMaterialQuote, RawMaterialStock, get_db
-from backend.globals import STORE
+from backend.db import BomCatalog, RawMaterialQuote, RawMaterialStock, get_db
 from backend.schemas.materials import (
+    BomCatalogImport,
+    BomCatalogSummary,
     MaterialPlan,
     MaterialSupplierQuote,
     ProductionOptimizationRequest,
@@ -23,7 +23,8 @@ from backend.schemas.materials import (
     RawMaterialInventoryEntry,
     UpdateRawMaterialBalance,
 )
-from backend.services.material_planning import build_material_plan, material_catalog, raw_material_balances
+from backend.services.bom_catalog import load_bom_catalog, parse_bom_catalog, summarize_bom_catalog
+from backend.services.material_planning import build_material_plan, raw_material_balances
 from backend.services.monthly_forecast import ForecastUnavailable, monthly_predictions
 from backend.services.production_optimization import optimize_production
 from backend.services.production_planning import build_production_plan, raw_material_quotes
@@ -38,12 +39,32 @@ def get_material_db(db: Session = Depends(get_db)) -> Session:
     return db
 
 
+@router.get("/bom-catalog", dependencies=[Depends(require_permission(Permission.VIEW_INVENTORY))])
+def get_bom_catalog(db: Session = Depends(get_material_db)) -> BomCatalogSummary:
+    return summarize_bom_catalog(load_bom_catalog(db))
+
+
+@router.put("/bom-catalog", dependencies=[Depends(require_permission(Permission.MANAGE_INVENTORY))])
+def save_bom_catalog(payload: BomCatalogImport, db: Session = Depends(get_material_db)) -> BomCatalogSummary:
+    try:
+        catalog = parse_bom_catalog(payload.csv)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    insert = postgres_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
+    values = {"version": catalog.version, "products": catalog.products,
+              "materials": catalog.materials, "recipes": catalog.recipes}
+    stmt = insert(BomCatalog).values(id=1, **values)
+    db.execute(stmt.on_conflict_do_update(index_elements=[BomCatalog.id], set_=values))
+    db.commit()
+    return summarize_bom_catalog(catalog)
+
+
 @router.get(
     "/raw-materials",
     dependencies=[Depends(require_permission(Permission.VIEW_INVENTORY))],
 )
 def list_raw_materials(db: Session = Depends(get_material_db)) -> list[RawMaterialInventoryEntry]:
-    balances = raw_material_balances(db, material_catalog())
+    balances = raw_material_balances(db, load_bom_catalog(db).materials)
     quotes = raw_material_quotes(db, list(balances))
     return [
         RawMaterialInventoryEntry(**balance.model_dump(), quote=quotes.get(material_id))
@@ -60,7 +81,7 @@ def update_raw_material(
     payload: UpdateRawMaterialBalance,
     db: Session = Depends(get_material_db),
 ) -> RawMaterialBalance:
-    material_name = material_catalog().get(material_id)
+    material_name = load_bom_catalog(db).materials.get(material_id)
     if material_name is None:
         raise HTTPException(status_code=404, detail="Raw material not found")
 
@@ -78,7 +99,7 @@ def update_raw_material(
 def save_raw_material_quote(
     material_id: str, payload: MaterialSupplierQuote, db: Session = Depends(get_material_db)
 ) -> MaterialSupplierQuote:
-    if material_id not in material_catalog():
+    if material_id not in load_bom_catalog(db).materials:
         raise HTTPException(status_code=404, detail="Raw material not found")
     _upsert_material(db, RawMaterialQuote, material_id, payload.model_dump())
     return payload
@@ -100,7 +121,7 @@ def _upsert_material(
 def plan_materials(product_id: str, horizon_days: int = 30, db: Session = Depends(get_material_db)) -> MaterialPlan:
     if horizon_days not in {30, 90, 180}:
         raise HTTPException(status_code=422, detail="Select a one-, three-, or six-month horizon")
-    quantities, catalog = product_materials(product_id)
+    quantities, catalog = product_materials(load_bom_catalog(db), product_id)
 
     try:
         forecast = monthly_predictions(product_id, horizon_days // 30)
@@ -118,7 +139,7 @@ def plan_production(
     deadline_days: Annotated[int | None, Query(gt=0, le=2_147_483_647)] = None,
     db: Session = Depends(get_material_db),
 ) -> ProductionPlan:
-    quantities, catalog = product_materials(product_id)
+    quantities, catalog = product_materials(load_bom_catalog(db), product_id)
     balances = raw_material_balances(db, catalog)
     quotes = raw_material_quotes(db, list(quantities))
     return build_production_plan(product_id, target_units, daily_capacity, deadline_days, quantities, balances, quotes)
@@ -129,9 +150,10 @@ def optimize_production_plan(
     payload: ProductionOptimizationRequest,
     db: Session = Depends(get_material_db),
 ) -> ProductionOptimizationResult:
+    saved_catalog = load_bom_catalog(db)
     recipes, catalog = {}, {}
     for target in payload.targets:
-        recipe, names = product_materials(target.product_id)
+        recipe, names = product_materials(saved_catalog, target.product_id)
         recipes[target.product_id] = recipe
         catalog.update(names)
     balances = raw_material_balances(db, catalog)
@@ -157,22 +179,8 @@ def optimize_production_plan(
     return result
 
 
-def product_materials(product_id: str) -> tuple[dict[str, int], dict[str, str]]:
-    if product_id not in STORE.products()["product_id"].values:
-        raise HTTPException(status_code=404, detail="Product not found")
-
-    bom = STORE.bom()
-    components = bom.loc[bom["product_id"] == product_id, ["material_id", "qty"]].copy()
-    if components.empty:
-        raise HTTPException(status_code=404, detail="Product has no bill of materials")
-
-    catalog = material_catalog()
-    components["qty"] = pd.to_numeric(components["qty"], errors="coerce")
-    quantities = {}
-    for material_id, quantity in components.itertuples(index=False, name=None):
-        if material_id not in catalog or pd.isna(quantity) or not float(quantity).is_integer() or quantity <= 0:
-            logger.error("Invalid BOM entry for %s and %s", product_id, material_id)
-            raise HTTPException(status_code=503, detail="Bill of materials is incomplete")
-        quantities[material_id] = quantities.get(material_id, 0) + int(quantity)
-
-    return quantities, {material_id: catalog[material_id] for material_id in quantities}
+def product_materials(catalog: BomCatalog, product_id: str) -> tuple[dict[str, int], dict[str, str]]:
+    quantities = catalog.recipes.get(product_id)
+    if quantities is None:
+        raise HTTPException(status_code=404, detail="Product has no saved operational bill of materials")
+    return quantities, {material_id: catalog.materials[material_id] for material_id in quantities}

@@ -22,6 +22,12 @@ from alembic.operations import Operations
             "RawMaterialQuote",
             {"supplier_name": "Local Supplier", "unit_price": 5, "lead_time_days": 2},
         ),
+        (
+            "a0d7cf58a9e1_add_operational_bom",
+            "bom_catalog",
+            "BomCatalog",
+            {"version": "original", "products": {}, "materials": {}, "recipes": {}},
+        ),
     ],
 )
 @pytest.mark.parametrize("preexisting", [False, True])
@@ -35,7 +41,9 @@ def test_downgrade_drops_only_tables_created_by_revision(
     migration = import_module(f"backend.migrations.versions.{revision}")
     monkeypatch.setattr(context, "is_offline_mode", lambda: False)
     table = getattr(db, model_name).__table__
-    values = {"material_id": "RM_PLASTIC", **values}
+    primary_key = next(iter(table.primary_key.columns))
+    identifier = 1 if primary_key.name == "id" else "RM_PLASTIC"
+    values = {primary_key.name: identifier, **values}
     if "updated_at" in table.c:
         values["updated_at"] = datetime.now(timezone.utc)
 
@@ -52,5 +60,5 @@ def test_downgrade_drops_only_tables_created_by_revision(
 
         assert sa.inspect(connection).has_table(table_name) == preexisting
         if preexisting:
-            assert connection.execute(sa.select(table.c.material_id)).scalar_one() == "RM_PLASTIC"
+            assert connection.execute(sa.select(primary_key)).scalar_one() == identifier
     engine.dispose()

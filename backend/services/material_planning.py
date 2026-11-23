@@ -6,7 +6,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db import RawMaterialStock
-from backend.globals import STORE
 from backend.schemas.forecast import MonthlyPrediction
 from backend.schemas.materials import (
     MaterialPlan,
@@ -14,11 +13,6 @@ from backend.schemas.materials import (
     MonthlyMaterialDemand,
     RawMaterialBalance,
 )
-
-
-def material_catalog() -> dict[str, str]:
-    materials = STORE.raw_materials()
-    return dict(zip(materials["material_id"], materials["material_name"]))
 
 
 def raw_material_balances(db: Session, catalog: dict[str, str]) -> dict[str, RawMaterialBalance]:
