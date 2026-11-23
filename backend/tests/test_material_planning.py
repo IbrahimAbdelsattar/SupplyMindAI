@@ -28,6 +28,66 @@ class ForecastStub:
         )
 
 
+def test_optimizer_shares_stock_and_handles_lead_time_capacity_and_budget(material_client):
+    client, headers = material_client
+    manager, analyst = headers["manager"], headers["analyst"]
+    stock_path = "/api/v1/inventory/raw-materials"
+    solve_path = "/api/v1/inventory/production-plan/optimize"
+    targets = [
+        {"product_id": "FAN_STD", "units": 10, "due_day": 2, "minutes_per_unit": 6, "priority": 10},
+        {"product_id": "EX_FLAT", "units": 10, "due_day": 2, "minutes_per_unit": 6, "priority": 1},
+    ]
+    payload = {"targets": targets, "daily_minutes": 60, "extra_daily_minutes": 60}
+
+    assert client.post(solve_path, headers=headers["viewer"], json=payload).status_code == 403
+    missing = client.post(solve_path, headers=analyst, json=payload).raise_for_status().json()
+    assert missing["baseline"] is None
+    assert set(missing["missing_stock"]) == {"RM_PLASTIC", "RM_STEEL", "RM_HEATER", "RM_PACK"}
+    for material, count in {"RM_PLASTIC": 40, "RM_STEEL": 40, "RM_HEATER": 20, "RM_PACK": 10}.items():
+        client.put(f"{stock_path}/{material}", headers=manager, json={"on_hand": count}).raise_for_status()
+
+    def solve(**overrides):
+        return client.post(solve_path, headers=analyst, json={**payload, **overrides}).raise_for_status().json()
+
+    result = solve()
+    plan = result["baseline"]
+    assert plan["status"] == "optimal"
+    assert [t["missed_units"] for t in plan["targets"]] == [0, 10]
+    assert min(row["on_hand"] for row in plan["balances"]) == 0
+    assert plan["orders"] == []
+    assert result["comparison"]["daily_minutes"] == 120
+    assert solve(strict_targets=True)["baseline"]["status"] == "infeasible"
+    reversed_targets = [{**t, "priority": 11 - t["priority"]} for t in targets]
+    assert [t["missed_units"] for t in solve(targets=reversed_targets)["baseline"]["targets"]] == [10, 0]
+
+    quote_path = f"{stock_path}/RM_STEEL/quote"
+    quote = {"supplier_name": "Steel supplier", "unit_price": "2.00", "lead_time_days": 2}
+    client.put(quote_path, headers=manager, json=quote).raise_for_status()
+    assert solve(strict_targets=True)["baseline"]["status"] == "infeasible"
+    client.put(quote_path, headers=manager, json={**quote, "lead_time_days": 1}).raise_for_status()
+
+    budget = solve(budget_egp="16.00")["baseline"]
+    assert [t["missed_units"] for t in budget["targets"]] == [0, 8]
+    assert Decimal(budget["spend_egp"]) == Decimal("16.00")
+
+    result = solve(daily_minutes=30, strict_targets=True)
+    assert result["baseline"]["status"] == "infeasible"
+    comparison = result["comparison"]
+    assert comparison["status"] == "optimal"
+    assert [t["missed_units"] for t in comparison["targets"]] == [0, 0]
+    assert comparison["orders"] == [{
+        "material_id": "RM_STEEL", "supplier_name": "Steel supplier",
+        "order_day": 1, "arrival_day": 2, "units": 40, "cost_egp": "80.00",
+    }]
+    assert sum(b["units"] for b in comparison["builds"] if b["day"] == 1) <= 10
+    for day in (1, 2):
+        assert sum(b["line_minutes"] for b in comparison["builds"] if b["day"] == day) <= 90
+    assert all(row["on_hand"] >= 0 for row in comparison["balances"])
+    assert client.get(solve_path, headers=analyst).status_code == 405
+    materials = client.get(stock_path, headers=analyst).raise_for_status().json()
+    assert next(m for m in materials if m["material_id"] == "RM_STEEL")["on_hand"] == 40
+
+
 @pytest.fixture
 def material_client(monkeypatch):
     monkeypatch.setenv("JWT_SECRET_KEY", "local-test-material-planning-signing-key")

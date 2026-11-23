@@ -16,6 +16,8 @@ from backend.globals import STORE
 from backend.schemas.materials import (
     MaterialPlan,
     MaterialSupplierQuote,
+    ProductionOptimizationRequest,
+    ProductionOptimizationResult,
     ProductionPlan,
     RawMaterialBalance,
     RawMaterialInventoryEntry,
@@ -23,6 +25,7 @@ from backend.schemas.materials import (
 )
 from backend.services.material_planning import build_material_plan, material_catalog, raw_material_balances
 from backend.services.monthly_forecast import ForecastUnavailable, monthly_predictions
+from backend.services.production_optimization import optimize_production
 from backend.services.production_planning import build_production_plan, raw_material_quotes
 
 router = APIRouter()
@@ -119,6 +122,39 @@ def plan_production(
     balances = raw_material_balances(db, catalog)
     quotes = raw_material_quotes(db, list(quantities))
     return build_production_plan(product_id, target_units, daily_capacity, deadline_days, quantities, balances, quotes)
+
+
+@router.post("/production-plan/optimize", dependencies=[Depends(require_permission(Permission.GENERATE_FORECASTS))])
+def optimize_production_plan(
+    payload: ProductionOptimizationRequest,
+    db: Session = Depends(get_material_db),
+) -> ProductionOptimizationResult:
+    recipes, catalog = {}, {}
+    for target in payload.targets:
+        recipe, names = product_materials(target.product_id)
+        recipes[target.product_id] = recipe
+        catalog.update(names)
+    balances = raw_material_balances(db, catalog)
+    quotes = raw_material_quotes(db, list(catalog))
+    stock = {material_id: item.on_hand for material_id, item in balances.items() if item.on_hand is not None}
+    result = ProductionOptimizationResult(
+        materials=catalog,
+        missing_stock=[material_id for material_id in catalog if material_id not in stock],
+        missing_quotes=[material_id for material_id in catalog if material_id not in quotes],
+    )
+    if result.missing_stock:
+        return result
+
+    try:
+        result.baseline = optimize_production(payload, payload.daily_minutes, recipes, stock, quotes)
+        if payload.extra_daily_minutes is not None:
+            result.comparison = optimize_production(
+                payload, payload.daily_minutes + payload.extra_daily_minutes, recipes, stock, quotes,
+            )
+    except RuntimeError as exc:
+        logger.exception("Production optimization failed")
+        raise HTTPException(status_code=503, detail="Production optimizer unavailable") from exc
+    return result
 
 
 def product_materials(product_id: str) -> tuple[dict[str, int], dict[str, str]]:

@@ -1,6 +1,6 @@
 {
   "title": "BOM & material planning",
-  "subtitle": "Plan raw materials from forecast demand or a production target.",
+  "subtitle": "Plan raw materials and production from demand, stock, and capacity.",
   "controls": "Plan settings",
   "chooseProduct": "Choose a product",
   "forecastLink": "Open Forecasting",
@@ -54,7 +54,7 @@
   "dailyCapacity": "Maximum units per day",
   "deadlineDays": "Deadline in days",
   "optional": "Optional",
-  "optimizeProduction": "Optimize production",
+  "calculateProduction": "Calculate production estimate",
   "optimizingProduction": "Calculating the production plan…",
   "productionError": "Could not calculate the production plan. Check the target and that a BOM is available for this product.",
   "productionResult": "Plan for {{units}} units",
@@ -90,5 +90,50 @@
   "saveQuote": "Save quote",
   "quoteSaved": "Supplier quote saved.",
   "quoteSaveError": "Could not save the quote. Try again.",
-  "missingProductionQuotes": "Save a supplier quote in Inventory for each material you need to buy to calculate cost and completion."
+  "missingProductionQuotes": "Save a supplier quote in Inventory for each material you need to buy to calculate cost and completion.",
+  "solver": {
+    "mode": "Optimize production",
+    "description": "Plan multiple products that share one production line and raw-material stock. The optimizer prioritizes on-time units, then minimizes new material spend.",
+    "lineHours": "Line hours per day",
+    "extraHours": "Extra hours per day for comparison",
+    "budget": "Purchasing budget (EGP)",
+    "strict": "Require every target in full by its due day",
+    "dayBasis": "Day 1 starts today. Capacity repeats daily on calendar days. Orders can be used on their arrival day. Missed units remain open.",
+    "target": "Target {{number}}",
+    "removeTarget": "Remove target {{number}}",
+    "addTarget": "Add product target",
+    "dueDay": "Due day",
+    "minutesPerUnit": "Line minutes per unit",
+    "priority": "Priority (10 is highest)",
+    "run": "Run optimizer",
+    "capacityError": "Line hours and extra hours together must be at most 24 per day.",
+    "requestError": "Could not run the optimizer. Check that each selected product has a complete BOM, then try again.",
+    "results": "Optimization results",
+    "missingStock": "Record counts in raw inventory for the following materials before running the optimizer.",
+    "missingQuotes": "The following materials can only be used from stock until their supplier quotes are saved.",
+    "baseline": "Baseline plan",
+    "comparison": "Plan with extra line hours",
+    "missed": "Units missed by due day",
+    "onTime": "Units on time",
+    "spend": "New material spend",
+    "fulfillment": "Target fulfillment",
+    "lineMinutes": "Line minutes",
+    "day": "Day",
+    "orderDay": "Order day",
+    "arrivalDay": "Arrival day",
+    "plannedOrders": "Planned material purchases",
+    "noBuilds": "No production is scheduled.",
+    "noOrders": "No material purchases are scheduled.",
+    "balances": "Projected end-of-day material balances",
+    "status": {
+      "optimal": "The solver proved optimality for these inputs.",
+      "feasible": "The solver found a feasible plan within the time limit. It has yet to prove optimality.",
+      "infeasible": "The targets cannot all be met under these constraints. Allow missed units or revise the inputs.",
+      "no_solution": "The solver reached its time limit before finding a feasible plan."
+    },
+    "gap": {
+      "service": "Optimality gap for priority-weighted missed units: {{gap}}",
+      "cost": "Optimality gap for purchase cost: {{gap}}"
+    }
+  }
 }

@@ -1,8 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 
 class RawMaterialBalance(BaseModel):
@@ -71,3 +71,77 @@ class ProductionPlan(BaseModel):
     full_purchase_cost: Decimal | None = None
     materials: list[ProductionMaterial]
     phases: list[ProductionPhase]
+
+
+class OptimizationTarget(BaseModel):
+    product_id: str = Field(min_length=1, max_length=80)
+    units: int = Field(strict=True, ge=1, le=100_000)
+    due_day: int = Field(strict=True, ge=1, le=60)
+    minutes_per_unit: int = Field(strict=True, ge=1, le=1440)
+    priority: int = Field(strict=True, ge=1, le=10)
+
+
+class ProductionOptimizationRequest(BaseModel):
+    targets: list[OptimizationTarget] = Field(min_length=1, max_length=12)
+    daily_minutes: int = Field(strict=True, ge=0, le=1440)
+    extra_daily_minutes: int | None = Field(default=None, strict=True, ge=1, le=1440)
+    budget_egp: Decimal | None = Field(default=None, ge=0, max_digits=11, decimal_places=2)
+    strict_targets: bool = False
+
+    @model_validator(mode="after")
+    def validate_scenario(self):
+        if len({target.product_id for target in self.targets}) != len(self.targets):
+            raise ValueError("Enter one target per product")
+        if self.daily_minutes + (self.extra_daily_minutes or 0) > 1440:
+            raise ValueError("Total daily capacity cannot exceed 24 hours")
+        return self
+
+
+class OptimizedTarget(BaseModel):
+    product_id: str
+    due_day: int
+    units: int
+    missed_units: int
+
+
+class OptimizedBuild(BaseModel):
+    day: int
+    product_id: str
+    units: int
+    line_minutes: int
+
+
+class OptimizedOrder(BaseModel):
+    material_id: str
+    supplier_name: str
+    order_day: int
+    arrival_day: int
+    units: int
+    cost_egp: Decimal
+
+
+class ProjectedMaterialBalance(BaseModel):
+    material_id: str
+    day: int
+    on_hand: int
+
+
+class OptimizedScenario(BaseModel):
+    status: Literal["optimal", "feasible", "infeasible", "no_solution"]
+    daily_minutes: int
+    gap: float | None = None
+    gap_objective: Literal["service", "cost"] | None = None
+    weighted_missed_units: int | None = None
+    spend_egp: Decimal | None = None
+    targets: list[OptimizedTarget] = Field(default_factory=list)
+    builds: list[OptimizedBuild] = Field(default_factory=list)
+    orders: list[OptimizedOrder] = Field(default_factory=list)
+    balances: list[ProjectedMaterialBalance] = Field(default_factory=list)
+
+
+class ProductionOptimizationResult(BaseModel):
+    materials: dict[str, str]
+    missing_stock: list[str]
+    missing_quotes: list[str]
+    baseline: OptimizedScenario | None = None
+    comparison: OptimizedScenario | None = None

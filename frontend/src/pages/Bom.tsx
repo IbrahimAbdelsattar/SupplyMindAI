@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { MaterialPlanResults } from '@/components/inventory/MaterialPlanResults';
+import { ProductionOptimizer } from '@/components/inventory/ProductionOptimizer';
 import { ProductionPlanner } from '@/components/inventory/ProductionPlanner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -25,6 +26,8 @@ export default function Bom() {
   });
   const requestedProduct = params.get('product');
   const productionMode = params.get('mode') === 'production';
+  const optimizationMode = params.get('mode') === 'optimize';
+  const forecastMode = !productionMode && !optimizationMode;
   const productId = products.data?.find((product) => product.product_id === requestedProduct)?.product_id
     ?? products.data?.[0]?.product_id ?? '';
   const horizon = forecastHorizon(params.get('horizon'));
@@ -34,14 +37,14 @@ export default function Bom() {
       const search = new URLSearchParams({ product_id: productId, horizon_days: horizon });
       return apiFetch<MaterialPlan>(`/inventory/material-plan?${search}`, { signal });
     },
-    enabled: !!productId && !productionMode,
+    enabled: !!productId && forecastMode,
     retry: false,
   });
   const selection = forecastSelection(productId, horizon);
   const planningSelection = new URLSearchParams(params);
   planningSelection.set('product', productId);
   planningSelection.set('horizon', horizon);
-  const inventorySelection = new URLSearchParams(productionMode ? planningSelection : selection);
+  const inventorySelection = new URLSearchParams(forecastMode ? selection : planningSelection);
   inventorySelection.set('view', 'raw-materials');
 
   function changeSelection(key: string, value: string) {
@@ -76,16 +79,20 @@ export default function Bom() {
             </CardHeader>
             <CardContent className="space-y-4 px-4 pb-4 sm:max-w-2xl sm:px-6 sm:pb-6">
               <div role="group" aria-label={t('planningMode')} className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant={productionMode ? 'outline' : 'default'}
-                  aria-pressed={!productionMode} onClick={() => changeSelection('mode', 'forecast')}>
+                <Button type="button" size="sm" variant={forecastMode ? 'default' : 'outline'}
+                  aria-pressed={forecastMode} onClick={() => changeSelection('mode', 'forecast')}>
                   {t('forecastMode')}
                 </Button>
                 <Button type="button" size="sm" variant={productionMode ? 'default' : 'outline'}
                   aria-pressed={productionMode} onClick={() => changeSelection('mode', 'production')}>
                   {t('productionMode')}
                 </Button>
+                <Button type="button" size="sm" variant={optimizationMode ? 'default' : 'outline'}
+                  aria-pressed={optimizationMode} onClick={() => changeSelection('mode', 'optimize')}>
+                  {t('solver.mode')}
+                </Button>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              {!optimizationMode && <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="bom-product">{t('forecasting:product')}</Label>
                   <select
@@ -101,7 +108,7 @@ export default function Bom() {
                     ))}
                   </select>
                 </div>
-                {!productionMode && (
+                {forecastMode && (
                   <div className="space-y-2">
                     <Label htmlFor="bom-horizon">{t('forecasting:horizonLabel')}</Label>
                     <select
@@ -116,13 +123,13 @@ export default function Bom() {
                     </select>
                   </div>
                 )}
-              </div>
+              </div>}
             </CardContent>
           </Card>
 
           {products.isPending && <p role="status" className="px-2 text-sm text-muted-foreground">{t('loadingProducts')}</p>}
           {products.isSuccess && !productId && <p className="px-2 text-sm text-muted-foreground">{t('noProducts')}</p>}
-          {(products.isError || (!productionMode && query.isError)) && (
+          {(products.isError || (forecastMode && query.isError)) && (
             <Card hoverLift={false} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <p role="alert" className="text-sm text-destructive">{t(products.isError ? 'productsError' : 'planError')}</p>
               <Button variant="outline" size="sm" onClick={() => void (products.isError ? products.refetch() : query.refetch())}>
@@ -130,13 +137,14 @@ export default function Bom() {
               </Button>
             </Card>
           )}
-          {!productionMode && !!productId && query.isPending && (
+          {forecastMode && !!productId && query.isPending && (
             <p role="status" className="px-2 text-sm text-muted-foreground">{t('loadingPlan')}</p>
           )}
-          {!productionMode && query.data && !query.isError && <MaterialPlanResults plan={query.data} />}
+          {forecastMode && query.data && !query.isError && <MaterialPlanResults plan={query.data} />}
           {productionMode && !!productId && (
             <ProductionPlanner selection={planningSelection} onPlan={(next) => setParams(next, { replace: true })} />
           )}
+          {optimizationMode && !!products.data?.length && <ProductionOptimizer products={products.data} />}
         </main>
       </div>
     </div>

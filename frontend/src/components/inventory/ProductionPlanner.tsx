@@ -69,7 +69,7 @@ export function ProductionPlanner({ selection, onPlan }: {
                 step={1} inputMode="numeric" placeholder={t('optional')} defaultValue={deadline} />
             </div>
             <div className="sm:col-span-3">
-              <Button type="submit" disabled={plan.isFetching}>{t('optimizeProduction')}</Button>
+              <Button type="submit" disabled={plan.isFetching}>{t('calculateProduction')}</Button>
             </div>
           </form>
         </CardContent>
