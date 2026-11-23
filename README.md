@@ -1214,7 +1214,7 @@ uvicorn backend.main:app --reload --port 8000
 
 Set `SUPPLYMIND_ADMIN_EMAIL` to an address in the configured `ALLOWED_DOMAIN` and choose a unique `SUPPLYMIND_ADMIN_PASSWORD` of at least 12 characters for a fresh database. The backend preserves existing accounts on startup.
 
-For a production target, record physical counts and current supplier quotes under **Inventory → Raw materials**. Quotes use Egyptian pounds per material unit and calendar days for delivery. On **Materials (BOM) → Production target**, select a product and enter the build quantity and available units per day. The planner reads recipe quantities from `data/bom.csv` and uses the saved counts and quotes to calculate shortages, material spend, and completion. Missing operational inputs leave the affected estimates blank.
+In **Materials (BOM)**, a manager or admin imports the operational BOM as a UTF-8 CSV with columns `product_id,product_name,material_id,material_name,qty`. Each row specifies the whole-number quantity of one component per finished unit. Record stock counts and supplier quotes in **Current material stock**. Quotes use Egyptian pounds per material unit and calendar days for delivery. In **Optimize production**, enter the products, target quantities, due days, and line capacity. The optimizer uses the imported recipes and recorded inventory. Importing a replacement catalog retains stock and quotes for unchanged material IDs.
 
 ### Environment Variables
 
