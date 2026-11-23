@@ -26,6 +26,16 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-charts': ['recharts'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1200,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
