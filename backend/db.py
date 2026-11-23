@@ -345,6 +345,12 @@ def seed_database() -> None:
         except Exception as seed_err:
             LOGGER.error("Failed to seed admin user: %s", seed_err)
         try:
+            from backend.services.bom_catalog import seed_default_bom
+            with SessionLocal() as db_session:
+                seed_default_bom(db_session)
+        except Exception as bom_err:
+            LOGGER.error("Failed to seed default BOM catalog: %s", bom_err)
+        try:
             import backend.scripts.copy_intro
         except Exception as copy_err:
             LOGGER.error("Failed to copy intro video: %s", copy_err)

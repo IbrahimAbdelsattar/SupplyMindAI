@@ -44,7 +44,14 @@
     "saved": "BOM catalog saved.",
     "error": "Could not import the BOM catalog.",
     "empty": "Import your production BOM to start planning.",
-    "askManager": "Ask an inventory manager to import your production BOM before planning."
+    "askManager": "Ask an inventory manager to import your production BOM before planning.",
+    "supportedFormats": "Supported CSV formats",
+    "standard": "Standard data/bom.csv",
+    "or": "or",
+    "defaultSystemTitle": "Default System BOM (data/bom.csv)",
+    "defaultSystemDescription": "Load default production BOM mapping from the system data repository.",
+    "loadDefault": "Load default BOM",
+    "loadingDefault": "Loading default BOM…"
   },
   "rawMaterialsDescription": "Record physical stock and current supplier quotes for production planning.",
   "updatedAt": "Last counted",

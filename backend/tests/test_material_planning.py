@@ -175,6 +175,17 @@ def test_operational_catalog_starts_empty_and_drives_optimizer(material_client):
     payload["targets"][0]["product_id"] = "FAN_STD"
     assert client.post(solve, headers=planner, json=payload).status_code == 404
 
+    # 3-column CSV support test
+    three_col_csv = "product_id,material_id,qty\nFAN_STD,RM_PLASTIC,4\n"
+    three_col_saved = client.put(catalog, headers=manager, json={"csv": three_col_csv}).raise_for_status().json()
+    assert three_col_saved["products"] == [{"product_id": "FAN_STD", "product_name": "Fan"}]
+
+    # Load default BOM endpoint test
+    loaded_default = client.post(f"{catalog}/load-default", headers=manager).raise_for_status().json()
+    assert len(loaded_default["products"]) >= 10
+    product_ids = {p["product_id"] for p in loaded_default["products"]}
+    assert "FAN_STD" in product_ids and "AF_5" in product_ids
+
 
 def test_plan_uses_forecast_and_current_raw_inventory(material_client):
     client, headers = material_client

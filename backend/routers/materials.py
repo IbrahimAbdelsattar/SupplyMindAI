@@ -23,7 +23,12 @@ from backend.schemas.materials import (
     RawMaterialInventoryEntry,
     UpdateRawMaterialBalance,
 )
-from backend.services.bom_catalog import load_bom_catalog, parse_bom_catalog, summarize_bom_catalog
+from backend.services.bom_catalog import (
+    load_bom_catalog,
+    load_default_bom_catalog,
+    parse_bom_catalog,
+    summarize_bom_catalog,
+)
 from backend.services.material_planning import build_material_plan, raw_material_balances
 from backend.services.monthly_forecast import ForecastUnavailable, monthly_predictions
 from backend.services.production_optimization import optimize_production
@@ -50,6 +55,21 @@ def save_bom_catalog(payload: BomCatalogImport, db: Session = Depends(get_materi
         catalog = parse_bom_catalog(payload.csv)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    insert = postgres_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
+    values = {"version": catalog.version, "products": catalog.products,
+              "materials": catalog.materials, "recipes": catalog.recipes}
+    stmt = insert(BomCatalog).values(id=1, **values)
+    db.execute(stmt.on_conflict_do_update(index_elements=[BomCatalog.id], set_=values))
+    db.commit()
+    return summarize_bom_catalog(catalog)
+
+
+@router.post("/bom-catalog/load-default", dependencies=[Depends(require_permission(Permission.MANAGE_INVENTORY))])
+def load_default_bom_catalog_endpoint(db: Session = Depends(get_material_db)) -> BomCatalogSummary:
+    try:
+        catalog = load_default_bom_catalog()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load default BOM CSV: {exc}") from exc
     insert = postgres_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     values = {"version": catalog.version, "products": catalog.products,
               "materials": catalog.materials, "recipes": catalog.recipes}
