@@ -11,6 +11,7 @@ import time
 import logging
 from pathlib import Path
 from typing import Any, Literal, Optional
+from urllib.parse import urlparse
 
 import pandas as pd
 import uvicorn
@@ -59,6 +60,17 @@ else:
     else:
         # Always include production domains alongside user-configured hosts
         _defaults = {"supplymind.tech", "api.supplymind.tech", "*.supplymind.tech"}
+        # Trust the hostnames of configured CORS origins. The frontend calls the
+        # API from its own origin, so a new deployment domain must not silently
+        # 400 every request with "Invalid host header" just because ALLOWED_HOSTS
+        # was not updated alongside ALLOWED_ORIGINS.
+        for _origin in ALLOWED_ORIGINS:
+            try:
+                _host = urlparse(_origin).hostname
+            except ValueError:
+                continue
+            if _host:
+                _defaults.add(_host)
         ALLOWED_HOSTS = list(set(_parsed) | _defaults)
 
 
