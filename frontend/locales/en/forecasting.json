@@ -4,6 +4,7 @@
   "product": "Product",
   "horizonLabel": "Forecast Horizon",
   "exportCsv": "Export CSV",
+  "forecastError": "Could not load the forecast for this product.",
   "parameters": {
     "title": "Forecast Parameters",
     "description": "Select a product and forecast future demand"
@@ -29,9 +30,7 @@
   },
   "chart": {
     "title": "Forecast Visualization",
-    "description": "Historical demand with predicted demand and confidence bands",
-    "upperBound": "Upper Bound",
-    "lowerBound": "Lower Bound",
+    "description": "Recorded daily sales and the daily average of forecast monthly demand.",
     "actual": "Actual",
     "forecast": "Forecast"
   },

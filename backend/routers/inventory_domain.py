@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from backend.dependencies import _get_current_user, require_permission
 from backend.auth.rbac import Permission
 from backend.globals import DATA_DIR, PROJECT_ROOT, STORE
+from backend.routers.materials import router as materials_router
 from backend.analytics import (
     daily_demand_stats,
     lead_time_days as calc_lead_time,
@@ -24,6 +25,7 @@ from backend.analytics import (
 
 
 router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
+router.include_router(materials_router)
 
 INVENTORY_REPORTS_DIR = PROJECT_ROOT / "reports" / "inventory"
 os.makedirs(INVENTORY_REPORTS_DIR, exist_ok=True)

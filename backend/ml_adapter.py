@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -90,17 +90,23 @@ class DemandForecastService:
     def is_trained_model_loaded(self) -> bool:
         return self._forecast_model is not None
 
-    def predict(self, product_id: str, n_months: int = 3) -> pd.DataFrame:
+    def predict(
+        self, product_id: str, n_months: int = 3, *, start_period: pd.Period | None = None
+    ) -> pd.DataFrame:
         if self._forecast_model is not None:
             try:
-                out = self._forecast_model.predict(product_id, n_months=n_months)
+                out = self._forecast_model.predict(
+                    product_id, n_months=n_months, start_period=start_period
+                )
                 if isinstance(out, pd.DataFrame) and not out.empty:
                     return out
             except Exception as exc:
                 LOGGER.warning("ForecastModel.predict failed for %s: %s", product_id, exc)
-        return self._predict_from_csv(product_id, n_months)
+        return self._predict_from_csv(product_id, n_months, start_period=start_period)
 
-    def _predict_from_csv(self, product_id: str, n_months: int) -> pd.DataFrame:
+    def _predict_from_csv(
+        self, product_id: str, n_months: int, *, start_period: pd.Period | None = None
+    ) -> pd.DataFrame:
         sales = self._store.sales_daily()
         sub = sales[sales["product_id"] == product_id].copy()
         
@@ -112,6 +118,9 @@ class DemandForecastService:
             avg_price = (min_p + max_p) / 2.0
         else:
             avg_price = 1500.0
+
+        if sub.empty and start_period is not None:
+            return pd.DataFrame()
 
         if sub.empty:
             base_monthly = 0.0
@@ -147,14 +156,19 @@ class DemandForecastService:
                 slope_monthly = 0.0
 
         rows = []
-        today = date.today()
+        first_period = start_period if start_period is not None else pd.Period(date.today(), freq="M")
+        skipped_months = 0
+        if start_period is not None and sub["date"].notna().any():
+            last_period = sub["date"].max().to_period("M")
+            first_period = max(first_period, last_period + 1)
+            skipped_months = first_period.ordinal - last_period.ordinal - 1
         
         # Determine base confidence based on monthly variance
         base_confidence = min(95.0, max(70.0, 88.0 - (std_monthly / (base_monthly + 1)) * 10)) if base_monthly > 0 else 70.0
 
-        current_forecast = base_monthly
+        current_forecast = max(0, base_monthly + slope_monthly * skipped_months)
         for i in range(max(1, n_months)):
-            period = (today.replace(day=1) + timedelta(days=32 * i)).strftime("%Y-%m")
+            period = str(first_period + i)
             
             # Apply monthly trend
             current_forecast = max(0, current_forecast + slope_monthly)
@@ -167,7 +181,7 @@ class DemandForecastService:
                 trend_str = "increasing" if slope_monthly > 0 else "decreasing"
                 
             # Confidence decays slightly over time
-            confidence = max(50, int(base_confidence - (i * 2)))
+            confidence = max(50, int(base_confidence - ((skipped_months + i) * 2)))
 
             rows.append(
                 {

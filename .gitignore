@@ -118,6 +118,7 @@ Modeling/
 /data/
 node_modules
 backend/supplymind.db
+backend/data/supplymind_dev.db*
 backend/alembic.ini
 bun.lock
 bun.lockb

@@ -21,6 +21,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+backend/data/supplymind_dev.db*
 
 # IDE
 .idea/

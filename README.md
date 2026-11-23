@@ -1184,8 +1184,8 @@ docker >= 24.0.0 (optional — for containerized setup)
 git clone https://github.com/IbrahimAbdelsattar/Demand-Forecasting-Inventory-Optimization-Engine.git
 cd Demand-Forecasting-Inventory-Optimization-Engine
 
-# Copy environment template
-cp .env.example .env
+# Copy the environment template and configure SUPPLYMIND_ADMIN_EMAIL and SUPPLYMIND_ADMIN_PASSWORD
+cp .env-example .env
 
 # Start all services (PostgreSQL + Backend + Frontend)
 docker compose up -d
@@ -1208,9 +1208,13 @@ npm run dev                    # Runs on :8080
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r backend/requirements.txt
-cp .env.example .env           # Edit with your API keys
+cp .env-example .env           # Configure your initial admin and API keys
 uvicorn backend.main:app --reload --port 8000
 ```
+
+Set `SUPPLYMIND_ADMIN_EMAIL` to an address in the configured `ALLOWED_DOMAIN` and choose a unique `SUPPLYMIND_ADMIN_PASSWORD` of at least 12 characters for a fresh database. The backend preserves existing accounts on startup.
+
+For a production target, record physical counts and current supplier quotes under **Inventory → Raw materials**. Quotes use Egyptian pounds per material unit and calendar days for delivery. On **Materials (BOM) → Production target**, select a product and enter the build quantity and available units per day. The planner reads recipe quantities from `data/bom.csv` and uses the saved counts and quotes to calculate shortages, material spend, and completion. Missing operational inputs leave the affected estimates blank.
 
 ### Environment Variables
 

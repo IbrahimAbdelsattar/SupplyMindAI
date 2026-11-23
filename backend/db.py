@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import socket
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlparse
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, create_engine, event
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
@@ -17,7 +18,15 @@ LOGGER = logging.getLogger("backend.db")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+
+def database_driver_url(url: str) -> str:
+    if url.startswith("postgresql://"):
+        # The project installs psycopg2. SQLAlchemy 2.1 defaults to psycopg 3.
+        return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return url
+
+
+DATABASE_URL = database_driver_url(os.getenv("DATABASE_URL") or "")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
 # ---------------------------------------------------------------------------
@@ -28,6 +37,8 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 # startup instant instead of waiting 3-10s for a DNS/connection timeout.
 _SQLITE_PATH = PROJECT_ROOT / "backend" / "data" / "supplymind_dev.db"
 _USE_SQLITE = ENVIRONMENT == "development" or os.getenv("DB_USE_SQLITE", "").lower() in {"1", "true", "yes", "on"}
+
+using_postgres_fallback = False
 
 if _USE_SQLITE and not os.getenv("DB_FORCE_POSTGRES", "").lower() in {"1", "true", "yes", "on"}:
     _SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -108,6 +119,7 @@ else:
         engine = create_engine(DATABASE_URL, **engine_options)
         LOGGER.info("Primary database connected successfully: %s", DATABASE_URL)
     except Exception as _exc:
+        using_postgres_fallback = True
         LOGGER.warning("Primary database unavailable — falling back to local SQLite: %s", _exc)
         _SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
         engine = create_engine(
@@ -183,6 +195,28 @@ class RefreshToken(Base):
 
 
 
+
+
+class RawMaterialStock(Base):
+    __tablename__ = "raw_material_stock"
+    __table_args__ = (CheckConstraint("on_hand >= 0", name="ck_raw_material_stock_on_hand"),)
+
+    material_id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    on_hand: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class RawMaterialQuote(Base):
+    __tablename__ = "raw_material_quotes"
+    __table_args__ = (
+        CheckConstraint("unit_price >= 0", name="ck_raw_material_quotes_unit_price"),
+        CheckConstraint("lead_time_days >= 0", name="ck_raw_material_quotes_lead_time"),
+    )
+
+    material_id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    supplier_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class ForecastResult(Base):
@@ -289,82 +323,11 @@ def get_db() -> Session:
 
 
 
-def seed_demo_data() -> None:
-    import uuid
-    from datetime import datetime, timezone
-    
-    with SessionLocal() as db:
-        # 1. Seed ForecastResult
-        if db.query(ForecastResult).count() == 0:
-            LOGGER.info("Seeding ForecastResult table with mock predictions...")
-            mock_predictions = [
-                # FAN_STD
-                {"product_id": "FAN_STD", "period": "2026-06", "predicted_demand": 1200, "confidence_level": 88.0, "demand_trend": "increasing", "current_stock": 850, "stock_risk_level": "low", "recommended_order_qty": 600, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 42000.0},
-                {"product_id": "FAN_STD", "period": "2026-07", "predicted_demand": 1450, "confidence_level": 91.0, "demand_trend": "increasing", "current_stock": 850, "stock_risk_level": "medium", "recommended_order_qty": 900, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 50750.0},
-                {"product_id": "FAN_STD", "period": "2026-08", "predicted_demand": 1300, "confidence_level": 89.0, "demand_trend": "decreasing", "current_stock": 850, "stock_risk_level": "low", "recommended_order_qty": 500, "supplier_score": 89.0, "best_supplier": "Apex Logistics", "lead_time_days": 10.0, "delay_risk": "low", "avg_delay": 0.5, "profit_margin": 0.35, "revenue_forecast": 45500.0},
-                # BL_KIT
-                {"product_id": "BL_KIT", "period": "2026-06", "predicted_demand": 850, "confidence_level": 82.0, "demand_trend": "stable", "current_stock": 450, "stock_risk_level": "medium", "recommended_order_qty": 500, "supplier_score": 81.0, "best_supplier": "Global Logistics", "lead_time_days": 14.0, "delay_risk": "medium", "avg_delay": 1.8, "profit_margin": 0.40, "revenue_forecast": 34000.0},
-                {"product_id": "BL_KIT", "period": "2026-07", "predicted_demand": 950, "confidence_level": 85.0, "demand_trend": "increasing", "current_stock": 450, "stock_risk_level": "high", "recommended_order_qty": 700, "supplier_score": 81.0, "best_supplier": "Global Logistics", "lead_time_days": 14.0, "delay_risk": "medium", "avg_delay": 1.8, "profit_margin": 0.40, "revenue_forecast": 38000.0},
-                {"product_id": "BL_KIT", "period": "2026-08", "predicted_demand": 900, "confidence_level": 83.0, "demand_trend": "stable", "current_stock": 450, "stock_risk_level": "high", "recommended_order_qty": 600, "supplier_score": 81.0, "best_supplier": "Global Logistics", "lead_time_days": 14.0, "delay_risk": "medium", "avg_delay": 1.8, "profit_margin": 0.40, "revenue_forecast": 36000.0},
-                # AF_5
-                {"product_id": "AF_5", "period": "2026-06", "predicted_demand": 600, "confidence_level": 94.0, "demand_trend": "stable", "current_stock": 650, "stock_risk_level": "low", "recommended_order_qty": 100, "supplier_score": 95.0, "best_supplier": "Swift Delivery", "lead_time_days": 5.0, "delay_risk": "low", "avg_delay": 0.1, "profit_margin": 0.28, "revenue_forecast": 16800.0},
-                {"product_id": "AF_5", "period": "2026-07", "predicted_demand": 620, "confidence_level": 93.0, "demand_trend": "increasing", "current_stock": 650, "stock_risk_level": "low", "recommended_order_qty": 150, "supplier_score": 95.0, "best_supplier": "Swift Delivery", "lead_time_days": 5.0, "delay_risk": "low", "avg_delay": 0.1, "profit_margin": 0.28, "revenue_forecast": 17360.0},
-                {"product_id": "AF_5", "period": "2026-08", "predicted_demand": 580, "confidence_level": 95.0, "demand_trend": "decreasing", "current_stock": 650, "stock_risk_level": "low", "recommended_order_qty": 50, "supplier_score": 95.0, "best_supplier": "Swift Delivery", "lead_time_days": 5.0, "delay_risk": "low", "avg_delay": 0.1, "profit_margin": 0.28, "revenue_forecast": 16240.0},
-            ]
-            for p in mock_predictions:
-                db.add(ForecastResult(
-                    id=str(uuid.uuid4()),
-                    product_id=p["product_id"],
-                    period=p["period"],
-                    predicted_demand=p["predicted_demand"],
-                    confidence_level=p["confidence_level"],
-                    demand_trend=p["demand_trend"],
-                    current_stock=p["current_stock"],
-                    stock_risk_level=p["stock_risk_level"],
-                    recommended_order_qty=p["recommended_order_qty"],
-                    supplier_score=p["supplier_score"],
-                    best_supplier=p["best_supplier"],
-                    lead_time_days=p["lead_time_days"],
-                    delay_risk=p["delay_risk"],
-                    avg_delay=p["avg_delay"],
-                    profit_margin=p["profit_margin"],
-                    revenue_forecast=p["revenue_forecast"],
-                    created_at=datetime.now(timezone.utc)
-                ))
-            db.commit()
-            LOGGER.info("ForecastResult table seeded successfully.")
-
-        # 2. Seed KnowledgeDocuments if empty
-        if db.query(KnowledgeDocument).count() == 0:
-            LOGGER.info("Seeding KnowledgeDocument table...")
-            try:
-                from backend.knowledge.ingestion import ingest_document
-                ingest_document(
-                    title="Supplier Apex Logistics Profile",
-                    content="Apex Logistics is our primary partner for FAN_STD. They maintain an outstanding reliability score of 89.2%. The standard lead time is 10 days, and the average delivery delay is 0.5 days. Delay risk is historically low. Their hub is located close to our primary warehouse, which minimizes transit overhead.",
-                    source_type="supplier",
-                    source_id="apex_logistics"
-                )
-                ingest_document(
-                    title="Supplier Global Logistics Profile",
-                    content="Global Logistics handles shipments for BL_KIT. They have a supplier reliability score of 81.0%. The standard lead time is 14 days, and the average delay is 1.8 days. Delay risk is medium. Stockouts have occurred twice in the past year due to customs processing delays.",
-                    source_type="supplier",
-                    source_id="global_logistics"
-                )
-                ingest_document(
-                    title="Inventory Safety Stock Policy",
-                    content="The default safety stock levels are set as follows: FAN_STD is kept at 200 units. BL_KIT is kept at 150 units. AF_5 is kept at 80 units. These buffers ensure we maintain a service level above 95% across all regional stores. Safety stock is reviewed at the end of each fiscal quarter.",
-                    source_type="inventory",
-                    source_id="safety_stock_policy"
-                )
-                LOGGER.info("KnowledgeDocument seeded successfully.")
-            except Exception as exc:
-                LOGGER.error("Failed to seed RAG KnowledgeDocuments: %s", exc)
-
-
 def seed_database() -> None:
     try:
-        seed_demo_data()
+        from backend.services.sample_data_cleanup import remove_seeded_samples
+
+        remove_seeded_samples()
         try:
             from backend.scripts.seed_admin import seed_admin
             seed_admin()

@@ -6,6 +6,7 @@ import enCommon from "../../locales/en/common.json";
 import enDashboard from "../../locales/en/dashboard.json";
 import enForecasting from "../../locales/en/forecasting.json";
 import enInventory from "../../locales/en/inventory.json";
+import enBom from "../../locales/en/bom.json";
 import enInsights from "../../locales/en/insights.json";
 import enReports from "../../locales/en/reports.json";
 import enMlops from "../../locales/en/mlops.json";
@@ -23,6 +24,7 @@ import arCommon from "../../locales/ar/common.json";
 import arDashboard from "../../locales/ar/dashboard.json";
 import arForecasting from "../../locales/ar/forecasting.json";
 import arInventory from "../../locales/ar/inventory.json";
+import arBom from "../../locales/ar/bom.json";
 import arInsights from "../../locales/ar/insights.json";
 import arReports from "../../locales/ar/reports.json";
 import arMlops from "../../locales/ar/mlops.json";
@@ -55,6 +57,7 @@ i18n
         dashboard: enDashboard,
         forecasting: enForecasting,
         inventory: enInventory,
+        bom: enBom,
         insights: enInsights,
         reports: enReports,
         mlops: enMlops,
@@ -72,6 +75,7 @@ i18n
         dashboard: arDashboard,
         forecasting: arForecasting,
         inventory: arInventory,
+        bom: arBom,
         insights: arInsights,
         reports: arReports,
         mlops: arMlops,

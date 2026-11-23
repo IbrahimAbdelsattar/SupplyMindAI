@@ -15,6 +15,8 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from backend.db import Base, database_driver_url  # noqa: E402
+
 config = context.config
 
 # ── Database URL: mirror db.py SQLite-first logic ────────────────────────────
@@ -33,12 +35,10 @@ else:
         db_url = db_url.replace(":6543", ":5432")
 
 if db_url:
-    config.set_main_option("sqlalchemy.url", db_url)
+    config.set_main_option("sqlalchemy.url", database_driver_url(db_url))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-from backend.db import Base  # noqa: E402
 
 target_metadata = Base.metadata
 

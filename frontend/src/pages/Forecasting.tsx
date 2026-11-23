@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -21,7 +22,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Area,
   ComposedChart,
   Legend,
 } from 'recharts';
@@ -33,13 +33,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, Calendar, Package, Brain, Loader2, Sparkles } from 'lucide-react';
+import { Boxes, Download, Calendar, Package, Brain, Loader2, Sparkles } from 'lucide-react';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { consumeSSE } from '@/lib/stream';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCompactNumber } from '@/lib/currency';
+import { FORECAST_HORIZONS, forecastHorizon, forecastSelection } from '@/lib/materialPlanning';
 
 // Types for forecast reasoning
 interface ForecastReasoningRisk {
@@ -65,15 +66,9 @@ interface ForecastReasoningResult {
 }
 
 type Product = { product_id: string; product_name: string; category?: string };
-type ForecastPoint = { date: string; actual?: number | null; forecast: number; lower: number; upper: number };
-type MonthlyPrediction = { period: string; predicted_demand: number; confidence_level: number; demand_trend: string; revenue_forecast?: number | null };
+type ForecastPoint = { date: string; actual?: number | null; forecast: number | null; lower: number | null; upper: number | null };
+type MonthlyPrediction = { period: string; predicted_demand: number; confidence_level: number | null; demand_trend: string | null; revenue_forecast?: number | null };
 type ForecastResponse = { product_id: string; horizon_days: number; series: ForecastPoint[]; monthly_summary?: MonthlyPrediction[] | null };
-
-const HORIZON_OPTIONS = [
-  { labelKey: 'forecasting:horizon.1month', value: 30 },
-  { labelKey: 'forecasting:horizon.3months', value: 90 },
-  { labelKey: 'forecasting:horizon.6months', value: 180 },
-];
 
 const Forecasting = () => {
   const { t } = useTranslation();
@@ -93,21 +88,22 @@ const Forecasting = () => {
     queryFn: () => apiFetch<Product[]>('/data/products'),
   });
 
-  const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [horizon, setHorizon] = useState('90');
+  const [params, setParams] = useSearchParams();
+  const requestedProduct = params.get('product');
+  const selectedProduct = products?.find((product) => product.product_id === requestedProduct)?.product_id
+    ?? products?.[0]?.product_id ?? '';
+  const horizon = forecastHorizon(params.get('horizon'), '90');
 
-  useMemo(() => {
-    if (!selectedProduct && products?.[0]?.product_id) setSelectedProduct(products[0].product_id);
-  }, [products, selectedProduct]);
-
-  const forecastMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedProduct) return null;
-      return apiFetch<ForecastResponse>('/forecast/predict', {
-        method: 'POST',
-        body: JSON.stringify({ product_id: selectedProduct, horizon_days: parseInt(horizon) }),
-      });
-    },
+  const forecastQuery = useQuery({
+    queryKey: ['forecast', selectedProduct, horizon],
+    queryFn: ({ signal }) => apiFetch<ForecastResponse>('/forecast/predict', {
+      method: 'POST',
+      body: JSON.stringify({ product_id: selectedProduct, horizon_days: Number(horizon) }),
+      signal,
+    }),
+    enabled: !!selectedProduct,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 
   // Load cached forecast analysis on product or horizon change
@@ -134,7 +130,7 @@ const Forecasting = () => {
 
   /* ── Forecast reasoning stream ── */
   const generateForecastAnalysis = useCallback(() => {
-    if (!forecastMutation.data?.monthly_summary?.length) {
+    if (!forecastQuery.data?.monthly_summary?.length) {
       return;
     }
 
@@ -146,7 +142,7 @@ const Forecasting = () => {
     setIsStreaming(true);
 
     // Build forecasts array from monthly_summary
-    const monthlyData = forecastMutation.data.monthly_summary ?? [];
+    const monthlyData = forecastQuery.data.monthly_summary ?? [];
 
     consumeSSE<ForecastReasoningResult>('/forecast/reasoning/stream', {
       method: 'POST',
@@ -188,28 +184,24 @@ const Forecasting = () => {
         },
       },
     });
-  }, [forecastMutation.data, selectedProduct, horizon]);
+  }, [forecastQuery.data, selectedProduct, horizon]);
 
-  const chartData = useMemo(() => forecastMutation.data?.series ?? [], [forecastMutation.data]);
-  const monthlyData = useMemo(() => forecastMutation.data?.monthly_summary ?? [], [forecastMutation.data]);
+  const chartData = useMemo(() => forecastQuery.data?.series ?? [], [forecastQuery.data]);
+  const monthlyData = useMemo(() => forecastQuery.data?.monthly_summary ?? [], [forecastQuery.data]);
 
   const summary = useMemo(() => {
     if (!monthlyData.length) return null;
     const totalDemand = monthlyData.reduce((s, m) => s + m.predicted_demand, 0);
-    const avgConfidence = monthlyData.reduce((s, m) => s + m.confidence_level, 0) / monthlyData.length;
-    const latestTrend = monthlyData[monthlyData.length - 1]?.demand_trend ?? 'stable';
+    const confidence = monthlyData.flatMap((month) => month.confidence_level === null ? [] : [month.confidence_level]);
+    const avgConfidence = confidence.length ? confidence.reduce((sum, value) => sum + value, 0) / confidence.length : null;
+    const latestTrend = monthlyData[monthlyData.length - 1]?.demand_trend;
     const totalRevenue = monthlyData.reduce((s, m) => s + (m.revenue_forecast ?? 0), 0);
     return { totalDemand, avgConfidence, latestTrend, totalRevenue };
   }, [monthlyData]);
 
-  useEffect(() => {
-    void forecastMutation.mutateAsync();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProduct, horizon]);
-
   const handleExport = () => {
     const csv = chartData
-      .map((row) => `${row.date},${row.actual || ''},${row.forecast},${row.lower},${row.upper}`)
+      .map((row) => `${row.date},${row.actual ?? ''},${row.forecast ?? ''},${row.lower ?? ''},${row.upper ?? ''}`)
       .join('\n');
     const header = 'Date,Actual,Forecast,Lower,Upper\n';
     const blob = new Blob([header + csv], { type: 'text/csv' });
@@ -249,7 +241,7 @@ const Forecasting = () => {
                       <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       {t('forecasting:product')}
                     </Label>
-                    <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                    <Select value={selectedProduct} onValueChange={(product) => setParams(forecastSelection(product, horizon), { replace: true })}>
                       <SelectTrigger className="bg-background h-9 sm:h-10">
                         <SelectValue />
                       </SelectTrigger>
@@ -268,13 +260,13 @@ const Forecasting = () => {
                       <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       {t('forecasting:horizonLabel')}
                     </Label>
-                    <Select value={horizon} onValueChange={setHorizon}>
+                    <Select value={horizon} onValueChange={(value) => setParams(forecastSelection(selectedProduct, value), { replace: true })}>
                       <SelectTrigger className="bg-background h-9 sm:h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover">
-                        {HORIZON_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={String(opt.value)}>
+                        {FORECAST_HORIZONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
                             {t(opt.labelKey)}
                           </SelectItem>
                         ))}
@@ -282,9 +274,24 @@ const Forecasting = () => {
                     </Select>
                   </div>
                 </div>
+                {selectedProduct && (
+                  <Button asChild size="sm" variant="outline" className="mt-4">
+                    <Link to={{ pathname: '/bom', search: forecastSelection(selectedProduct, horizon).toString() }}>
+                      <Boxes aria-hidden="true" />
+                      {t('bom:planLink')}
+                    </Link>
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </motion.div>
+
+          {forecastQuery.isError && (
+            <div className="flex flex-wrap items-center gap-3">
+              <p role="alert" className="text-sm text-destructive">{t('forecasting:forecastError')}</p>
+              <Button size="sm" variant="outline" onClick={() => void forecastQuery.refetch()}>{t('bom:retry')}</Button>
+            </div>
+          )}
 
           {/* Summary Cards */}
           {summary && (
@@ -307,7 +314,7 @@ const Forecasting = () => {
                 <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
                   <CardDescription className="text-xs truncate">{t('forecasting:kpi.confidenceLevel')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl truncate">
-                    {Math.round(summary.avgConfidence)}%
+                    {summary.avgConfidence === null ? '—' : `${Math.round(summary.avgConfidence)}%`}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground truncate">{t('forecasting:kpi.confidenceLevelDesc')}</p>
                 </CardHeader>
@@ -316,7 +323,7 @@ const Forecasting = () => {
                 <CardHeader className="pb-2 flex-1 flex flex-col justify-between">
                   <CardDescription className="text-xs truncate">{t('forecasting:kpi.demandTrend')}</CardDescription>
                   <CardTitle className="text-xl sm:text-2xl capitalize truncate">
-                    {summary.latestTrend}
+                    {summary.latestTrend ?? '—'}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground truncate">{t('forecasting:kpi.demandTrendDesc')}</p>
                 </CardHeader>
@@ -360,12 +367,6 @@ const Forecasting = () => {
                 <div className="h-60 sm:h-96">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData}>
-                      <defs>
-                        <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
@@ -383,20 +384,6 @@ const Forecasting = () => {
                         }}
                       />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Area
-                        type="monotone"
-                        dataKey="upper"
-                        stroke="none"
-                        fill="url(#confidenceGradient)"
-                        name={t('forecasting:chart.upperBound')}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="lower"
-                        stroke="none"
-                        fill="hsl(var(--background))"
-                        name={t('forecasting:chart.lowerBound')}
-                      />
                       <Line
                         type="monotone"
                         dataKey="actual"
@@ -407,7 +394,7 @@ const Forecasting = () => {
                         connectNulls={false}
                       />
                       <Line
-                        type="monotone"
+                        type="stepAfter"
                         dataKey="forecast"
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
@@ -441,7 +428,7 @@ const Forecasting = () => {
                 </div>
                 <Button
                   onClick={generateForecastAnalysis}
-                  disabled={isStreaming || !forecastMutation.data?.monthly_summary?.length}
+                  disabled={isStreaming || !forecastQuery.data?.monthly_summary?.length}
                   className="flex items-center gap-2 flex-shrink-0"
                   size="sm"
                 >
@@ -572,10 +559,10 @@ const Forecasting = () => {
                             {row.predicted_demand.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-right text-xs sm:text-sm">
-                            {row.confidence_level}%
+                            {row.confidence_level === null ? '—' : `${row.confidence_level}%`}
                           </TableCell>
                           <TableCell className="text-right text-xs sm:text-sm capitalize">
-                            {row.demand_trend}
+                            {row.demand_trend ?? '—'}
                           </TableCell>
                         </TableRow>
                       ))}
