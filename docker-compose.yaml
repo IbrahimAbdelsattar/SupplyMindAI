@@ -90,7 +90,7 @@ services:
       - DEBUG=false
       # Connects directly to the local postgres container on the VPS network
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-supplymind_prod}:${POSTGRES_PASSWORD:-supplymind_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-supplymind_prod}}
-      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379/0
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://supplymind.tech,https://www.supplymind.tech,http://localhost,http://localhost:80,http://127.0.0.1}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-sk_live_placeholder_secret_key}
@@ -195,7 +195,7 @@ services:
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-supplymind_prod}:${POSTGRES_PASSWORD:-supplymind_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-supplymind_prod}}
-      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379/0
       - LLM_PROVIDER=${LLM_PROVIDER:-omniroute}
       - OMNIROUTE_API_KEY=${OMNIROUTE_API_KEY:-}
       - OMNIROUTE_BASE_URL=${OMNIROUTE_BASE_URL:-https://omniroute.wajehni-ai.space/v1}
@@ -230,7 +230,7 @@ services:
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-supplymind_prod}:${POSTGRES_PASSWORD:-supplymind_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-supplymind_prod}}
-      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-supplymind_redis_pass_2026}@redis:6379/0
     depends_on:
       redis:
         condition: service_healthy

@@ -125,10 +125,14 @@ jobs:
           if [ -z "$PG_URL" ]; then
             PG_URL="postgresql://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}"
           fi
-          REDIS_CONN="${{ secrets.REDIS_URL }}"
-          if [ -z "$REDIS_CONN" ]; then
-            REDIS_CONN="redis://:${REDIS_PASS}@redis:6379"
-          fi
+          # Always derive the Redis connection string from REDIS_PASSWORD so the
+          # Celery/backend client password can never diverge from redis-server's
+          # --requirepass value. A standalone REDIS_URL secret previously caused
+          # "Authentication required" (NOAUTH) — killing the worker and beat —
+          # whenever its embedded password was stale, empty, or out of sync with
+          # REDIS_PASSWORD. The compose stack always uses the local `redis:6379`
+          # service, so host/port/db are fixed here and only the password varies.
+          REDIS_CONN="redis://:${REDIS_PASS}@redis:6379/0"
           cat > deploy/.env <<EOF
           BACKEND_IMAGE=${IMAGE_PREFIX}/backend:${{ github.sha }}
           FRONTEND_IMAGE=${IMAGE_PREFIX}/frontend:${{ github.sha }}
