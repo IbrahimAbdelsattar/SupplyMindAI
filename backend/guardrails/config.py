@@ -22,9 +22,21 @@ class GuardrailsConfig(BaseModel):
     forecast_min_value: float = -1e9
     forecast_max_horizon_days: int = 3650
 
-    rate_limit_per_minute: int = 60
-    rate_limit_per_hour: int = 1000
-    rate_limit_burst: int = 10
+    # Per-endpoint limits (keyed by user + endpoint path).
+    # Tuned for an interactive SPA: a single page load fans out to many
+    # endpoints, and background polling (notifications/alerts every 30s)
+    # keeps a steady trickle of traffic. The old values (burst=10,
+    # 60/min => 1 token/sec) drained instantly and 429'd the whole app.
+    rate_limit_per_minute: int = 600
+    rate_limit_per_hour: int = 20000
+    rate_limit_burst: int = 120
+
+    # Global per-IP limits (aggregated across ALL endpoints). Deliberately
+    # more generous than the per-endpoint budget because one browser tab
+    # issues many parallel requests to different endpoints on load, and
+    # multiple users behind a NAT/proxy share a single IP.
+    rate_limit_ip_per_minute: int = 1200
+    rate_limit_ip_burst: int = 300
 
     agent_max_steps: int = 50
     agent_max_cost: float = 2.0

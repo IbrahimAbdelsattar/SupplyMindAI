@@ -32,12 +32,12 @@ class RateLimiter:
         self._buckets: dict[str, TokenBucket] = {}
         self._lock = Lock()
 
-    def _get_bucket(self, key: str) -> TokenBucket:
+    def _get_bucket(self, key: str, capacity: int, refill_rate: float) -> TokenBucket:
         with self._lock:
             if key not in self._buckets:
                 self._buckets[key] = TokenBucket(
-                    capacity=self.config.rate_limit_burst,
-                    refill_rate=self.config.rate_limit_per_minute / 60.0,
+                    capacity=capacity,
+                    refill_rate=refill_rate,
                 )
             return self._buckets[key]
 
@@ -45,9 +45,14 @@ class RateLimiter:
               ip: str | None = None, endpoint: str | None = None) -> GuardrailResult:
         result = GuardrailResult(passed=True)
 
+        # Per-endpoint budget (user + path).
         rate_key = f"user:{user_id or 'anon'}:{endpoint or 'global'}"
 
-        bucket = self._get_bucket(rate_key)
+        bucket = self._get_bucket(
+            rate_key,
+            capacity=self.config.rate_limit_burst,
+            refill_rate=self.config.rate_limit_per_minute / 60.0,
+        )
         if not bucket.consume(1):
             result.violations.append(GuardrailViolation(
                 category=ViolationCategory.RATE_LIMIT,
@@ -59,8 +64,14 @@ class RateLimiter:
                 blocked=True,
             ))
 
+        # Global per-IP budget (aggregated across all endpoints). Uses its own,
+        # more generous limits so a normal multi-request page load doesn't trip it.
         ip_key = f"ip:{ip or 'unknown'}"
-        ip_bucket = self._get_bucket(ip_key)
+        ip_bucket = self._get_bucket(
+            ip_key,
+            capacity=self.config.rate_limit_ip_burst,
+            refill_rate=self.config.rate_limit_ip_per_minute / 60.0,
+        )
         if not ip_bucket.consume(1):
             result.violations.append(GuardrailViolation(
                 category=ViolationCategory.RATE_LIMIT,
