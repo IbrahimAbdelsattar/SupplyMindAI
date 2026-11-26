@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuthContext } from './AuthContext';
 
 type Theme = 'light' | 'dark';
 
@@ -18,6 +19,7 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuthContext();
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('theme') as Theme;
@@ -29,6 +31,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Load theme preference from backend
   useEffect(() => {
+    if (!user) return;
     const loadSettings = async () => {
       try {
         const { fetchApi } = await import('@/lib/api');
@@ -42,13 +45,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     };
     loadSettings();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
     localStorage.setItem('theme', theme);
+
+    if (!user) return;
 
     // Sync to backend (fire-and-forget)
     import('@/lib/api').then(({ fetchApi }) => {
@@ -57,7 +62,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         body: JSON.stringify({ theme }),
       }).catch(() => {});
     });
-  }, [theme]);
+  }, [theme, user]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
